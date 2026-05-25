@@ -1,12 +1,26 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const { app } = require('electron');
+const { app, safeStorage } = require('electron');
 
 let db;
 
 function getDbPath() {
   const userDataPath = app.getPath('userData');
   return path.join(userDataPath, 'agent.db');
+}
+
+function encryptApiKey(plain) {
+  if (!plain || !safeStorage.isEncryptionAvailable()) return plain || '';
+  return safeStorage.encryptString(plain).toString('base64');
+}
+
+function decryptApiKey(encrypted) {
+  if (!encrypted || !safeStorage.isEncryptionAvailable()) return encrypted || '';
+  try {
+    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
+  } catch (_) {
+    return encrypted; // legacy plaintext key
+  }
 }
 
 function init() {
@@ -83,4 +97,4 @@ function getDb() {
   return db;
 }
 
-module.exports = { init, getDb };
+module.exports = { init, getDb, encryptApiKey, decryptApiKey };

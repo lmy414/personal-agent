@@ -4,7 +4,7 @@
  */
 const { ipcMain, BrowserWindow } = require('electron');
 const path = require('path');
-const { getDb } = require('./db');
+const { getDb, encryptApiKey, decryptApiKey } = require('./db');
 const { sendMessageStream, getModelDisplayName, getModelPricing, PRICING } = require('./api');
 const { recordUsage, getStats } = require('./usage');
 
@@ -24,14 +24,21 @@ function registerHandlers() {
   ipcMain.handle('settings:get', () => {
     const rows = db.prepare('SELECT key, value FROM settings').all();
     const settings = {};
-    rows.forEach(r => { settings[r.key] = r.value; });
+    rows.forEach(r => {
+      if (r.key === 'api_key') {
+        settings[r.key] = decryptApiKey(r.value);
+      } else {
+        settings[r.key] = r.value;
+      }
+    });
     return settings;
   });
 
   ipcMain.handle('settings:save', (_event, updates) => {
     const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
     for (const [key, value] of Object.entries(updates)) {
-      stmt.run(key, String(value));
+      const stored = (key === 'api_key') ? encryptApiKey(String(value)) : String(value);
+      stmt.run(key, stored);
     }
     return { ok: true };
   });
