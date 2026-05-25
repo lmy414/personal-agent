@@ -95,26 +95,14 @@ async function sendMessage() {
       settings: App.settings,
     });
 
-    // If stream was off, render full content at once; if stream was on,
-    // re-render the streaming bubble as Markdown
-    if (!Chat.streamingEl) {
-      Chat.renderMessage('assistant', result.content, result.tokensInput + result.tokensOutput, result.model);
-    } else {
-      Chat.streamingEl.innerHTML = renderMarkdown(result.content);
+    // Replace streaming placeholder with properly rendered message
+    if (Chat.streamingEl) {
+      Chat.streamingMsgEl.remove();
+      Chat.streamingEl = null;
+      Chat.streamingMsgEl = null;
     }
+    Chat.renderMessage('assistant', result.content, result.tokensInput + result.tokensOutput, result.model);
 
-    // Update usage tag
-    const usageTag = msgEl.querySelector('.usage-tag');
-    if (usageTag && result.tokensInput + result.tokensOutput > 0) {
-      usageTag.textContent = `📊 ${result.tokensInput + result.tokensOutput} tokens`;
-    }
-    const timeEl = msgEl.querySelector('.time');
-    if (timeEl) {
-      timeEl.textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    Chat.streamingEl = null;
-    Chat.streamingMsgEl = null;
     Chat.isStreaming = false;
 
     // Refresh conversation list (title may have changed)
