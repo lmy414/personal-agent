@@ -76,7 +76,7 @@ const settingsSections = {
       <label class="form-label">默认工作目录</label>
       <div class="input-with-btn">
         <input type="text" id="cfg-workspace-dir" value="D:\\claude">
-        <button class="btn btn-secondary btn-sm">浏览</button>
+        <button class="btn btn-secondary btn-sm" id="btn-browse-workspace">浏览</button>
       </div>
     </div>
     <div class="form-group">
@@ -237,6 +237,7 @@ function populateForm() {
   setVal('cfg-monthly-budget', s.monthly_budget || '100');
   setVal('cfg-daily-budget', s.daily_budget || '20');
   setVal('cfg-ignore-patterns', s.ignore_patterns || '');
+  setVal('cfg-workspace-dir', s.workspace_dir || stateFiles.currentDir);
 
   setToggle('toggle-stream', s.stream_enabled !== 'false');
   setToggle('toggle-compress', s.auto_compress !== 'false');
@@ -267,17 +268,24 @@ async function saveSettings() {
     monthly_budget: getVal('cfg-monthly-budget'),
     daily_budget: getVal('cfg-daily-budget'),
     ignore_patterns: getVal('cfg-ignore-patterns'),
+    workspace_dir: getVal('cfg-workspace-dir'),
     stream_enabled: getToggle('toggle-stream') ? 'true' : 'false',
     auto_compress: getToggle('toggle-compress') ? 'true' : 'false',
     budget_warn: getToggle('toggle-budget-warn') ? 'true' : 'false',
     budget_stop: getToggle('toggle-budget-stop') ? 'true' : 'false',
   };
 
+  const oldWorkspace = App.settings.workspace_dir || '';
   await window.electronAPI.saveSettings(updates);
   App.settings = await window.electronAPI.getSettings();
   // Refresh models if API key changed
   if (updates.api_key || updates.api_base_url) {
     try { await refreshModels(); } catch (_) {}
+  }
+  // Refresh file tree if workspace changed
+  if (updates.workspace_dir && updates.workspace_dir !== oldWorkspace) {
+    stateFiles.expandedFolders.clear();
+    setWorkspaceRoot(updates.workspace_dir).then(ok => { if (ok) loadFileTree(); });
   }
 }
 
@@ -416,6 +424,17 @@ $('#settings-window').addEventListener('click', async (e) => {
         } else {
           status.innerHTML = `<span class="status-dot offline"></span> 失败: ${result.error}`;
         }
+      }
+    });
+    return;
+  }
+
+  // Browse workspace directory
+  if (e.target.id === 'btn-browse-workspace') {
+    window.electronAPI.openDirectoryDialog().then(dirPath => {
+      if (dirPath) {
+        const inp = document.getElementById('cfg-workspace-dir');
+        if (inp) inp.value = dirPath;
       }
     });
     return;

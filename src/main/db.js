@@ -83,6 +83,7 @@ function init() {
     budget_warn: 'true',
     budget_stop: 'false',
     ignore_patterns: 'node_modules/\n.git/\n*.exe\n*.dll\n*.obj\n.env\n*.log\n__pycache__/\n*.pyc',
+    workspace_dir: 'D:\\claude',
   };
 
   const insert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');

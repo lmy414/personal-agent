@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ── Shell ──
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  openDirectoryDialog: () => ipcRenderer.invoke('dialog:openDirectory'),
 
   // ── File System ──
   setWorkspace: (dirPath) => ipcRenderer.invoke('fs:setWorkspace', dirPath),

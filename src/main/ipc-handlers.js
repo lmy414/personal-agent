@@ -305,10 +305,19 @@ function registerHandlers() {
     });
   });
 
-  // ────────── Shell ──────────
+  // ────────── Shell & Dialogs ──────────
   ipcMain.handle('shell:openExternal', async (_event, url) => {
     const { shell } = require('electron');
     return shell.openExternal(url);
+  });
+
+  ipcMain.handle('dialog:openDirectory', async (_event) => {
+    const { dialog, BrowserWindow } = require('electron');
+    const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+      properties: ['openDirectory'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
   });
 
   // ────────── File System ──────────
