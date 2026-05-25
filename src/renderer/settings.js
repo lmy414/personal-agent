@@ -165,7 +165,7 @@ __pycache__/
       <table style="font-size:12px;color:var(--text-secondary);">
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">Electron</td><td>v34.x</td></tr>
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">Node.js</td><td>v22.x</td></tr>
-        <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">LLM</td><td>Anthropic Claude API</td></tr>
+        <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">LLM</td><td>DeepSeek API</td></tr>
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">数据库</td><td>SQLite</td></tr>
       </table>
     </div>
@@ -228,7 +228,7 @@ function switchSection(name) {
 function populateForm() {
   const s = App.settings;
   setVal('cfg-api-key', s.api_key || '');
-  setVal('cfg-base-url', s.api_base_url || 'https://api.anthropic.com');
+  setVal('cfg-base-url', s.api_base_url || 'https://api.deepseek.com');
   setVal('cfg-temperature', s.temperature || '0.7');
   setVal('cfg-max-tokens', s.max_tokens || '4096');
   setVal('cfg-max-steps', s.max_steps || '10');

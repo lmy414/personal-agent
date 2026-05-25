@@ -113,7 +113,7 @@ function registerHandlers() {
   // ────────── Chat ──────────
   ipcMain.handle('chat:send', async (event, { conversationId, messages, settings }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    const model = settings.default_model || 'claude-sonnet-4-6-20250514';
+    const model = settings.default_model || 'deepseek-chat';
     const maxTokens = parseInt(settings.max_tokens) || 4096;
     const temp = parseFloat(settings.temperature) || 0.7;
     const streamEnabled = settings.stream_enabled === 'true';
