@@ -1,0 +1,13 @@
+{
+  "name": "personal-agent",
+  "version": "0.1.0",
+  "description": "Personal AI Agent — 资料收集、文章撰写、信息查询",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  }
+}

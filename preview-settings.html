@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Agent — 设置 & 用量管理 (预览)</title>
+<style>
+  :root {
+    --bg-main: #1a1a2e;
+    --bg-sidebar: #16213e;
+    --bg-input: #0d1117;
+    --bg-card: #111827;
+    --border: #2a2a4a;
+    --accent: #e94560;
+    --accent-hover: #ff6b81;
+    --text-primary: #eaeaea;
+    --text-secondary: #8b8b9e;
+    --text-muted: #5c5c7a;
+    --code-bg: #0d1117;
+    --success: #3fb950;
+    --warning: #d2991d;
+    --danger: #f85149;
+    --info: #58a6ff;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "Segoe UI", sans-serif;
+    --font-mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-ui);
+    background: #0a0a1a;
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; overflow: hidden;
+  }
+
+  .app-window {
+    width: 1200px; max-width: 98vw; height: 92vh;
+    background: var(--bg-main);
+    border-radius: 10px; border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    box-shadow: 0 0 60px rgba(233,69,96,0.08), 0 0 120px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+
+  /* ── Title Bar ── */
+  .titlebar {
+    height: 36px; background: #141428; display: flex; align-items: center;
+    padding: 0 10px; border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag; user-select: none; flex-shrink: 0;
+  }
+  .titlebar .title { font-size: 12px; color: var(--text-secondary); margin-left: 8px; flex: 1; }
+  .titlebar .dot {
+    width: 10px; height: 10px; border-radius: 50%; margin-right: 6px;
+    -webkit-app-region: no-drag; cursor: pointer;
+  }
+  .dot.red    { background: #ff5f57; }
+  .dot.yellow { background: #febc2e; }
+  .dot.green  { background: #28c840; }
+
+  /* ═══════════ SETTINGS LAYOUT ═══════════ */
+  .settings-body {
+    display: flex; flex: 1; overflow: hidden;
+  }
+
+  /* ── Left Nav ── */
+  .settings-nav {
+    width: 220px; min-width: 220px; background: var(--bg-sidebar);
+    border-right: 1px solid var(--border); padding: 12px 8px;
+    display: flex; flex-direction: column; gap: 2px; overflow-y: auto;
+  }
+  .nav-section-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); padding: 10px 10px 4px; font-weight: 700;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary);
+    transition: all 0.12s; border: none; background: none; font-family: var(--font-ui);
+    width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+  .nav-item.active { background: rgba(233,69,96,0.1); color: var(--accent); font-weight: 600; }
+  .nav-item .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+  /* ── Right Content ── */
+  .settings-content {
+    flex: 1; overflow-y: auto; padding: 28px 36px;
+  }
+  .settings-section { display: none; }
+  .settings-section.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title { font-size: 1.25rem; color: #fff; margin-bottom: 4px; }
+  .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+
+  /* Form groups */
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%; padding: 8px 12px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--text-primary); font-family: var(--font-ui); font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; font-family: var(--font-mono); font-size: 12px; }
+  select { cursor: pointer; }
+
+  .input-with-btn { display: flex; gap: 8px; }
+  .input-with-btn input { flex: 1; }
+
+  .btn {
+    padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 13px; font-family: var(--font-ui); font-weight: 600;
+    transition: all 0.12s; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-primary); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-danger:hover { background: rgba(248,81,73,0.1); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-xs { padding: 3px 8px; font-size: 10px; border-radius: 4px; }
+
+  /* Toggle switch */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .toggle-row .toggle-label { font-size: 13px; color: var(--text-primary); }
+  .toggle-row .toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .toggle {
+    width: 40px; height: 22px; border-radius: 11px; background: var(--border);
+    cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* ═══════════ DASHBOARD CARDS ═══════════ */
+  .dashboard-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+  }
+  .stat-card .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .stat-value { font-size: 1.6rem; font-weight: 700; color: #fff; margin: 4px 0; font-family: var(--font-mono); }
+  .stat-card .stat-sub { font-size: 11px; color: var(--text-muted); }
+  .stat-card.accent .stat-value { color: var(--accent); }
+  .stat-card.success .stat-value { color: var(--success); }
+  .stat-card.warning .stat-value { color: var(--warning); }
+  .stat-card.info .stat-value { color: var(--info); }
+
+  /* Cost breakdown bar */
+  .cost-breakdown { margin-bottom: 24px; }
+  .cost-breakdown h3 { font-size: 14px; color: #fff; margin-bottom: 12px; }
+  .cost-bar-wrap {
+    display: flex; height: 24px; border-radius: 6px; overflow: hidden;
+    margin-bottom: 8px; border: 1px solid var(--border);
+  }
+  .cost-bar-input {
+    background: var(--info); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #fff; transition: width 0.4s;
+  }
+  .cost-bar-output {
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #fff; transition: width 0.4s;
+  }
+  .cost-legend { display: flex; gap: 20px; font-size: 12px; color: var(--text-secondary); }
+  .cost-legend span { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .legend-dot.input { background: var(--info); }
+  .legend-dot.output { background: var(--accent); }
+
+  /* Daily table */
+  .daily-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .daily-table th {
+    text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+  }
+  .daily-table td {
+    padding: 8px 12px; font-size: 13px; color: var(--text-secondary);
+    border-bottom: 1px solid rgba(42,42,74,0.4); font-family: var(--font-mono);
+  }
+  .daily-table tr:hover td { background: rgba(255,255,255,0.01); }
+  .cost-positive { color: var(--warning); }
+  .cost-zero { color: var(--text-muted); }
+
+  /* Mini bar chart (CSS) */
+  .mini-bars { display: flex; align-items: flex-end; gap: 3px; height: 80px; padding: 0 4px; }
+  .mini-bar {
+    flex: 1; border-radius: 2px 2px 0 0; background: var(--accent);
+    opacity: 0.7; transition: height 0.4s; min-height: 2px; position: relative;
+  }
+  .mini-bar:hover { opacity: 1; }
+  .mini-bar .bar-tooltip {
+    display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: var(--bg-input); color: var(--text-primary); font-size: 10px;
+    padding: 2px 6px; border-radius: 3px; white-space: nowrap; border: 1px solid var(--border);
+    font-family: var(--font-mono);
+  }
+  .mini-bar:hover .bar-tooltip { display: block; }
+
+  /* Divider */
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* Danger zone */
+  .danger-zone {
+    border: 1px solid rgba(248,81,73,0.25); border-radius: 8px; padding: 16px;
+    background: rgba(248,81,73,0.03);
+  }
+  .danger-zone h4 { color: var(--danger); font-size: 13px; margin-bottom: 6px; }
+  .danger-zone p { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+
+  /* Status indicator */
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-dot.online { background: var(--success); }
+  .status-dot.offline { background: var(--danger); }
+
+  .connection-status {
+    display: flex; align-items: center; gap: 8px; padding: 8px 0;
+    font-size: 13px; color: var(--text-secondary);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  @media (max-width: 800px) {
+    .settings-nav { width: 160px; min-width: 160px; }
+    .settings-content { padding: 20px; }
+    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-window">
+
+  <!-- ── Title Bar ── -->
+  <div class="titlebar">
+    <span class="dot red"></span>
+    <span class="dot yellow"></span>
+    <span class="dot green"></span>
+    <span class="title">Personal Agent — 设置</span>
+  </div>
+
+  <!-- ═══════ Settings Body ═══════ -->
+  <div class="settings-body">
+
+    <!-- ── Left Nav ── -->
+    <nav class="settings-nav">
+      <div class="nav-section-label">核心配置</div>
+      <button class="nav-item active" data-section="api">
+        <span class="nav-icon">📡</span> API 配置
+      </button>
+      <button class="nav-item" data-section="agent">
+        <span class="nav-icon">🤖</span> Agent 配置
+      </button>
+      <button class="nav-item" data-section="workspace">
+        <span class="nav-icon">📁</span> 工作目录
+      </button>
+
+      <div class="nav-section-label">监控</div>
+      <button class="nav-item" data-section="usage">
+        <span class="nav-icon">📊</span> 用量管理
+      </button>
+
+      <div class="nav-section-label">其他</div>
+      <button class="nav-item" data-section="appearance">
+        <span class="nav-icon">🎨</span> 外观
+      </button>
+      <button class="nav-item" data-section="about">
+        <span class="nav-icon">ℹ</span> 关于
+      </button>
+    </nav>
+
+    <!-- ── Right Content ── -->
+    <div class="settings-content">
+
+      <!-- ═══════════ API 配置 ═══════════ -->
+      <div class="settings-section active" id="section-api">
+        <h2 class="section-title">📡 API 配置</h2>
+        <p class="section-desc">配置 LLM 接口连接参数。API Key 存储在本地，不会上传。</p>
+
+        <div class="form-group">
+          <label class="form-label">API 提供商</label>
+          <select>
+            <option>Anthropic</option>
+            <option>OpenAI</option>
+            <option>DeepSeek</option>
+            <option>自定义兼容接口</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <div class="input-with-btn">
+            <input type="password" value="sk-ant-api-xxxxxxxxxxxxxxxxxxxx" placeholder="sk-ant-...">
+            <button class="btn btn-secondary btn-sm">显示</button>
+          </div>
+          <p class="form-hint">密钥仅保存在本地 SQLite，不会上传任何服务器。</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Base URL</label>
+            <input type="text" value="https://api.anthropic.com" placeholder="https://api.anthropic.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">API Version</label>
+            <input type="text" value="2023-06-01" placeholder="2023-06-01">
+          </div>
+        </div>
+
+        <div class="connection-status">
+          <span class="status-dot online"></span> 连接正常 — Anthropic API (us-west-2)
+        </div>
+        <button class="btn btn-secondary btn-sm">测试连接</button>
+      </div>
+
+      <!-- ═══════════ Agent 配置 ═══════════ -->
+      <div class="settings-section" id="section-agent">
+        <h2 class="section-title">🤖 Agent 配置</h2>
+        <p class="section-desc">调整 Agent 的行为参数和默认设置。</p>
+
+        <div class="form-group">
+          <label class="form-label">默认模型</label>
+          <select>
+            <option>Claude Sonnet 4.6</option>
+            <option>Claude Opus 4.7</option>
+            <option>Claude Haiku 4.5</option>
+          </select>
+          <p class="form-hint">对话界面可随时切换。Opus 适合复杂推理但成本更高。</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Temperature</label>
+            <input type="number" value="0.7" min="0" max="1" step="0.1">
+            <p class="form-hint">越高越有创造性，越低越确定。</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Tokens（单次回复）</label>
+            <input type="number" value="4096" min="256" max="200000" step="256">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">System Prompt</label>
+          <textarea rows="5">你是用户的个人 AI 助手，擅长资料收集、文章撰写和信息查询。回答应简洁准确，必要时使用 Markdown 格式化输出。对于需要搜索的任务，主动使用工具获取最新信息。</textarea>
+          <p class="form-hint">定义 Agent 的基础行为和角色。</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">最大推理步数</label>
+            <input type="number" value="10" min="1" max="50">
+            <p class="form-hint">Agent 循环的最大迭代次数，防止死循环。</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">上下文窗口上限 (Tokens)</label>
+            <input type="number" value="180000" min="1000" max="200000" step="1000">
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">启用流式输出</div>
+            <div class="toggle-desc">回复逐字显示，体验更流畅</div>
+          </div>
+          <div class="toggle on" data-toggle="stream"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">自动压缩超长上下文</div>
+            <div class="toggle-desc">接近 Token 上限时自动总结早期消息</div>
+          </div>
+          <div class="toggle on" data-toggle="compress"></div>
+        </div>
+      </div>
+
+      <!-- ═══════════ 工作目录 ═══════════ -->
+      <div class="settings-section" id="section-workspace">
+        <h2 class="section-title">📁 工作目录</h2>
+        <p class="section-desc">设置默认工作目录和文件过滤规则。</p>
+
+        <div class="form-group">
+          <label class="form-label">默认工作目录</label>
+          <div class="input-with-btn">
+            <input type="text" value="D:\claude" placeholder="选择目录...">
+            <button class="btn btn-secondary btn-sm">浏览</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">忽略模式（Glob）</label>
+          <textarea rows="4">node_modules/
+.git/
+*.exe
+*.dll
+*.pdb
+*.obj
+.env
+*.log
+__pycache__/
+*.pyc</textarea>
+          <p class="form-hint">每行一个 glob 模式，匹配的文件/文件夹不显示在文件树中。</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">预览文件大小上限 (KB)</label>
+          <input type="number" value="500" min="10" max="10000">
+          <p class="form-hint">超过此大小的文件不显示预览，防止大文件卡顿。</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 用量管理 ═══════════ -->
+      <div class="settings-section" id="section-usage">
+        <h2 class="section-title">📊 用量管理</h2>
+        <p class="section-desc">Token 消耗统计与成本核算。价格基于 Anthropic 官方定价（2026-05）。</p>
+
+        <!-- Stat cards -->
+        <div class="dashboard-grid">
+          <div class="stat-card accent">
+            <div class="stat-label">今日消耗</div>
+            <div class="stat-value">¥2.47</div>
+            <div class="stat-sub">较昨日 +12%</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-label">本月累计</div>
+            <div class="stat-value">¥38.52</div>
+            <div class="stat-sub">预估月底 ¥52.00</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-label">今日 Token</div>
+            <div class="stat-value">124.5K</div>
+            <div class="stat-sub">Input 98K / Output 26.5K</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-label">本月 Token</div>
+            <div class="stat-value">1.83M</div>
+            <div class="stat-sub">日均 73.2K</div>
+          </div>
+        </div>
+
+        <!-- Cost breakdown -->
+        <div class="cost-breakdown">
+          <h3>成本构成（本月）</h3>
+          <div class="cost-bar-wrap">
+            <div class="cost-bar-input" style="width:68%">Input ¥26.20 (68%)</div>
+            <div class="cost-bar-output" style="width:32%">Output ¥12.32 (32%)</div>
+          </div>
+          <div class="cost-legend">
+            <span><span class="legend-dot input"></span> Input: $3/M tokens ≈ ¥21.9/M</span>
+            <span><span class="legend-dot output"></span> Output: $15/M tokens ≈ ¥109.5/M</span>
+          </div>
+        </div>
+
+        <!-- Daily bar chart -->
+        <h3 style="font-size:14px;color:#fff;margin-bottom:10px;">近 14 天 Token 消耗</h3>
+        <div class="mini-bars" id="mini-bars"></div>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:6px;text-align:center;">
+          Hover 查看每日详情 &nbsp;|&nbsp; 横线 = 日均 73.2K
+        </p>
+
+        <hr class="section-divider">
+
+        <!-- Daily detail table -->
+        <h3 style="font-size:14px;color:#fff;margin-bottom:10px;">每日明细</h3>
+        <table class="daily-table">
+          <thead>
+            <tr><th>日期</th><th>模型</th><th>Input</th><th>Output</th><th>请求数</th><th>费用</th></tr>
+          </thead>
+          <tbody id="daily-table-body"></tbody>
+        </table>
+
+        <hr class="section-divider">
+
+        <!-- Budget settings -->
+        <h3 style="font-size:14px;color:#fff;margin-bottom:12px;">预算控制</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">月度预算上限 (¥)</label>
+            <input type="number" value="100" min="0" step="10">
+            <p class="form-hint">设为 0 表示不限。达到 80% 时预警。</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">单日预算上限 (¥)</label>
+            <input type="number" value="20" min="0" step="5">
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">预算预警通知</div>
+            <div class="toggle-desc">达到 80% 月度预算时在界面上显示提醒</div>
+          </div>
+          <div class="toggle on" data-toggle="budget-warn"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">超预算自动暂停</div>
+            <div class="toggle-desc">月度预算耗尽后自动拒绝新请求</div>
+          </div>
+          <div class="toggle" data-toggle="budget-stop"></div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Cost rates reference -->
+        <h3 style="font-size:14px;color:#fff;margin-bottom:10px;">模型费率参考 (Anthropic)</h3>
+        <table class="daily-table">
+          <thead>
+            <tr><th>模型</th><th>Input / M tokens</th><th>Output / M tokens</th><th>备注</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:#fff">Claude Opus 4.7</td>
+              <td>$15.00 (¥109.5)</td>
+              <td>$75.00 (¥547.5)</td>
+              <td>最强推理，最贵</td>
+            </tr>
+            <tr>
+              <td style="color:#fff">Claude Sonnet 4.6</td>
+              <td>$3.00 (¥21.9)</td>
+              <td>$15.00 (¥109.5)</td>
+              <td>默认推荐</td>
+            </tr>
+            <tr>
+              <td style="color:#fff">Claude Haiku 4.5</td>
+              <td>$0.80 (¥5.8)</td>
+              <td>$4.00 (¥29.2)</td>
+              <td>轻量任务</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button class="btn btn-secondary btn-sm" style="margin-top:12px;">导出用量报告 (CSV)</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:8px;">重置统计数据</button>
+      </div>
+
+      <!-- ═══════════ 外观 ═══════════ -->
+      <div class="settings-section" id="section-appearance">
+        <h2 class="section-title">🎨 外观</h2>
+        <p class="section-desc">界面主题与字体设置。</p>
+
+        <div class="form-group">
+          <label class="form-label">主题</label>
+          <select>
+            <option>深色（默认）</option>
+            <option>浅色</option>
+            <option>跟随系统</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">强调色</label>
+          <div style="display:flex;gap:8px;">
+            <span style="width:28px;height:28px;border-radius:6px;background:#e94560;cursor:pointer;border:2px solid #fff;"></span>
+            <span style="width:28px;height:28px;border-radius:6px;background:#58a6ff;cursor:pointer;"></span>
+            <span style="width:28px;height:28px;border-radius:6px;background:#3fb950;cursor:pointer;"></span>
+            <span style="width:28px;height:28px;border-radius:6px;background:#a371f7;cursor:pointer;"></span>
+            <span style="width:28px;height:28px;border-radius:6px;background:#d2991d;cursor:pointer;"></span>
+            <span style="width:28px;height:28px;border-radius:6px;background:#f778ba;cursor:pointer;"></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">界面字号</label>
+          <select>
+            <option>中（默认 14px）</option>
+            <option>小（12px）</option>
+            <option>大（16px）</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">代码字体</label>
+          <select>
+            <option>Cascadia Code</option>
+            <option>Fira Code</option>
+            <option>JetBrains Mono</option>
+            <option>Consolas</option>
+            <option>Source Code Pro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ═══════════ 关于 ═══════════ -->
+      <div class="settings-section" id="section-about">
+        <h2 class="section-title">ℹ 关于</h2>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px;">
+          <h3 style="font-size:18px;color:#fff;margin-bottom:4px;">Personal Agent</h3>
+          <p style="color:var(--text-muted);margin-bottom:12px;">个人 AI 助手 v0.1.0</p>
+          <table style="font-size:13px;color:var(--text-secondary);">
+            <tr><td style="padding:3px 20px 3px 0;color:var(--text-muted)">Electron</td><td>v34.x</td></tr>
+            <tr><td style="padding:3px 20px 3px 0;color:var(--text-muted)">Node.js</td><td>v22.x</td></tr>
+            <tr><td style="padding:3px 20px 3px 0;color:var(--text-muted)">Chromium</td><td>v132.x</td></tr>
+            <tr><td style="padding:3px 20px 3px 0;color:var(--text-muted)">LLM 引擎</td><td>Anthropic Claude API</td></tr>
+            <tr><td style="padding:3px 20px 3px 0;color:var(--text-muted)">数据库</td><td>SQLite (better-sqlite3)</td></tr>
+          </table>
+        </div>
+
+        <button class="btn btn-secondary btn-sm">检查更新</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left:8px;">查看日志文件</button>
+
+        <hr class="section-divider">
+
+        <div class="danger-zone">
+          <h4>⚠ 危险操作</h4>
+          <p>以下操作不可撤销，请确认后再执行。</p>
+          <button class="btn btn-danger btn-sm">清除所有对话记录</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:8px;">恢复出厂设置</button>
+        </div>
+      </div>
+
+    </div><!-- /settings-content -->
+  </div><!-- /settings-body -->
+</div><!-- /app-window -->
+
+<script>
+// ═══════════════════════════════════════════
+// Nav switching
+// ═══════════════════════════════════════════
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    const sectionId = 'section-' + item.dataset.section;
+    document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════
+// Toggle switches
+// ═══════════════════════════════════════════
+document.querySelectorAll('.toggle').forEach(toggle => {
+  toggle.addEventListener('click', () => {
+    toggle.classList.toggle('on');
+  });
+});
+
+// ═══════════════════════════════════════════
+// Mini bar chart — 14 days mock data
+// ═══════════════════════════════════════════
+const dailyData = [
+  { date:'05/12', input:52000, output:14000, model:'Sonnet 4.6', requests:8,  cost:'¥1.02' },
+  { date:'05/13', input:38000, output:11000, model:'Sonnet 4.6', requests:5,  cost:'¥0.74' },
+  { date:'05/14', input:81000, output:23000, model:'Sonnet 4.6', requests:12, cost:'¥2.38' },
+  { date:'05/15', input:45000, output:12000, model:'Sonnet 4.6', requests:6,  cost:'¥0.88' },
+  { date:'05/16', input:63000, output:19000, model:'Opus 4.7',   requests:9,  cost:'¥4.52' },
+  { date:'05/17', input:29000, output:8000,  model:'Sonnet 4.6', requests:4,  cost:'¥0.55' },
+  { date:'05/18', input:102000,output:31000, model:'Sonnet 4.6', requests:15, cost:'¥4.86' },
+  { date:'05/19', input:76000, output:21000, model:'Sonnet 4.6', requests:11, cost:'¥2.96' },
+  { date:'05/20', input:48000, output:15000, model:'Sonnet 4.6', requests:7,  cost:'¥1.43' },
+  { date:'05/21', input:91000, output:27000, model:'Sonnet 4.6', requests:13, cost:'¥3.72' },
+  { date:'05/22', input:56000, output:16000, model:'Haiku 4.5',  requests:8,  cost:'¥0.42' },
+  { date:'05/23', input:107000,output:34000, model:'Sonnet 4.6', requests:16, cost:'¥5.32' },
+  { date:'05/24', input:68000, output:20000, model:'Sonnet 4.6', requests:10, cost:'¥2.68' },
+  { date:'05/25', input:98000, output:26500, model:'Sonnet 4.6', requests:14, cost:'¥2.47' },
+];
+
+const maxTokens = Math.max(...dailyData.map(d => d.input + d.output));
+const avgTokens = dailyData.reduce((s, d) => s + d.input + d.output, 0) / dailyData.length;
+
+// Render bars
+const miniBars = document.getElementById('mini-bars');
+dailyData.forEach(d => {
+  const total = d.input + d.output;
+  const height = Math.max(4, (total / maxTokens) * 72);
+  const bar = document.createElement('div');
+  bar.className = 'mini-bar';
+  bar.style.height = height + 'px';
+  bar.innerHTML = `<span class="bar-tooltip">${d.date}: ${(total/1000).toFixed(1)}K (${d.cost})</span>`;
+  miniBars.appendChild(bar);
+});
+
+// Add average line element
+const avgLine = document.createElement('div');
+avgLine.style.cssText = `position:absolute;left:0;right:0;height:1px;background:var(--text-muted);opacity:0.5;bottom:${(avgTokens/maxTokens)*72}px;pointer-events:none`;
+avgLine.title = `日均 ${(avgTokens/1000).toFixed(1)}K`;
+miniBars.style.position = 'relative';
+miniBars.appendChild(avgLine);
+
+// Render daily table
+const tbody = document.getElementById('daily-table-body');
+dailyData.slice().reverse().forEach(d => {
+  tbody.innerHTML += `<tr>
+    <td>${d.date}</td>
+    <td>${d.model}</td>
+    <td>${(d.input/1000).toFixed(1)}K</td>
+    <td>${(d.output/1000).toFixed(1)}K</td>
+    <td>${d.requests}</td>
+    <td class="cost-positive">${d.cost}</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════
+// Connection test simulation
+// ═══════════════════════════════════════════
+document.querySelectorAll('.btn-secondary.btn-sm').forEach(btn => {
+  if (btn.textContent.includes('测试连接')) {
+    btn.addEventListener('click', () => {
+      const statusEl = document.querySelector('.connection-status .status-dot');
+      const textEl = document.querySelector('.connection-status');
+      btn.textContent = '测试中...';
+      btn.disabled = true;
+      setTimeout(() => {
+        statusEl.className = 'status-dot online';
+        textEl.innerHTML = '<span class="status-dot online"></span> 连接正常 — 延迟 87ms';
+        btn.textContent = '测试连接';
+        btn.disabled = false;
+      }, 1200);
+    });
+  }
+});
+</script>
+
+</body>
+</html>
