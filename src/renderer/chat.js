@@ -95,9 +95,12 @@ async function sendMessage() {
       settings: App.settings,
     });
 
-    // If stream was off, render full content at once
+    // If stream was off, render full content at once; if stream was on,
+    // re-render the streaming bubble as Markdown
     if (!Chat.streamingEl) {
       Chat.renderMessage('assistant', result.content, result.tokensInput + result.tokensOutput, result.model);
+    } else {
+      Chat.streamingEl.innerHTML = renderMarkdown(result.content);
     }
 
     // Update usage tag
