@@ -3,9 +3,19 @@
  * Renderer calls these via window.electronAPI.*
  */
 const { ipcMain, BrowserWindow } = require('electron');
+const path = require('path');
 const { getDb } = require('./db');
 const { sendMessageStream, getModelDisplayName, getModelPricing, PRICING } = require('./api');
 const { recordUsage, getStats } = require('./usage');
+
+let workspaceRoot = '';
+
+function isPathSafe(targetPath) {
+  if (!workspaceRoot) return true; // not configured yet, allow
+  const resolved = path.resolve(targetPath);
+  const root = path.resolve(workspaceRoot);
+  return resolved.startsWith(root + path.sep) || resolved === root;
+}
 
 function registerHandlers() {
   const db = getDb();
@@ -255,9 +265,28 @@ function registerHandlers() {
   });
 
   // ────────── File System ──────────
+  ipcMain.handle('fs:setWorkspace', (_event, dirPath) => {
+    if (typeof dirPath !== 'string' || !dirPath.trim()) {
+      return { error: 'Invalid workspace path' };
+    }
+    const fs = require('fs');
+    try {
+      const stat = fs.statSync(dirPath);
+      if (!stat.isDirectory()) {
+        return { error: 'Path is not a directory' };
+      }
+      workspaceRoot = path.resolve(dirPath);
+      return { ok: true, root: workspaceRoot };
+    } catch (e) {
+      return { error: `Cannot access: ${e.message}` };
+    }
+  });
+
   ipcMain.handle('fs:listDir', async (_event, dirPath) => {
     const fs = require('fs');
-    const path = require('path');
+    if (!isPathSafe(dirPath)) {
+      return { error: `Access denied: "${dirPath}" is outside workspace` };
+    }
     try {
       const entries = fs.readdirSync(dirPath, { withFileTypes: true });
       return entries.map(e => ({
@@ -272,6 +301,9 @@ function registerHandlers() {
 
   ipcMain.handle('fs:readFile', async (_event, filePath) => {
     const fs = require('fs');
+    if (!isPathSafe(filePath)) {
+      return { error: `Access denied: "${filePath}" is outside workspace` };
+    }
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
       return { content };

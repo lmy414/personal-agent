@@ -90,6 +90,9 @@ async function init() {
       App.usage.month = data.month;
     });
 
+    // Initialize workspace boundary
+    await setWorkspaceRoot(stateFiles.currentDir);
+
     App.initialized = true;
   } catch (err) {
     console.error('Init error:', err);
@@ -214,6 +217,17 @@ const stateFiles = {
   expandedFolders: new Set(),
   currentDir: 'D:\\claude',
 };
+
+async function setWorkspaceRoot(dirPath) {
+  const result = await window.electronAPI.setWorkspace(dirPath);
+  if (result.error) {
+    console.error('Workspace rejected:', result.error);
+    return false;
+  }
+  stateFiles.currentDir = result.root || dirPath;
+  document.getElementById('dir-path-display').textContent = stateFiles.currentDir;
+  return true;
+}
 
 const fileIcons = {
   folder: { cls: 'folder', icon: '📁' },
@@ -397,12 +411,14 @@ document.getElementById('btn-refresh-dir').addEventListener('click', () => {
   loadFileTree();
 });
 
-// Select directory button (placeholder — full dialog in Phase 2)
-document.getElementById('btn-select-dir').addEventListener('click', () => {
+// Select directory button
+document.getElementById('btn-select-dir').addEventListener('click', async () => {
   const newPath = prompt('输入工作目录路径:', stateFiles.currentDir);
   if (newPath) {
     stateFiles.expandedFolders.clear();
-    loadFileTree(newPath);
+    const ok = await setWorkspaceRoot(newPath);
+    if (ok) loadFileTree();
+    else alert('无法访问该目录，请检查路径是否正确。');
   }
 });
 

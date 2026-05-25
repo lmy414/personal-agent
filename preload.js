@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 
   // ── File System ──
+  setWorkspace: (dirPath) => ipcRenderer.invoke('fs:setWorkspace', dirPath),
   listDir: (dirPath) => ipcRenderer.invoke('fs:listDir', dirPath),
   readFile: (filePath) => ipcRenderer.invoke('fs:readFile', filePath),
 
