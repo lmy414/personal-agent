@@ -133,23 +133,25 @@ npm start
 
 在实现应用自身工具链之前，先了解 Claude Code 已有的信息检索能力：
 
-| 工具 | 功能 | 适用场景 |
-|------|------|----------|
-| **WebSearch** | 搜索引擎封装，返回标题+摘要+链接列表 | 找信息源、验证事实、获取最新资讯 |
-| **WebFetch** | 抓取单个 URL 完整内容，HTML→Markdown | 读文档页、API 参考、技术文章全文 |
-| **组合用法** | WebSearch 先搜到目标页 → WebFetch 读全文 | 深度调研 |
+| 工具 | 类型 | 功能 |
+|------|------|------|
+| **WebSearch** | 服务端工具 | Anthropic API 直接执行搜索，返回标题+URL+摘要。支持 `allowed_domains`/`blocked_domains` 过滤，单次对话最多 8 次调用 |
+| **WebFetch** | 本地工具 | 抓取 URL → HTML 转 Markdown（turndown 库）→ 小型模型总结。非预授权域名或内容过长时触发总结，预授权域名 <100K 字返回原始 Markdown |
+| **组合用法** | — | WebSearch 先搜到目标页 → WebFetch 取全文总结 |
 
-> - WebSearch 不是浏览器：不能登录、不能填表单、不能访问需认证的页面
-> - WebFetch 不是爬虫：不能递归抓站，仅取单页
-> - 两者都只能访问公开网页，结果受搜索引擎排名影响
-> - WebFetch 有 15 分钟自清理缓存，同一 URL 重复请求更快
+> **关键约束**
+> - WebSearch 和 WebFetch 均为**只读**，可并行执行
+> - WebFetch 超时 60s，响应体上限 10MB；跨域重定向不自动跟随，需显式重新调用
+> - WebFetch 有域名授权系统，用户可对域名设置永久允许/拒绝规则
+> - 本地 15 分钟 / 50MiB LRU 缓存
+> - 以上均为 Claude Code 原生工具；**第三方模型（DeepSeek 等）无原生 WebSearch/WebFetch**，需通过 MCP 桥接（如 CC-Web-MCP）
 
 #### Agent 待建能力
 
 | 功能 | 说明 | 优先级 |
 |------|------|--------|
 | **文件拖拽引用** | 从文件树拖文件到对话，附带文件内容到上下文 | 🔴 高 |
-| **Web Search 工具集成** | Agent 可主动调用 WebSearch 获取最新信息 | 🔴 高 |
+| **MCP Web 工具接入** | 为 DeepSeek 等第三方模型接入 WebSearch/WebFetch MCP 桥 | 🔴 高 |
 | **知识库 / RAG** | 工作目录文件向量化，语义检索后注入对话 | 🟡 中 |
 | **简单 Shell 命令** | Agent 可执行预定义的安全命令 | 🟡 中 |
 | **工具调用可视化** | 对话中展示 Agent 正在用什么工具 | 🟡 中 |
