@@ -144,7 +144,7 @@ function registerHandlers() {
   });
 
   // ────────── Chat ──────────
-  ipcMain.handle('chat:send', async (event, { conversationId, messages, settings }) => {
+  ipcMain.handle('chat:send', async (event, { conversationId, messages, fileContext, settings }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const model = settings.default_model || 'deepseek-chat';
     const parsedMax = parseInt(settings.max_tokens);
@@ -153,10 +153,18 @@ function registerHandlers() {
     const streamEnabled = settings.stream_enabled === 'true';
 
     const systemMsg = messages.find(m => m.role === 'system');
+    // Clean messages for DB storage (no file context)
     const chatMessages = messages.filter(m => m.role !== 'system').map(m => ({
       role: m.role,
       content: m.content,
     }));
+
+    // Messages for API call — file context injected here, not saved to DB
+    const apiMessages = chatMessages.map(m => ({ role: m.role, content: m.content }));
+    if (fileContext) {
+      const lastApiUser = [...apiMessages].reverse().find(m => m.role === 'user');
+      if (lastApiUser) lastApiUser.content += fileContext;
+    }
 
     // Save user message BEFORE API call so it persists even on failure
     const lastUserMsg = chatMessages.filter(m => m.role === 'user').pop();
@@ -181,7 +189,7 @@ function registerHandlers() {
     try {
       if (streamEnabled) {
         const result = await sendMessageStream({
-          messages: chatMessages,
+          messages: apiMessages,
           system: systemMsg?.content || settings.system_prompt,
           model,
           maxTokens,
@@ -199,7 +207,7 @@ function registerHandlers() {
         modelUsed = result.model;
       } else {
         const result = await sendMessage({
-          messages: chatMessages,
+          messages: apiMessages,
           system: systemMsg?.content || settings.system_prompt,
           model,
           maxTokens,

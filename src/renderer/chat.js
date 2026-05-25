@@ -66,12 +66,8 @@ async function sendMessage() {
   Chat.isStreaming = true;
   Chat.currentTokens = 0;
 
-  // Build messages from DOM, then append file context to last user message
+  // Build messages from DOM (clean, no file context)
   const messages = buildMessages();
-  if (fileContext && messages.length > 0) {
-    const lastUser = [...messages].reverse().find(m => m.role === 'user');
-    if (lastUser) lastUser.content += fileContext;
-  }
 
   // Clear referenced files after sending
   App.referencedFiles = [];
@@ -89,9 +85,11 @@ async function sendMessage() {
   scrollToBottom();
 
   try {
+    // Pass fileContext separately: injected into API request, not saved to DB
     const result = await window.electronAPI.sendMessage({
       conversationId: App.currentConversationId,
       messages: messages,
+      fileContext: fileContext,
       settings: App.settings,
     });
 
