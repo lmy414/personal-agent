@@ -75,6 +75,7 @@ function registerHandlers() {
         });
       });
       req.on('error', (e) => resolve({ ok: false, error: e.message }));
+      req.setTimeout(30000, () => { req.destroy(); resolve({ ok: false, error: 'Connection timeout (30s)' }); });
       req.write(body);
       req.end();
     });
@@ -254,6 +255,7 @@ function registerHandlers() {
         });
       });
       req.on('error', (e) => resolve({ error: e.message, models: [] }));
+      req.setTimeout(30000, () => { req.destroy(); resolve({ error: 'Connection timeout (30s)', models: [] }); });
       req.end();
     });
   });

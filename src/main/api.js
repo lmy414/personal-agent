@@ -97,6 +97,7 @@ function sendMessage({ messages, system, model, maxTokens, temperature, settings
     });
 
     req.on('error', reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Request timeout (30s)')); });
     req.write(body);
     req.end();
   });
@@ -185,6 +186,7 @@ function sendMessageStream({ messages, system, model, maxTokens, temperature, se
     });
 
     req.on('error', reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Request timeout (30s)')); });
     req.write(body);
     req.end();
   });
