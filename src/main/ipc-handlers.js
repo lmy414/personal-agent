@@ -147,7 +147,8 @@ function registerHandlers() {
   ipcMain.handle('chat:send', async (event, { conversationId, messages, settings }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const model = settings.default_model || 'deepseek-chat';
-    const maxTokens = parseInt(settings.max_tokens) || 4096;
+    const parsedMax = parseInt(settings.max_tokens);
+    const maxTokens = isNaN(parsedMax) ? 4096 : parsedMax;
     const temp = parseFloat(settings.temperature) || 0.7;
     const streamEnabled = settings.stream_enabled === 'true';
 

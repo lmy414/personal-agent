@@ -182,12 +182,6 @@ function renderMessage(role, content, tokenCount, model) {
  */
 function renderMarkdown(md) {
   if (!md) return '';
-  // Use marked if available, otherwise basic render
-  if (typeof marked !== 'undefined' && marked.parse) {
-    try {
-      return marked.parse(md);
-    } catch (_) { /* fall through to basic */ }
-  }
   return basicMarkdown(md);
 }
 

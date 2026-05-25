@@ -163,7 +163,7 @@ __pycache__/
       <h3 style="font-size:16px;color:#fff;">Personal Agent</h3>
       <p style="color:var(--text-muted);margin-bottom:10px;">个人 AI 助手 v0.1.0</p>
       <table style="font-size:12px;color:var(--text-secondary);">
-        <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">Electron</td><td>v34.x</td></tr>
+        <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">Electron</td><td>v37.x</td></tr>
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">Node.js</td><td>v22.x</td></tr>
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">LLM</td><td>DeepSeek API</td></tr>
         <tr><td style="padding:3px 16px 3px 0;color:var(--text-muted)">数据库</td><td>SQLite</td></tr>
@@ -232,7 +232,7 @@ function populateForm() {
   setVal('cfg-temperature', s.temperature || '0.7');
   setVal('cfg-max-tokens', s.max_tokens || '4096');
   setVal('cfg-max-steps', s.max_steps || '10');
-  setVal('cfg-context-limit', s.context_limit || '180000');
+  setVal('cfg-context-limit', s.context_limit || '64000');
   setVal('cfg-system-prompt', s.system_prompt || '');
   setVal('cfg-monthly-budget', s.monthly_budget || '100');
   setVal('cfg-daily-budget', s.daily_budget || '20');
