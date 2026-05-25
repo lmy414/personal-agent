@@ -236,6 +236,7 @@ function populateForm() {
   setVal('cfg-system-prompt', s.system_prompt || '');
   setVal('cfg-monthly-budget', s.monthly_budget || '100');
   setVal('cfg-daily-budget', s.daily_budget || '20');
+  setVal('cfg-ignore-patterns', s.ignore_patterns || '');
 
   setToggle('toggle-stream', s.stream_enabled !== 'false');
   setToggle('toggle-compress', s.auto_compress !== 'false');
@@ -265,6 +266,7 @@ async function saveSettings() {
     system_prompt: getVal('cfg-system-prompt'),
     monthly_budget: getVal('cfg-monthly-budget'),
     daily_budget: getVal('cfg-daily-budget'),
+    ignore_patterns: getVal('cfg-ignore-patterns'),
     stream_enabled: getToggle('toggle-stream') ? 'true' : 'false',
     auto_compress: getToggle('toggle-compress') ? 'true' : 'false',
     budget_warn: getToggle('toggle-budget-warn') ? 'true' : 'false',

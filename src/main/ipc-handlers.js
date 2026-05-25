@@ -9,6 +9,31 @@ const { sendMessageStream, getModelDisplayName, getModelPricing, PRICING } = req
 const { recordUsage, getStats } = require('./usage');
 
 let workspaceRoot = '';
+let ignorePatterns = [];
+
+function compileGlob(pattern) {
+  const dirOnly = pattern.endsWith('/');
+  const p = dirOnly ? pattern.slice(0, -1) : pattern;
+  // Escape regex specials, then replace * with .*
+  const escaped = p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  const regex = new RegExp('^' + escaped + '$', 'i');
+  return { regex, dirOnly };
+}
+
+function setIgnorePatterns(patternsText) {
+  if (!patternsText) { ignorePatterns = []; return; }
+  ignorePatterns = patternsText.split('\n')
+    .map(s => s.trim())
+    .filter(s => s && !s.startsWith('#'))
+    .map(compileGlob);
+}
+
+function shouldIgnore(name, isDir) {
+  return ignorePatterns.some(({ regex, dirOnly }) => {
+    if (dirOnly && !isDir) return false;
+    return regex.test(name);
+  });
+}
 
 function isPathSafe(targetPath) {
   if (!workspaceRoot) return true; // not configured yet, allow
@@ -308,13 +333,18 @@ function registerHandlers() {
     if (!isPathSafe(dirPath)) {
       return { error: `Access denied: "${dirPath}" is outside workspace` };
     }
+    // Auto-load ignore patterns from settings
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'ignore_patterns'").get();
+    if (row) setIgnorePatterns(row.value);
     try {
       const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-      return entries.map(e => ({
-        name: e.name,
-        type: e.isDirectory() ? 'folder' : 'file',
-        ext: e.isFile() ? e.name.split('.').pop()?.toLowerCase() || '' : '',
-      }));
+      return entries
+        .filter(e => !shouldIgnore(e.name, e.isDirectory()))
+        .map(e => ({
+          name: e.name,
+          type: e.isDirectory() ? 'folder' : 'file',
+          ext: e.isFile() ? e.name.split('.').pop()?.toLowerCase() || '' : '',
+        }));
     } catch (e) {
       return { error: e.message };
     }
