@@ -554,13 +554,11 @@ function renderWithMode(path) {
     if (ext === 'md') {
       previewBody.innerHTML = renderMarkdownSafe(content);
     } else if (ext === 'html' || ext === 'htm') {
-      // Sandbox in iframe to prevent CSS/JS leaking into app
-      const safe = content.replace(/<script[\s\S]*?<\/script>/gi, '<!-- script removed -->');
       previewBody.innerHTML = '';
       const iframe = document.createElement('iframe');
       iframe.className = 'preview-iframe';
-      iframe.sandbox = 'allow-same-origin';
-      iframe.srcdoc = safe;
+      iframe.sandbox = '';
+      iframe.srcdoc = content;
       previewBody.appendChild(iframe);
     } else {
       previewBody.innerHTML = `<pre class="source-view">${escapeHtml(content)}</pre>`;
