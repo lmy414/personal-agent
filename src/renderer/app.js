@@ -138,6 +138,10 @@ async function selectConversation(id) {
   App.currentConversationId = id;
   renderConvList();
 
+  // Clear file references from previous conversation
+  App.referencedFiles = [];
+  renderRefChips();
+
   // Load messages
   const msgs = await window.electronAPI.getMessages(id);
   dom.chatMessages.innerHTML = '';
