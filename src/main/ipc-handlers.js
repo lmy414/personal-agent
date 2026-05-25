@@ -266,7 +266,7 @@ function registerHandlers() {
   // ────────── Models (dynamic from API) ──────────
   ipcMain.handle('models:list', async (_event, { apiKey, baseUrl } = {}) => {
     const settings = db.prepare('SELECT key, value FROM settings').all().reduce((o, r) => { o[r.key] = r.value; return o; }, {});
-    const key = apiKey || settings.api_key;
+    const key = apiKey || decryptApiKey(settings.api_key);
     const url = baseUrl || settings.api_base_url || 'https://api.deepseek.com';
 
     if (!key) return { error: '未配置 API Key', models: [] };
