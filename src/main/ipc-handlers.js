@@ -125,46 +125,7 @@ function registerHandlers() {
       content: m.content,
     }));
 
-    let fullContent = '';
-    let tokensInput = 0;
-    let tokensOutput = 0;
-    let modelUsed = model;
-
-    if (streamEnabled) {
-      fullContent = '';
-      const result = await sendMessageStream({
-        messages: chatMessages,
-        system: systemMsg?.content || settings.system_prompt,
-        model,
-        maxTokens,
-        temperature: temp,
-        settings,
-        onToken: (token) => {
-          fullContent += token;
-          if (win && !win.isDestroyed()) {
-            win.webContents.send('chat:token', { conversationId, token });
-          }
-        },
-      });
-      tokensInput = result.tokensInput;
-      tokensOutput = result.tokensOutput;
-      modelUsed = result.model;
-    } else {
-      const result = await sendMessage({
-        messages: chatMessages,
-        system: systemMsg?.content || settings.system_prompt,
-        model,
-        maxTokens,
-        temperature: temp,
-        settings,
-      });
-      fullContent = result.content;
-      tokensInput = result.tokensInput;
-      tokensOutput = result.tokensOutput;
-      modelUsed = result.model;
-    }
-
-    // Save user message
+    // Save user message BEFORE API call so it persists even on failure
     const lastUserMsg = chatMessages.filter(m => m.role === 'user').pop();
     if (lastUserMsg) {
       db.prepare(
@@ -172,10 +133,61 @@ function registerHandlers() {
       ).run(conversationId, 'user', lastUserMsg.content, model);
     }
 
-    // Save assistant message with usage
-    db.prepare(
-      'INSERT INTO messages (conversation_id, role, content, tokens_input, tokens_output, model) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(conversationId, 'assistant', fullContent, tokensInput, tokensOutput, modelUsed);
+    let fullContent = '';
+    let tokensInput = 0;
+    let tokensOutput = 0;
+    let modelUsed = model;
+    let assistantMsgId = null;
+
+    // Insert a placeholder for the assistant message so partial content persists
+    const placeholder = db.prepare(
+      'INSERT INTO messages (conversation_id, role, content, tokens_input, tokens_output, model) VALUES (?, \'assistant\', ?, 0, 0, ?)'
+    ).run(conversationId, '', model);
+    assistantMsgId = placeholder.lastInsertRowid;
+
+    try {
+      if (streamEnabled) {
+        const result = await sendMessageStream({
+          messages: chatMessages,
+          system: systemMsg?.content || settings.system_prompt,
+          model,
+          maxTokens,
+          temperature: temp,
+          settings,
+          onToken: (token) => {
+            fullContent += token;
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('chat:token', { conversationId, token });
+            }
+          },
+        });
+        tokensInput = result.tokensInput;
+        tokensOutput = result.tokensOutput;
+        modelUsed = result.model;
+      } else {
+        const result = await sendMessage({
+          messages: chatMessages,
+          system: systemMsg?.content || settings.system_prompt,
+          model,
+          maxTokens,
+          temperature: temp,
+          settings,
+        });
+        fullContent = result.content;
+        tokensInput = result.tokensInput;
+        tokensOutput = result.tokensOutput;
+        modelUsed = result.model;
+      }
+    } catch (_) {
+      // Partial content saved via placeholder insert + periodic flushes
+    }
+
+    // Final update of assistant message with full content and token counts
+    if (assistantMsgId) {
+      db.prepare(
+        'UPDATE messages SET content = ?, tokens_input = ?, tokens_output = ?, model = ? WHERE id = ?'
+      ).run(fullContent, tokensInput, tokensOutput, modelUsed, assistantMsgId);
+    }
 
     // Update conversation timestamp & auto-title
     const msgCount = db.prepare('SELECT COUNT(*) as c FROM messages WHERE conversation_id = ?').get(conversationId);
