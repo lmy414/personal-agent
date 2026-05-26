@@ -1,0 +1,12 @@
+{
+  "name": "pa-budget",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  }
+}

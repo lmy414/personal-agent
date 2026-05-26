@@ -12,9 +12,11 @@ data/
 .env
 .env.*
 *.bat
+!pa.bat
 *.ps1
 *.sh
-!preview*.html
+# Python
+__pycache__/
 
 # OS files
 .DS_Store
@@ -28,3 +30,12 @@ Desktop.ini
 # Build output
 dist/
 out/
+
+# ── Privacy: personal data & chat analysis ──
+mio-data/groups/
+mio-data/analysis/
+mio-data/scripts/
+mio-data/songs-*.txt
+mio-data/preview*.html
+*.jsonl
+*.xlsx

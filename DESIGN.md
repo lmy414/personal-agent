@@ -1,137 +1,161 @@
-# Personal Agent — 设计规划文档
+# Personal Agent — 设计文档
+
+> v0.3.0 · Pi 架构 + 澪号 Harness · 2026-05-27
 
 ## 1. 概述
 
-一个桌面端个人 AI 助手，定位：**资料收集 + 文章撰写 + 信息查询 + 简单命令执行**。
-
-UI 参考 Chatbox 的经典三栏布局：左侧会话列表 + 中间对话区 + 底部输入区。
+Personal Agent 是一个基于 Pi 编码 Agent 框架的个人 AI 助手。核心理念：**魔改 Pi**——保持 Pi 的极简核心，用扩展系统承载所有差异化功能。
 
 ## 2. 技术选型
 
 | 层 | 选型 | 理由 |
 |---|---|---|
-| 桌面壳 | **Electron** | 生态最成熟，Web 技术栈，后面好扩展 |
-| 前端 | **原生 HTML/CSS/JS** | 零依赖起步，不引入框架复杂度 |
-| LLM | **Anthropic Claude API** | 用户已有 Claude Code 使用经验 |
-| 工具层 | **MCP 协议** | 行业标准，后续接搜索/文件操作 |
-| 数据存储 | **SQLite (better-sqlite3)** | 本地存会话记录，轻量零配置 |
-| 打包 | **electron-builder** | Windows 优先 |
+| Agent 框架 | **Pi (pi-mono)** | MIT 开源，双层 Agent 循环，28 事件扩展系统，300+ 模型支持 |
+| LLM | **DeepSeek V3 + R1** | 成本极低（V3: $0.27/M input），OpenAI 兼容协议，中文优秀 |
+| Web UI | **wgnr-pi** | 原生 JS 零框架，WebSocket 实时流式，极易魔改 |
+| 持久化 | **SQLite (better-sqlite3)** | 结构化查询，跨会话分析，零配置 |
+| 通信 | **Pi RPC + WebSocket** | Pi RPC 模式驱动 Agent，WebSocket 推送流式响应到浏览器 |
+| 扩展 | **Pi Extension API** | 28 个生命周期事件，registerTool/registerCommand/registerProvider |
 
-### 为什么不选其他方案？
+### 为什么不用 Electron
 
-- **Tauri**：更轻但 Rust 学习成本高，用户不需要极致体积
-- **Python + PyQt**：用户没 Python GUI 经验，开发速度不如 Web
-- **直接调用 API**：先做桌面壳再慢慢加功能，敏捷迭代
+- 自研 GUI 维护成本高（~2300 行前端代码）
+- 需要从零实现 Agent 循环、工具系统、模型抽象
+- Pi 已经提供了所有这些基础设施
 
-## 3. UI 布局规范
+### 为什么选 wgnr-pi 而不是自研 Web UI
+
+- 原生 JS 零框架，一个 HTML 文件 1392 行
+- 已实现会话管理、模型选择、思考级别、斜杠命令、图片支持
+- 修改成本极低（已全部汉化）
+
+## 3. 架构
 
 ```
-┌──────────────────────────────────────────────────┐
-│  标题栏 (30px)  [Personal Agent]       [_ □ X]   │
-├────────────┬─────────────────────────────────────┤
-│  侧边栏    │  消息区域                           │
-│  (260px)   │                                     │
-│            │  ┌──────────────────────────────┐   │
-│  [+新对话] │  │ 用户消息 (右侧气泡)          │   │
-│            │  └──────────────────────────────┘   │
-│  ────────  │                                     │
-│  对话1     │  ┌──────────────────────────────┐   │
-│  对话2     │  │ AI 回复 (左侧，Markdown)     │   │
-│  对话3     │  └──────────────────────────────┘   │
-│            │                                     │
-│            │                                     │
-│            │                                     │
-│  设置 ⚙    │                                     │
-├────────────┴─────────────────────────────────────┤
-│  输入区域 (60-200px)                              │
-│  ┌──────────────────────────────────────┐ [发送] │
-│  │ 输入消息...                           │        │
-│  └──────────────────────────────────────┘        │
-│  [模型选择 ▼]  [清空上下文]  [Token 计数]         │
-└──────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│            浏览器 (wgnr-pi)               │
+│  侧边栏 │ 对话区 │ 输入框 │ 模型选择       │
+│         WebSocket ↑↓                     │
+├─────────────────────────────────────────┤
+│          wgnr-pi (Express)               │
+│  spawn Pi RPC ←→ WebSocket 消息转发       │
+├─────────────────────────────────────────┤
+│            Pi Agent Core                 │
+│  agent-loop (双层 while)                  │
+│  4 内置工具: read / write / edit / bash   │
+├─────────────────────────────────────────┤
+│          Personal Agent Extensions       │
+│  pa-sqlite │ pa-usage │ pa-files │ pa-budget │ pa-mio │
+├─────────────────────────────────────────┤
+│            Pi AI (pi-ai)                 │
+│  OpenAI 兼容协议 → DeepSeek API           │
+└─────────────────────────────────────────┘
 ```
 
-### 配色方案（深色主题）
+## 4. 扩展设计
+
+每个扩展是一个 TypeScript 文件，通过 `export default function(pi: ExtensionAPI)` 注册。
+
+### pa-sqlite（~100 行）
+
+| 钩子 | 用途 |
+|------|------|
+| `session_start` | 创建/更新 SQLite 会话记录 |
+| `message_end` | 持久化每条消息（role, content, tokens, model） |
+| `session_shutdown` | 关闭数据库连接 |
+
+### pa-usage（~120 行）
+
+| 钩子 | 用途 |
+|------|------|
+| `message_end` | 从 assistant 消息提取 usage.input / usage.output |
+| 命令 | `/usage [today|month|14d]` `/cost` |
+
+### pa-files（~130 行）
+
+| 注册 | 类型 |
+|------|------|
+| `list_directory` | LLM 工具 — TypeBox schema 校验参数 |
+| `preview_file` | LLM 工具 — 路径安全校验 + 文件预览 |
+| `/files` `/preview` `/workspace` | 用户命令 |
+
+### pa-budget（~100 行）
+
+| 钩子 | 用途 |
+|------|------|
+| `turn_start` | 检查当日/当月用量，>=80% 黄色警告，>=100% 红色错误 |
+| 命令 | `/budget` `/budget set <月> <日>` |
+
+## 5. 数据流
+
+```
+用户输入 → WebSocket → wgnr-pi → Pi RPC stdin
+                                    ↓
+                              agent-loop
+                              ↓           ↓
+                           LLM 调用    工具执行
+                              ↓           ↓
+                           DeepSeek    read/edit/write/bash
+                              ↓
+Pi RPC stdout → wgnr-pi → WebSocket → 浏览器实时渲染
+                              ↓
+                         扩展事件钩子
+                              ↓
+                    pa-sqlite 写 SQLite
+                    pa-usage 记录用量
+                    pa-budget 检查预算
+```
+
+## 5. 澪号 Harness 设计
+
+### pa-mio（~260 行）
+
+澪号 Harness 扩展。核心机制：9-Slot Prompt 注入 + 5 计数器反馈校验 + JSON 记忆系统。
+
+**Prompt 注入顺序**（9 个 Slot）：
+| Slot | 内容 | 来源 | 性质 |
+|------|------|------|------|
+| 0 | 元指令（身份 > 工具） | `meta_instruction.txt` | 静态 |
+| 1 | 身份层（soul + boundaries） | `soul.md` + `boundaries.md` | 静态 |
+| 2 | 知识层 | `knowledge.md` | 静态 |
+| 3 | 运行环境（Pi 原生提示词 + 工具定义） | Pi 注入 | 动态 |
+| 4 | 记忆层 | `mio_memories.json` 检索 | 按需 |
+| 5 | Chat History | Pi 管理 | 动态 |
+| 6 | 语言锚（~50 tokens） | 硬编码 | 静态（最靠近输出） |
+| 7 | 修正槽 | 计数器触发时注入 | 按需 |
+| 8 | 用户消息 | 用户输入 | 动态 |
+
+**5 个计数器**（字符级，不跑 LLM）：
+| # | 检测项 | 规则 | 修正指令 |
+|---|--------|------|---------|
+| 1 | 叠甲 | ≥2 个叠甲词 | 不叠甲，有观点直接说 |
+| 2 | emoji 溢出 | ≥3 个 emoji | 不使用 emoji |
+| 3 | 感叹号溢出 | ≥2 个！ | 不用感叹号 |
+| 4 | 话痨 | >200 字 | 短句 |
+| 5 | 亲密溢出 | <10 轮出现 hhh/嗯嗯/摸摸 | 不够熟，克制 |
+
+**记忆系统**：
+- 存储：`~/.personal-agent/mio_memories.json`（JSON 数组，最多 500 条）
+- 检索：CJK 2-4 字关键词 → 包含匹配 → 衰减权重 `importance × e^(-0.05×天数)` → top 5
+- 提取：对话 >10 条后，独立 DeepSeek 调用提取 → 写入 JSON
+
+### 关键设计决策
+
+- Pi 原生 systemPrompt 退化为 Slot 3 内的 `[运行环境]` 标签，不与澪号身份竞争权重
+- Slot 0-3 形成静态前缀（~2100 tokens），可被 Prompt Cache 命中
+- Slot 6 语言锚在 Chat History 之后、用户消息之前——注意力权重最高
+- 长工具返回（>500字）时自动在 history 前额外插入语言锚，对抗稀释
+
+## 6. 配色
+
+沿用原 Personal Agent 配色：
 
 | 颜色 | 色值 | 用途 |
 |------|------|------|
-| 背景主色 | `#1a1a2e` | 主背景 |
-| 侧边栏 | `#16213e` | 侧边栏背景 |
-| 气泡-用户 | `#0f3460` | 用户消息气泡 |
-| 气泡-AI | `#1a1a2e` | AI 消息气泡（带边框） |
-| 强调色 | `#e94560` | 发送按钮、选中态 |
-| 文字主色 | `#eaeaea` | 正文 |
-| 文字次要 | `#8b8b9e` | 时间戳、辅助信息 |
-| 输入区背景 | `#0d1117` | 输入框背景 |
-
-### 字体
-
-- 系统 UI：`-apple-system, "Microsoft YaHei", sans-serif`
-- 代码：`"Cascadia Code", "Fira Code", Consolas, monospace`
-
-## 4. 功能清单
-
-### Phase 1 — MVP（当前）
-- [x] UI 框架完整（三栏布局）
-- [x] 基础对话（调用 Claude API）
-- [x] 消息气泡 + Markdown 渲染
-- [x] 新建/切换/删除对话
-- [x] 对话持久化（localStorage → SQLite）
-- [x] 流式输出（打字机效果）
-
-### Phase 2 — Agent 能力
-- [ ] Web Search 工具
-- [ ] 文件读写工具
-- [ ] 知识库 / RAG 接入
-- [ ] 简单 Shell 命令执行
-- [ ] 工具调用可视化（显示 Agent 在用什么工具）
-
-### Phase 3 — 增强
-- [ ] 多模型切换（Claude / GPT / DeepSeek）
-- [ ] Prompt 模板
-- [ ] 导出对话（Markdown / PDF）
-- [ ] 系统托盘常驻
-- [ ] 全局快捷键唤起
-
-## 5. 项目结构
-
-```
-personal-agent/
-├── package.json          # Electron + 依赖
-├── main.js               # Electron 主进程
-├── preload.js            # 安全桥接
-├── renderer/
-│   ├── index.html        # 主界面
-│   ├── style.css         # 样式
-│   ├── app.js            # UI 逻辑
-│   ├── chat.js           # 对话管理
-│   ├── api.js            # LLM API 调用
-│   └── markdown.js       # Markdown 渲染
-├── assets/
-│   └── icon.png
-└── data/                 # 本地数据（运行时）
-    └── agent.db
-```
-
-## 6. API 对接设计
-
-```js
-// 初始：直接调 Anthropic Messages API
-// 后续：通过 MCP 协议扩展工具
-
-const agent = {
-  model: "claude-sonnet-4-6",
-  system: "你是用户的个人助手，擅长资料收集和文章撰写...",
-  tools: [],           // Phase 2 添加
-  memory: "conversation", // 短期：上下文窗口；长期：Phase 2
-};
-```
-
-## 7. 开发顺序
-
-1. **HTML 预览** → 纯静态 HTML，确认 UI 布局和交互
-2. **Electron 壳** → 把 HTML 装进 Electron 窗口
-3. **对话功能** → 接入 Claude API，实现基础问答
-4. **对话管理** → 多会话、重命名、删除
-5. **持久化** → localStorage → SQLite
-6. **Agent 工具** → Phase 2 逐步添加
+| 背景 | `#1a1a2e` | 主背景 |
+| 表面 | `#16213e` | 侧边栏、消息气泡 |
+| 用户气泡 | `#1e3a5f` | 用户消息 |
+| 强调色 | `#6EA8DB` | 按钮、链接、选中态 |
+| 金色 | `#D4AF37` | AI 标签、工具调用 |
+| 文字 | `#e0e0e0` | 正文 |
+| 次级文字 | `#8892a4` | 时间戳、辅助信息 |
