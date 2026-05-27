@@ -1,6 +1,6 @@
 # Personal Agent — 项目总览
 
-> v0.3.0 · 2026-05-27 · ~710 行扩展代码 + Pi + wgnr-pi + 澪号 Harness
+> v0.4.0 · 2026-05-27 · ~900 行扩展代码 + Pi + wgnr-pi + 澪号 Harness + 流水线透视
 
 ## 当前状态
 
@@ -16,6 +16,7 @@
 | **UI** | 全中文 Web 界面，实时流式渲染 | 正常 |
 | **启动** | 一键 bat 启动，自动打开浏览器 | 正常 |
 | **澪号** | Harness 角色控制系统（9-Slot Prompt + 5 计数器 + 记忆） | 正常 |
+| **流水线** | 右侧可展开面板，7 步全链路追踪（Prompt → API → 工具 → 计数器） | 正常 |
 
 ## 技术架构
 
@@ -38,6 +39,7 @@ Personal Agent v0.3.0
 | pa-files | ~130 行 | 2 工具 + 3 命令 |
 | pa-budget | ~100 行 | 1 事件 + 1 命令 |
 | pa-mio | ~260 行 | 5 事件（Harness 角色控制系统） |
+| pa-observe | ~180 行 | 7 事件（流水线透视——API 请求/响应/工具/计数器全链路追踪） |
 
 ## 启动方式
 
@@ -80,6 +82,8 @@ personal-agent/
 │   │   └── package.json
 │   └── pa-mio/
 │       └── index.ts               # 澪号 Harness 扩展
+│   └── pa-observe/
+│       └── index.ts               # 流水线透视扩展（v0.4.0 新增）
 ├── skills/
 │   └── personal-agent/
 │       └── agent.md               # Agent 角色定义（默认人格，pa-mio 加载时覆盖）

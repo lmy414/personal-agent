@@ -27,6 +27,7 @@
 | pa-files | ~130 行 | 工作区文件浏览器，`/files` `/preview` `/workspace` |
 | pa-budget | ~100 行 | API 预算预警，`/budget` |
 | pa-mio | ~260 行 | 澪号 Harness 角色控制系统（9-Slot Prompt + 5 计数器 + 记忆） |
+| pa-observe | ~230 行 | 流水线透视——API 请求/响应/工具/计数器全链路追踪 |
 
 ## 快捷键
 

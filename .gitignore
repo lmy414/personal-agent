@@ -37,5 +37,6 @@ mio-data/analysis/
 mio-data/scripts/
 mio-data/songs-*.txt
 mio-data/preview*.html
+mio-data/mio-standalone-prompt.md
 *.jsonl
 *.xlsx

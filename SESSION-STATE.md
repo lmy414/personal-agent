@@ -220,6 +220,56 @@ wgnr-pi (`%APPDATA%\npm\node_modules\wgnr-pi`) 已纳入 Git 管理：
 | `b6a769f` | history 事件渲染 toolCall + toolResult 消息 |
 | `c5cd68e` | 工具块包裹 .msg 容器（CSS 修复） |
 | `9475e6b` | 修复目录列表双换行 bug（移除冗余 `<br>`，history 路径加 `pre-wrap`） |
+| *未提交* | 全中文汉化 + marked.use API 兼容 + localStorage 缓存保护 + 多项 UI 修复 |
+| *未提交* | **流水线透视面板** — 新增 pa-observe 扩展 + wgnr-pi 调试面板 CSS/HTML/JS + /api/observe_trace 端点 |
+
+---
+
+## 四-B、流水线透视面板（2026-05-27 新增）
+
+### 功能
+
+右侧可展开的调试面板，展示每轮 Agent 对话的完整内部流水线——从 Prompt 组装到 API 调用到工具执行到计数器检查。
+
+### 数据链路
+
+```
+pa-observe (Pi 扩展) → 写入 observe_last_trace.json
+                       ↓
+wgnr-pi /api/observe_trace → 前端 fetch → renderTrace()
+```
+
+不使用 WebSocket 推送，改用文件 + HTTP 轮询（打开面板后每 3 秒拉取），避免 RPC 事件转发兼容性问题。
+
+### 7 个追踪步骤
+
+| # | 步骤 | 数据来源 | 内容 |
+|---|------|---------|------|
+| 1 | System Prompt 组装 | `before_agent_start` | 组装后的完整 systemPrompt（含澪号 9-Slot） |
+| 2 | Context 消息列表 | `context` | 发给 LLM 前的消息数组摘要 |
+| 3 | API 请求体 | `before_provider_request` | DeepSeek 完整 HTTP 请求 JSON（含 messages/tools/temperature） |
+| 4 | API 响应 | `after_provider_response` | HTTP 状态码 |
+| 5 | 工具调用 | `tool_execution_start/end` | 工具名、参数、返回值、耗时 |
+| 6 | 计数器检查 | `message_end` | 5 项规则检查（叠甲/emoji/感叹号/话痨/亲密溢出）+ 修正槽注入 |
+| 7 | 记忆提取 | `agent_end` | 由 pa-mio 处理，pa-observe 仅报告状态 |
+
+### 涉及的文件
+
+| 文件 | 改动 |
+|------|------|
+| `extensions/pa-observe/index.ts` | **新建** ~230 行，Hook 8 个 Pi 事件，写 JSON 到 `~/.personal-agent/observe_last_trace.json` |
+| `wgnr-pi/public/index.html` | CSS +150 行 / HTML +10 行 / JS +120 行（面板 UI + 渲染 + 轮询） |
+| `wgnr-pi/server.js` | 新增 `GET /api/observe_trace` 端点（~10 行） |
+| `.pi/settings.json` | extensions 数组新增 pa-observe |
+
+### 面板 UI
+
+- 位置：`position: fixed; right: 0; top: 0; bottom: 0; width: 420px`
+- 开关：右侧边缘 `🔍 流水线` 竖排按钮
+- 展开/折叠：每个步骤点击标题切换
+- 滚动：面板整体 `overflow-y: scroll`，无步骤内独立滚动条
+- 默认折叠所有步骤，API 请求体（Step 3）默认展开
+- 配色沿用项目统一的深蓝主题（--bg / --surface / --accent）
 
 ---
 
@@ -231,6 +281,7 @@ wgnr-pi (`%APPDATA%\npm\node_modules\wgnr-pi`) 已纳入 Git 管理：
 - [x] 创建 pa-mio 扩展（Harness 角色控制 + 记忆系统）✅
 - [x] 澪号 System Prompt（Harness 注入管线）✅
 - [x] wgnr-pi 历史工具渲染修复 ✅
+- [x] 流水线透视面板（pa-observe + Debug 面板 UI） ✅
 - [ ] 导出 Free Bird 群数据
 
 ### 中期
@@ -274,6 +325,7 @@ rm D:/claude/personal-agent/qq_analyze.js D:/claude/personal-agent/qq_deep_analy
 | `personal-agent/extensions/pa-files/index.ts` | 文件浏览扩展 |
 | `personal-agent/extensions/pa-budget/index.ts` | 预算预警扩展 |
 | `personal-agent/extensions/pa-mio/index.ts` | 澪号 Harness 扩展 |
+| `personal-agent/extensions/pa-observe/index.ts` | 流水线透视扩展（v0.4.0 新增） |
 | `personal-agent/skills/personal-agent/agent.md` | Agent Skill |
 | `personal-agent/mio-harness/character/` | 角色文件（soul/boundaries/knowledge/language） |
 | `personal-agent/mio-data/character-v1.md` | 澪号角色卡 v1.1 |

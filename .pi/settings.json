@@ -8,7 +8,8 @@
     "D:/claude/personal-agent/extensions/pa-usage/index.ts",
     "D:/claude/personal-agent/extensions/pa-files/index.ts",
     "D:/claude/personal-agent/extensions/pa-budget/index.ts",
-    "D:/claude/personal-agent/extensions/pa-mio/index.ts"
+    "D:/claude/personal-agent/extensions/pa-mio/index.ts",
+    "D:/claude/personal-agent/extensions/pa-observe/index.ts"
   ],
   "skills": [
     "D:/claude/personal-agent/skills/personal-agent"
