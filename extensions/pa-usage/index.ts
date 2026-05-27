@@ -4,33 +4,8 @@
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import Database from "better-sqlite3";
-import path from "path";
-import os from "os";
 import fs from "fs";
-
-const PA_DIR = path.join(os.homedir(), ".personal-agent");
-const DB_PATH = path.join(PA_DIR, "agent.db");
-const USD_CNY_RATE = 7.3;
-
-// ── Pricing data (per 1M tokens, USD) ─────────────────────────
-
-interface Pricing {
-  input: number;
-  output: number;
-}
-
-const PRICING: Record<string, Pricing> = {
-  "deepseek-chat": { input: 0.27, output: 1.1 },
-  "deepseek-reasoner": { input: 0.55, output: 2.19 },
-};
-
-function getPricing(modelId: string): Pricing {
-  if (!modelId) return { input: 0.27, output: 1.1 };
-  for (const [key, p] of Object.entries(PRICING)) {
-    if (modelId.toLowerCase().includes(key.toLowerCase())) return p;
-  }
-  return { input: 0.27, output: 1.1 };
-}
+import { DB_PATH, PA_DIR, USD_CNY_RATE, getPricing } from "../shared/db-config";
 
 // ── DB helpers ─────────────────────────────────────────────────
 

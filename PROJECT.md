@@ -1,6 +1,6 @@
 # Personal Agent — 项目总览
 
-> v0.4.0 · 2026-05-27 · ~900 行扩展代码 + Pi + wgnr-pi + 澪号 Harness + 流水线透视
+> v0.4.0 · 2026-05-27 · ~1170 行扩展代码 + Pi + wgnr-pi + 澪号 Harness + 流水线透视
 
 ## 当前状态
 
@@ -21,11 +21,11 @@
 ## 技术架构
 
 ```
-Personal Agent v0.3.0
+Personal Agent v0.4.0
 ├── Pi v0.73.0               Agent 框架（Agent 循环 + 工具系统 + RPC）
 ├── DeepSeek API             V3 (chat) + R1 (reasoner)
 ├── wgnr-pi                  Web UI（原生 JS + WebSocket）
-├── 5 个 Pi 扩展             ~710 行 TypeScript
+├── 6 个 Pi 扩展             ~1170 行 TypeScript
 ├── 澪号 Harness              角色控制系统（9-Slot Prompt + 5 计数器 + 记忆）
 └── SQLite                   会话 + 用量数据
 ```
@@ -34,12 +34,13 @@ Personal Agent v0.3.0
 
 | 扩展 | 代码量 | 注册内容 |
 |------|--------|----------|
-| pa-sqlite | ~100 行 | 3 事件 + 1 命令 |
-| pa-usage | ~120 行 | 1 事件 + 2 命令 |
-| pa-files | ~130 行 | 2 工具 + 3 命令 |
-| pa-budget | ~100 行 | 1 事件 + 1 命令 |
-| pa-mio | ~260 行 | 5 事件（Harness 角色控制系统） |
-| pa-observe | ~180 行 | 7 事件（流水线透视——API 请求/响应/工具/计数器全链路追踪） |
+| pa-sqlite | ~158 行 | 3 事件 + 1 命令 |
+| pa-usage | ~135 行 | 1 事件 + 2 命令 |
+| pa-files | ~176 行 | 2 工具 + 3 命令 |
+| pa-budget | ~104 行 | 1 事件 + 1 命令 |
+| pa-mio | ~263 行 | 5 事件（Harness 角色控制系统） |
+| pa-observe | ~308 行 | 7 事件（流水线透视） |
+| shared/db-config | ~27 行 | DB 路径 + 定价常量共享模块 |
 
 ## 启动方式
 
@@ -65,10 +66,11 @@ personal-agent/
 ├── TEST_CHECKLIST.md              # 测试清单
 ├── SESSION-STATE.md               # 项目状态总览
 ├── main.js                        # Electron 桌面壳
-├── preload.js                     # Electron preload（旧）
 ├── .pi/
 │   └── settings.json              # Pi 配置（扩展 + 技能 + 模型默认值）
 ├── extensions/
+│   ├── shared/
+│   │   └── db-config.ts           # DB 路径 + 定价常量
 │   ├── pa-sqlite/
 │   │   ├── index.ts               # SQLite 持久化扩展
 │   │   └── package.json
@@ -80,10 +82,10 @@ personal-agent/
 │   ├── pa-budget/
 │   │   ├── index.ts               # 预算预警扩展
 │   │   └── package.json
-│   └── pa-mio/
+│   ├── pa-mio/
 │       └── index.ts               # 澪号 Harness 扩展
 │   └── pa-observe/
-│       └── index.ts               # 流水线透视扩展（v0.4.0 新增）
+│       └── index.ts               # 流水线透视扩展
 ├── skills/
 │   └── personal-agent/
 │       └── agent.md               # Agent 角色定义（默认人格，pa-mio 加载时覆盖）

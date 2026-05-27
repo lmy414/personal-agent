@@ -257,7 +257,7 @@ wgnr-pi /api/observe_trace → 前端 fetch → renderTrace()
 
 | 文件 | 改动 |
 |------|------|
-| `extensions/pa-observe/index.ts` | **新建** ~230 行，Hook 8 个 Pi 事件，写 JSON 到 `~/.personal-agent/observe_last_trace.json` |
+| `extensions/pa-observe/index.ts` | **新建** ~308 行，Hook 8 个 Pi 事件，写 JSON 到 `~/.personal-agent/observe_last_trace.json` |
 | `wgnr-pi/public/index.html` | CSS +150 行 / HTML +10 行 / JS +120 行（面板 UI + 渲染 + 轮询） |
 | `wgnr-pi/server.js` | 新增 `GET /api/observe_trace` 端点（~10 行） |
 | `.pi/settings.json` | extensions 数组新增 pa-observe |
