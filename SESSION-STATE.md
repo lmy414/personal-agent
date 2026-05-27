@@ -1,7 +1,7 @@
 # Personal Agent — 项目状态总览
 
-> 最后更新：2026-05-27
-> 当前阶段：澪号角色构建 — Harness 系统已部署，持续迭代中
+> 最后更新：2026-05-28
+> 当前阶段：v0.4.1 — 流水线透视 BUG 修复，Harness 系统持续迭代中
 
 ---
 
@@ -225,7 +225,25 @@ wgnr-pi (`%APPDATA%\npm\node_modules\wgnr-pi`) 已纳入 Git 管理：
 
 ---
 
-## 四-B、流水线透视面板（2026-05-27 新增）
+## 四-B、流水线透视面板（2026-05-27 新增，2026-05-28 修复）
+
+### v0.4.1 BUG 修复（2026-05-28）
+
+修复了 4 个会话切换相关的 BUG，详见 `docs/observe-issues.md`。
+
+**核心改动**：
+- pa-observe `session_start` 捕获 `sessionFile`/`sessionId` 写入 trace JSON
+- API 匹配 key 从 `sessionId`(UUID) 改为 `sessionFile`(路径精确匹配)
+- 前端 `fetchObserveTrace` 快照 `currentSessionFile`，`await` 后校验（竞态守卫）
+- server GET/POST 均校验 `trace.sessionFile === requestSessionFile`
+- `session_state` 切换时重置时间戳 + 清空面板 DOM
+
+**修改文件**：
+| 文件 | 改动 |
+|------|------|
+| `extensions/pa-observe/index.ts` | +6 行：sessionFile/sessionId 捕获与写入 |
+| `wgnr-pi/server.js` | ~40 行重写：sessionFile 过滤 + POST 守卫 + 日志 |
+| `wgnr-pi/public/index.html` | +10 行：sessionFile 参数 + 竞态守卫 + 面板清空 |
 
 ### 功能
 

@@ -35,7 +35,7 @@ npm install -g electron
 | pa-files | ~176 行 | 工作区文件浏览器，`/files` `/preview` `/workspace` |
 | pa-budget | ~104 行 | API 预算预警，`/budget` |
 | pa-mio | ~263 行 | 澪号 Harness 角色控制系统（9-Slot Prompt + 5 计数器 + 记忆） |
-| pa-observe | ~308 行 | 流水线透视——API 请求/响应/工具/计数器全链路追踪 |
+| pa-observe | ~316 行 | 流水线透视——API 请求/响应/工具/计数器全链路追踪（v0.4.1 修复 session 切换+跨会话污染） |
 
 ## 快捷键
 
