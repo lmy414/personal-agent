@@ -12,560 +12,921 @@
     --pink:   #ffe0e6;
     --grad1:  #ff8fa3;
     --grad2:  #c73e5c;
-    --grad3:  #8b1e3a;
     --silver: #c4bcc0;
     --crimson:#a61b3b;
     --surface:#fff3f5;
     --card:   #fffafb;
+    --code-bg:#2d1a22;
+    --warn-bg: #fff8f0;
+    --risk-bg: #fff0f3;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
+
   body {
     font-family: "PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
-    background: linear-gradient(180deg, var(--white) 0%, var(--pink) 40%, var(--sakura) 100%);
+    background: linear-gradient(175deg, var(--white) 0%, #ffeef2 30%, #ffdfe6 70%, var(--sakura) 100%);
+    background-attachment: fixed;
     color: #3a1a1a;
-    line-height: 1.8;
+    line-height: 1.85;
     min-height: 100vh;
   }
 
-  /* ── header ── */
-  .hero {
-    text-align: center;
-    padding: 80px 20px 60px;
-    background: linear-gradient(135deg, var(--wine) 0%, var(--grad2) 40%, var(--sakura) 100%);
-    color: var(--white);
-    position: relative;
-    overflow: hidden;
-  }
-  .hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(255,183,197,.3), transparent 60%),
-                radial-gradient(circle at 80% 30%, rgba(255,224,230,.25), transparent 50%);
-  }
-  .hero h1 {
-    font-size: 3em;
-    font-weight: 800;
-    letter-spacing: 2px;
-    position: relative;
-    text-shadow: 0 2px 12px rgba(122,18,51,.4);
-  }
-  .hero .sub {
-    font-size: 1.1em;
-    color: var(--sakura);
-    margin-top: 10px;
-    position: relative;
-    letter-spacing: 3px;
-  }
-  .hero .ver {
-    display: inline-block;
-    margin-top: 16px;
-    padding: 6px 20px;
-    border-radius: 20px;
-    background: rgba(255,255,255,.18);
-    font-size: .9em;
-    color: var(--white);
-    position: relative;
-    letter-spacing: 1px;
-  }
-
-  /* ── cherry blossom petals ── */
+  /* ── petals ── */
   .petal {
     position: fixed;
-    opacity: .35;
     pointer-events: none;
     z-index: 0;
     animation: fall linear infinite;
   }
   @keyframes fall {
-    0%   { transform: translateY(-10vh) rotate(0deg); opacity: .4; }
-    80%  { opacity: .15; }
-    100% { transform: translateY(105vh) rotate(540deg); opacity: 0; }
+    0%   { transform: translateY(-8vh) rotate(0deg) scale(1); opacity: .45; }
+    60%  { opacity: .18; }
+    100% { transform: translateY(106vh) rotate(520deg) scale(.6); opacity: 0; }
+  }
+
+  /* ── hero ── */
+  .hero {
+    text-align: center;
+    padding: 90px 20px 70px;
+    background: linear-gradient(160deg, #6e0d28 0%, var(--wine) 25%, var(--grad2) 55%, #e8768e 100%);
+    color: var(--white);
+    position: relative;
+    overflow: hidden;
+    clip-path: ellipse(120% 100% at 50% 0%);
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 18% 40%, rgba(255,183,197,.35), transparent 55%),
+      radial-gradient(circle at 82% 25%, rgba(255,224,230,.28), transparent 45%),
+      radial-gradient(circle at 50% 70%, rgba(255,143,163,.18), transparent 50%);
+  }
+  .hero h1 {
+    font-size: 3.2em;
+    font-weight: 850;
+    letter-spacing: 3px;
+    position: relative;
+    text-shadow: 0 3px 18px rgba(80,10,25,.5);
+  }
+  .hero .sub {
+    font-size: 1.1em;
+    color: #ffccd5;
+    margin-top: 10px;
+    position: relative;
+    letter-spacing: 4px;
+    font-weight: 300;
+  }
+  .hero .ver {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 7px 22px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.15);
+    backdrop-filter: blur(4px);
+    font-size: .88em;
+    color: var(--white);
+    position: relative;
+    letter-spacing: 1.5px;
+    border: 1px solid rgba(255,255,255,.18);
+  }
+
+  /* ── nav ── */
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(255,250,251,.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #fccdd6;
+    padding: 10px 24px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: .85em;
+  }
+  .toc a {
+    color: var(--crimson);
+    text-decoration: none;
+    padding: 5px 14px;
+    border-radius: 14px;
+    transition: all .18s;
+    white-space: nowrap;
+  }
+  .toc a:hover,
+  .toc a:focus {
+    background: var(--sakura);
+    color: var(--wine);
+    outline: none;
   }
 
   /* ── container ── */
   .container {
-    max-width: 880px;
+    max-width: 920px;
     margin: 0 auto;
-    padding: 0 24px 80px;
+    padding: 0 28px 100px;
     position: relative;
     z-index: 1;
   }
 
-  /* ── section ── */
-  section {
-    margin-top: 48px;
-  }
-  .section-title {
-    font-size: 1.5em;
-    font-weight: 700;
-    color: var(--wine);
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--sakura);
+  /* ── section heading ── */
+  section { margin-top: 56px; }
+  .sec-hd {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 2.5px solid var(--sakura);
+    margin-bottom: 24px;
   }
-  .section-title .icon {
-    width: 32px; height: 32px;
-    border-radius: 8px;
+  .sec-hd .ico {
+    width: 40px; height: 40px;
+    border-radius: 10px;
     background: linear-gradient(135deg, var(--sakura), var(--grad1));
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
+    font-size: 19px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 12px rgba(255,143,163,.35);
+  }
+  .sec-hd h2 {
+    font-size: 1.55em;
+    font-weight: 750;
+    color: var(--wine);
+    letter-spacing: .5px;
   }
 
   /* ── card ── */
   .card {
     background: var(--card);
     border: 1px solid #fdd0d8;
-    border-radius: 16px;
-    padding: 28px;
-    margin-top: 20px;
-    box-shadow: 0 4px 20px rgba(200,100,120,.08);
+    border-radius: 18px;
+    padding: 30px;
+    margin-top: 18px;
+    box-shadow: 0 3px 18px rgba(200,100,120,.07);
     transition: box-shadow .2s;
   }
-  .card:hover { box-shadow: 0 6px 28px rgba(180,80,100,.14); }
+  .card:hover { box-shadow: 0 5px 26px rgba(180,80,100,.12); }
   .card h3 {
     color: var(--crimson);
-    font-size: 1.1em;
-    margin-bottom: 14px;
+    font-size: 1.12em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .card p { margin: 6px 0; }
+  .card p,
+  .card li { margin: 7px 0; }
+  .card ul,
+  .card ol { padding-left: 22px; }
 
-  /* ── architecture diagram ── */
-  .arch {
-    background: var(--surface);
-    border: 1px solid #fccdd6;
+  /* ── code / pre ── */
+  :not(pre) > code {
+    background: #fce4ea;
+    color: var(--crimson);
+    padding: 2px 9px;
+    border-radius: 5px;
+    font-family: "SF Mono","Fira Code","Cascadia Code","Consolas",monospace;
+    font-size: .88em;
+    font-weight: 500;
+  }
+  pre {
+    background: var(--code-bg);
+    color: #f5d5e0;
+    border-radius: 14px;
+    padding: 24px 26px;
+    margin: 16px 0;
+    font-family: "SF Mono","Fira Code","Cascadia Code","Consolas",monospace;
+    font-size: .84em;
+    line-height: 1.75;
+    overflow-x: auto;
+    border: 1px solid #3d242e;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  pre .kw  { color: #f0a0c0; font-weight: 600; }
+  pre .str { color: #f5c6d0; }
+  pre .cmt { color: #8b6a78; font-style: italic; }
+  pre .fn  { color: #e8b4c8; }
+  pre .num { color: #e890a8; }
+  pre .op  { color: #c8a0b0; }
+  pre .box { color: #d4a0b5; }
+
+  /* ── ASCII diagram ── */
+  .diagram {
+    background: linear-gradient(135deg, #fef5f7, #fff0f3);
+    border: 1.5px dashed #f0c0cd;
     border-radius: 16px;
-    padding: 24px;
-    margin-top: 20px;
+    padding: 22px 24px;
+    margin: 18px 0;
     font-family: "SF Mono","Fira Code","Cascadia Code",monospace;
-    font-size: .85em;
-    line-height: 1.7;
+    font-size: .78em;
+    line-height: 1.65;
     white-space: pre;
     overflow-x: auto;
     color: #5a2a3a;
   }
 
   /* ── table ── */
+  .tbl-wrap { overflow-x: auto; margin: 14px 0; }
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 16px;
-    font-size: .93em;
+    font-size: .92em;
   }
   th {
-    background: linear-gradient(135deg, var(--sakura), var(--grad1));
+    background: linear-gradient(135deg, #fdd8e0, #ffc8d5);
     color: var(--wine);
-    padding: 12px 14px;
+    padding: 13px 15px;
     text-align: left;
-    font-weight: 700;
+    font-weight: 750;
+    font-size: .88em;
+    letter-spacing: .5px;
+    white-space: nowrap;
   }
   td {
-    padding: 10px 14px;
-    border-bottom: 1px solid #fdd0d8;
+    padding: 11px 15px;
+    border-bottom: 1px solid #fcdde4;
+    vertical-align: top;
   }
-  tr:nth-child(even) td { background: var(--surface); }
-
-  /* ── code inline ── */
-  code {
-    background: var(--pink);
-    padding: 2px 8px;
-    border-radius: 5px;
-    font-family: "SF Mono","Fira Code",monospace;
-    font-size: .9em;
-  }
+  tr:nth-child(even) td { background: #fff8f9; }
 
   /* ── badge ── */
   .badge {
     display: inline-block;
-    padding: 3px 12px;
-    border-radius: 12px;
-    font-size: .8em;
-    font-weight: 700;
+    padding: 3px 11px;
+    border-radius: 11px;
+    font-size: .78em;
+    font-weight: 750;
     letter-spacing: .5px;
+    white-space: nowrap;
   }
-  .badge-wine  { background: var(--wine);  color: var(--white); }
-  .badge-sakura{ background: var(--sakura);color: var(--wine); }
-  .badge-silver{ background: var(--silver);color: var(--wine); }
-
-  /* ── flow steps ── */
-  .flow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 18px;
-  }
-  .flow-step {
-    flex: 1; min-width: 140px;
-    background: var(--surface);
-    border: 1px solid #fccdd6;
-    border-radius: 14px;
-    padding: 18px 14px;
-    text-align: center;
-    position: relative;
-  }
-  .flow-step .num {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--sakura), var(--grad1));
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: .8em; font-weight: 700; color: var(--wine);
-    margin-bottom: 8px;
-  }
-  .flow-arrow {
-    display: flex; align-items: center;
-    font-size: 1.3em; color: var(--sakura);
-    flex-shrink: 0;
-  }
+  .b-wine  { background: var(--wine);  color: var(--white); }
+  .b-pink  { background: var(--sakura);color: var(--wine); }
+  .b-silv  { background: var(--silver);color: var(--wine); }
+  .b-risk  { background: #ffe0e6; color: var(--crimson); border: 1px solid #ffb7c5; }
+  .b-ok    { background: #e0f0e0; color: #3a6a3a; }
+  .b-warn  { background: #fff3e0; color: #8a5a2a; }
 
   /* ── callout ── */
   .callout {
     border-left: 4px solid var(--grad1);
-    background: var(--surface);
+    background: #fff5f7;
     border-radius: 0 10px 10px 0;
-    padding: 14px 18px;
-    margin-top: 14px;
-    font-size: .93em;
+    padding: 15px 20px;
+    margin-top: 16px;
+    font-size: .92em;
     color: var(--crimson);
+  }
+
+  /* ── pitfall card ── */
+  .pit {
+    background: var(--card);
+    border: 1px solid #fdd0d8;
+    border-left: 5px solid var(--grad1);
+    border-radius: 0 16px 16px 0;
+    padding: 24px 28px;
+    margin-top: 14px;
+    position: relative;
+  }
+  .pit .num {
+    position: absolute;
+    top: -12px; left: -14px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--wine);
+    color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78em; font-weight: 800;
+  }
+  .pit h4 {
+    color: var(--crimson);
+    font-size: .98em;
+    margin-bottom: 8px;
+  }
+  .pit .risk { font-size: .82em; margin-top: 6px; }
+
+  /* ── phase card ── */
+  .phase {
+    background: var(--card);
+    border: 1px solid #fdd0d8;
+    border-radius: 16px;
+    padding: 26px 28px;
+    margin-top: 14px;
+    border-top: 4px solid var(--sakura);
+  }
+  .phase h4 {
+    font-size: 1em;
+    color: var(--crimson);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .phase .checklist { list-style: none; padding: 0; }
+  .phase .checklist li {
+    padding: 7px 0 7px 24px;
+    position: relative;
+    font-size: .9em;
+  }
+  .phase .checklist li::before {
+    content: "♡";
+    position: absolute;
+    left: 0;
+    color: var(--sakura);
+    font-size: .7em;
+    top: 10px;
+  }
+
+  /* ── flow ── */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+    align-items: stretch;
+  }
+  .flow-step {
+    flex: 1; min-width: 130px;
+    background: var(--surface);
+    border: 1px solid #fccdd6;
+    border-radius: 14px;
+    padding: 16px 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: .85em;
+    gap: 6px;
+  }
+  .flow-step .num {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sakura), var(--grad1));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .82em; font-weight: 750; color: var(--wine);
+  }
+  .flow-arrow {
+    display: flex; align-items: center;
+    font-size: 1.2em; color: #e8a0b0;
+    flex-shrink: 0;
+    font-weight: 200;
+  }
+
+  /* ── warning block ── */
+  .warn-block {
+    background: #fff8f0;
+    border: 1px solid #f0d0b0;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-top: 14px;
+    font-size: .9em;
+  }
+  .warn-block h5 {
+    color: #b86a20;
+    margin-bottom: 8px;
+    font-size: .88em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
 
   /* ── footer ── */
   footer {
     text-align: center;
-    padding: 40px 20px;
+    padding: 50px 20px 36px;
     color: var(--silver);
     font-size: .85em;
   }
+  footer .heart {
+    color: var(--sakura);
+    font-size: 1.3em;
+  }
 
   /* ── responsive ── */
-  @media (max-width: 640px) {
+  @media (max-width: 700px) {
     .hero h1 { font-size: 2em; }
+    .hero { clip-path: ellipse(150% 100% at 50% 0%); padding: 60px 16px 40px; }
     .flow { flex-direction: column; }
     .flow-arrow { transform: rotate(90deg); }
+    .toc { font-size: .78em; gap: 2px; }
+    .toc a { padding: 4px 8px; }
+    .container { padding: 0 14px 80px; }
+    pre { font-size: .72em; padding: 16px; }
+    .diagram { font-size: .66em; padding: 14px; }
   }
 </style>
 </head>
 <body>
 
-<!-- petals -->
 <script>
-const chars = ['🌸','✿','♡','｡','•'];
-for (let i=0;i<18;i++) {
-  const d = document.createElement('div');
-  d.className='petal';
-  d.textContent = chars[i % chars.length];
-  d.style.left = Math.random()*100 + '%';
-  d.style.fontSize = (10 + Math.random()*18) + 'px';
-  d.style.animationDuration = (8 + Math.random()*14) + 's';
-  d.style.animationDelay = Math.random()*12 + 's';
-  document.body.appendChild(d);
-}
+(function(){
+  var pchars = ['🌸','✿','♡','｡','•','❀'];
+  for (var i=0;i<22;i++) {
+    var d=document.createElement('div');
+    d.className='petal';
+    d.textContent = pchars[i % pchars.length];
+    d.style.left = (Math.random()*96 + 2) + '%';
+    d.style.fontSize = (9 + Math.random()*20) + 'px';
+    d.style.animationDuration = (9 + Math.random()*16) + 's';
+    d.style.animationDelay = Math.random()*14 + 's';
+    document.body.appendChild(d);
+  }
+})();
 </script>
 
-<!-- ── Hero ── -->
+<!-- ════ Hero ════ -->
 <header class="hero">
   <h1>🌸 澪号 · 记忆系统</h1>
-  <div class="sub">M I O  ·  M E M O R Y  ·  S Y S T E M</div>
-  <div class="ver">v1.0 · 设计文档 · 2026-05-28</div>
+  <div class="sub">M I O  &nbsp;·&nbsp;  M E M O R Y  &nbsp;·&nbsp;  S Y S T E M</div>
+  <div class="ver">v1.0 设计文档 · 2026-05-28</div>
 </header>
+
+<!-- ════ TOC ════ -->
+<nav class="toc">
+  <a href="#s1">概述</a>
+  <a href="#s2">三层架构</a>
+  <a href="#s3">系统架构</a>
+  <a href="#s4">记忆Agent</a>
+  <a href="#s5">校验</a>
+  <a href="#s6">文件结构</a>
+  <a href="#s7">检索</a>
+  <a href="#s8">规则</a>
+  <a href="#s9">坑点</a>
+  <a href="#s10">执行方案</a>
+  <a href="#s11">原则</a>
+</nav>
 
 <div class="container">
 
-<!-- ── Overview ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">🌸</span> 设计概述
-  </div>
+<!-- ════ S1: 概述 ════ -->
+<section id="s1">
+  <div class="sec-hd"><span class="ico">🌸</span><h2>设计概述</h2></div>
   <div class="card">
     <p>记忆系统采用 <strong>多智能体架构</strong>，将记忆管理从对话 Agent 中完全解耦。</p>
-    <p>对话 Agent（澪号）专注角色扮演与对话，不感知记忆的存储结构和文件组织。</p>
-    <p>记忆 Agent 是一个独立 Pi session，<span class="badge badge-wine">只在需要时启动</span>，完成任务后立即清除上下文关机。</p>
+    <table style="margin-top:14px">
+      <tr><th style="width:120px">Agent</th><th>职责</th><th>运行方式</th></tr>
+      <tr><td><strong>对话 Agent</strong><br><small>(pa-mio · 澪号)</small></td><td>角色扮演与对话，不感知记忆的存储结构和文件组织。只在需要时<strong>自主决定</strong>检索哪些记忆文件。</td><td>常驻，随用户对话运行</td></tr>
+      <tr><td><strong>记忆 Agent</strong></td><td>对话压缩、摘要生成、格式整理、索引维护。只读写文件，无其他工具。</td><td><span class="badge b-wine">按需启动</span>，用完即毁</td></tr>
+    </table>
   </div>
 </section>
 
-<!-- ── Three Layers ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">📚</span> 三层记忆架构
-  </div>
+<!-- ════ S2: 三层架构 ════ -->
+<section id="s2">
+  <div class="sec-hd"><span class="ico">📚</span><h2>三层记忆架构</h2></div>
+  <div class="tbl-wrap">
   <table>
+    <tr><th style="width:90px">层级</th><th style="width:110px">触发条件</th><th>存储格式</th><th style="width:100px">生命周期</th><th>访问范围</th></tr>
     <tr>
-      <th>层级</th><th>触发</th><th>格式</th><th>生命周期</th><th>访问范围</th>
-    </tr>
-    <tr>
-      <td><span class="badge badge-sakura">规则记忆</span></td>
-      <td>每次对话拼入 prompt</td>
+      <td><span class="badge b-pink">规则记忆</span></td>
+      <td>每次对话<br>无条件拼入</td>
       <td><code>rules/rules.md</code></td>
-      <td>永久（手动编辑）</td>
+      <td>永久<br><small>手动编辑</small></td>
       <td>所有会话</td>
     </tr>
     <tr>
-      <td><span class="badge badge-sakura">短期记忆</span></td>
-      <td>上下文超阈值 → compaction</td>
-      <td><code>short-term/&lt;id&gt;-N.md</code></td>
-      <td>会话内，归档后删除</td>
-      <td>当前会话（代码约束）</td>
+      <td><span class="badge b-pink">短期记忆</span></td>
+      <td>上下文超阈值<br>→ compaction</td>
+      <td><code>short-term/&lt;id&gt;-N.md</code><br><small>同一会话可多个</small></td>
+      <td>会话内<br><small>归档后删除</small></td>
+      <td>当前会话<br><span class="badge b-risk">代码约束</span></td>
     </tr>
     <tr>
-      <td><span class="badge badge-sakura">长期记忆</span></td>
-      <td>用户 UI 归档会话</td>
-      <td><code>long-term/&lt;id&gt;.md</code> + <code>index.json</code></td>
+      <td><span class="badge b-pink">长期记忆</span></td>
+      <td>用户 UI<br>归档会话</td>
+      <td><code>long-term/&lt;id&gt;.md</code><br>+ <code>index.json</code></td>
       <td>永久</td>
       <td>所有会话</td>
     </tr>
   </table>
+  </div>
 </section>
 
-<!-- ── Architecture ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">🏗</span> 系统架构
-  </div>
-  <div class="arch">
-╔════════════════════════════════════════════════════════════╗
-║              主对话 Agent (pa-mio · 澪号)                  ║
-║  9-Slot Prompt · 完全不感知记忆存储结构                     ║
-║  读取记忆时: 自主决定读 index.json → 选读相关 .md           ║
-╚══════╤══════════════════════╤═════════════════════════════╝
-       │                      │
+<!-- ════ S3: 系统架构 ════ -->
+<section id="s3">
+  <div class="sec-hd"><span class="ico">🏗</span><h2>系统架构</h2></div>
+
+  <div class="diagram">
+╔══════════════════════════════════════════════════════════════╗
+║            主对话 Agent (pa-mio · 澪号)                      ║
+║  9-Slot Prompt · 不感知记忆存储 · 自主检索                    ║
+║  读取记忆: 看 index.json → 判断 → 选读 .md                    ║
+╚═════╤════════════════════════╤═══════════════════════════════╝
+      │                        │
   上下文超阈值             用户 UI 归档
-  (compaction)            (archive button)
-       │                      │
-       ▼                      ▼
-┌──────────────────────────────────────────────────────────┐
-│                 后台任务 (不阻塞对话)                       │
-│                                                          │
-│  ┌─── 记忆 Agent (独立 Pi session, 用完即毁) ────────┐   │
-│  │                                                   │   │
-│  │  工具: read (只读) + write_memory (校验写入)       │   │
-│  │  systemPrompt: 记忆整理 + 格式要求 + 自检指令       │   │
-│  │                                                   │   │
-│  │  输入                自循环校验        输出         │   │
-│  │  ┌───────┐    ┌────────────────┐  ┌────────────┐ │   │
-│  │  │原始对话│───▶│ Python 校验     │─▶│ short-term/│ │   │
-│  │  │片段   │    │ 通过→落盘      │  │ <id>-N.md  │ │   │
-│  │  └───────┘    │ 失败→LLM修正   │  └────────────┘ │   │
-│  │               │ 3次仍败→放弃   │                 │   │
-│  │  ┌───────┐    └────────────────┘  ┌────────────┐ │   │
-│  │  │短期.md│───────────────────────▶│ long-term/ │ │   │
-│  │  │(归档) │                        │ <id>.md    │ │   │
-│  │  └───────┘                        │+index.json │ │   │
-│  │                                   └────────────┘ │   │
-│  └──────────────────────────────────────────────────┘   │
-│                                                          │
-│  归档完成:                                               │
-│  ✕ 删原会话 JSONL  ✕ 删短期.md  ✓ 保留长期+索引          │
-│  失败:                                                  │
-│  原始数据保留，通知前台，下次重试                          │
-└──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────────────────────────┐
-│  前台进度面板 (可选展开)                                   │
-│  ⏳ 记忆整理中… ██████░░ 60%                              │
-│  主对话输入不阻塞，澪号照常聊天                             │
-└──────────────────────────────────────────────────────────┘
+  (compaction 事件)       (archive button)
+      │                        │
+      ▼                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    后台任务 (不阻塞对话)                       │
+│                                                             │
+│  ┌── 记忆 Agent (独立 Pi session, 用完即毁) ────────────┐   │
+│  │                                                      │   │
+│  │  工具: read (只读) + write_memory (Python校验写入)    │   │
+│  │  systemPrompt: 记忆整理专用，含格式要求+自检指令       │   │
+│  │                                                      │   │
+│  │  输入              Python校验循环         输出         │   │
+│  │  ┌──────┐    ┌──────────────────┐  ┌──────────────┐ │   │
+│  │  │原始   │──▶│ write_memory     │─▶│ short-term/  │ │   │
+│  │  │对话   │    │ → Python 校验    │  │ <id>-N.md    │ │   │
+│  │  │片段   │    │ → 不合规→修正    │  └──────────────┘ │   │
+│  │  └──────┘    │ → 3次失败→放弃   │                    │   │
+│  │              └──────────────────┘  ┌──────────────┐ │   │
+│  │  ┌──────┐                         │ long-term/   │ │   │
+│  │  │短期   │────────────────────────▶│ <id>.md      │ │   │
+│  │  │.md   │  (归档时合并所有-*.md)   │ + index追加   │ │   │
+│  │  └──────┘                         └──────────────┘ │   │
+│  └────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ✓ 成功: 归档 → 删会话JSONL + 删短期.md + 保留长期          │
+│  ✕ 失败: 原始数据保留不删, 通知前台, 下次重试                 │
+└─────────────────────────────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────────────────────────────┐
+│  前台进度面板                                                │
+│  ⏳ 记忆整理中… ██████░░ 60%  ·  主对话不阻塞                 │
+└─────────────────────────────────────────────────────────────┘
   </div>
 </section>
 
-<!-- ── Memory Agent ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">🤖</span> 记忆 Agent 详解
-  </div>
+<!-- ════ S4: 记忆Agent详解 ════ -->
+<section id="s4">
+  <div class="sec-hd"><span class="ico">🤖</span><h2>记忆 Agent 详解</h2></div>
 
   <div class="card">
     <h3>✧ 启动与销毁</h3>
-    <p>记忆 Agent 通过 <code>ctx.newSession()</code> 创建独立 Pi session。</p>
-    <p>每次压缩/归档任务一个 session，<code>agent_end</code> 后立即结束，不留上下文。</p>
-    <p class="callout">♡ 用完即毁，下次有任务再新起。完全无状态。</p>
+    <p>通过 <code>ctx.newSession()</code> 创建独立 Pi session。每次压缩/归档一个任务对应一个 session。</p>
+    <p><code>agent_end</code> 后立即结束，不留上下文。下次有任务再新起——<strong>完全无状态</strong>。</p>
   </div>
 
   <div class="card">
     <h3>✧ 工具与权限</h3>
     <table>
-      <tr><th>工具</th><th>权限</th><th>说明</th></tr>
-      <tr><td><code>read</code></td><td>只读</td><td>读取对话片段、旧 .md 文件、index.json</td></tr>
-      <tr><td><code>write_memory</code></td><td>受控写入</td><td>传入内容 → Python 校验 → 通过才落盘。无 write 权限</td></tr>
+      <tr><th style="width:130px">工具</th><th style="width:70px">权限</th><th>说明</th></tr>
+      <tr><td><code>read</code></td><td>只读</td><td>读取对话片段、旧的 .md 文件、index.json</td></tr>
+      <tr><td><code>write_memory</code></td><td><span class="badge b-risk">受控写入</span></td><td>传入内容 → Python 校验 → 通过才落盘。<strong>Agent 没有 write 权限</strong></td></tr>
     </table>
-    <p class="callout">♡ Agent 摸不到文件系统。Python 是唯一的写入入口。</p>
+    <p class="callout">♡ Agent 摸不到文件系统。Python 是唯一的写入入口，不通过校验的内容永远不会落盘。</p>
   </div>
 
   <div class="card">
-    <h3>✧ 输入与输出</h3>
+    <h3>✧ 输入 &amp; 输出</h3>
     <table>
-      <tr><th>场景</th><th>输入</th><th>输出</th></tr>
-      <tr>
-        <td>短期压缩</td>
-        <td>当前会话原始对话片段</td>
-        <td><code>short-term/&lt;id&gt;-N.md</code></td>
-      </tr>
-      <tr>
-        <td>长期归档</td>
-        <td>全部 <code>short-term/&lt;id&gt;-*.md</code></td>
-        <td><code>long-term/&lt;id&gt;.md</code> + <code>index.json</code> 追加条目</td>
-      </tr>
+      <tr><th style="width:100px">场景</th><th>输入</th><th>输出</th></tr>
+      <tr><td>短期压缩</td><td>当前会话原始对话片段（有长度上限）</td><td><code>short-term/&lt;id&gt;-N.md</code></td></tr>
+      <tr><td>长期归档</td><td>该会话全部 <code>short-term/&lt;id&gt;-*.md</code></td><td><code>long-term/&lt;id&gt;.md</code> + 在 <code>index.json</code> 末尾追加一条</td></tr>
     </table>
   </div>
 </section>
 
-<!-- ── Validation ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">✓</span> 校验与错误处理
-  </div>
+<!-- ════ S5: 校验 ════ -->
+<section id="s5">
+  <div class="sec-hd"><span class="ico">✓</span><h2>校验 &amp; 错误处理</h2></div>
 
   <div class="card">
-    <h3>✧ write_memory 工具 — Python 校验流程</h3>
+    <h3>✧ write_memory 工具流程</h3>
     <div class="flow">
-      <div class="flow-step"><div class="num">1</div>记忆 Agent<br>生成内容</div>
+      <div class="flow-step"><div class="num">1</div>记忆 Agent<br>生成内容<br>调 write_memory</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="num">2</div>调用<br>write_memory</div>
+      <div class="flow-step"><div class="num">2</div>Python<br>schema 校验</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="num">3</div>Python<br>schema 校验</div>
+      <div class="flow-step"><div class="num">3</div>一致性<br>检查</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="num">4</div>一致性<br>校验</div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step"><div class="num">5</div>通过<br>→ 落盘</div>
+      <div class="flow-step"><div class="num">4</div><span class="b-ok" style="padding:2px 6px;border-radius:4px">通过</span><br>落盘</div>
     </div>
   </div>
 
   <div class="card">
     <h3>✧ 校验内容</h3>
     <table>
-      <tr><th>类别</th><th>检查项</th></tr>
-      <tr><td>Schema</td><td>每个 index entry 必含 <code>id</code> / <code>date</code> / <code>summary</code> / <code>file</code> / <code>tags</code> / <code>importance</code></td></tr>
-      <tr><td>格式</td><td><code>date</code> 为 ISO 格式；<code>summary</code> ≤ 50 字；<code>importance</code> 为 1-5 整数</td></tr>
-      <tr><td>一致性</td><td><code>file</code> 指向的 .md 存在且非空；<code>id</code> 不重复；旧条目未被修改</td></tr>
-      <tr><td>文件</td><td>.md 文件 >0 且 <500KB；内容可读</td></tr>
+      <tr><th style="width:80px">类别</th><th>检查项</th></tr>
+      <tr><td>Schema</td><td>每个 entry 必含 <code>id</code> / <code>date</code> / <code>summary</code> / <code>file</code> / <code>tags</code> / <code>importance</code></td></tr>
+      <tr><td>格式</td><td><code>date</code> ISO 格式；<code>summary</code> ≤ 50 字；<code>importance</code> 1-5 整数；<code>tags</code> 非空数组</td></tr>
+      <tr><td>一致性</td><td><code>file</code> 指向 .md 存在且非空；<code>id</code> 不重复；旧条目未被修改或删除</td></tr>
+      <tr><td>文件</td><td>.md 文件 > 0 字节且 < 500KB；内容可读</td></tr>
     </table>
-    <p class="callout">校验失败 → 返回具体错误原因 → 记忆 Agent 修正后重调。最多 3 次。</p>
+    <p class="callout">校验失败 → 返回<strong>具体错误原因</strong>（如 "summary 当前 62 字，超过 50 字限制"）→ 记忆 Agent 修正后重调。最多 3 次。</p>
   </div>
 
   <div class="card">
     <h3>✧ 错误分类</h3>
     <table>
-      <tr><th>类型</th><th>处理</th><th>是否消耗 3 次配额</th></tr>
-      <tr><td><span class="badge badge-sakura">格式错误</span></td><td>返回错误原因 → LLM 重写 → 重试</td><td>✓ 消耗</td></tr>
-      <tr><td><span class="badge badge-silver">基础设施</span></td><td>API 超时/429、磁盘满、权限… 单独重试</td><td>✗ 不消耗</td></tr>
-      <tr><td><span class="badge badge-sakura">上下文问题</span></td><td>对话过长溢出、内容不可理解</td><td>✓ 消耗</td></tr>
+      <tr><th style="width:100px">类型</th><th>处理方式</th><th style="width:80px">消耗配额</th></tr>
+      <tr><td><span class="badge b-pink">格式错误</span></td><td>Python 返回具体原因 → LLM 修正 → 重写</td><td><span class="badge b-risk">✓ 消耗</span></td></tr>
+      <tr><td><span class="badge b-silv">基础设施</span></td><td>API 超时 / 429 / 5xx、磁盘满、权限拒绝 → 单独重试</td><td><span class="badge b-ok">✗ 不消耗</span></td></tr>
+      <tr><td><span class="badge b-pink">上下文问题</span></td><td>对话过长溢出、内容不可理解 → 大概率连败</td><td><span class="badge b-risk">✓ 消耗</span></td></tr>
     </table>
   </div>
 
   <div class="card">
-    <h3>✧ 失败处理</h3>
+    <h3>✧ 失败策略</h3>
     <p>3 次格式校验均失败 → <strong>放弃</strong>。</p>
-    <p style="margin-left:16px">原始对话 / short-term .md <strong>保留不删</strong>。</p>
-    <p style="margin-left:16px">通知前台 "⚠ 记忆整理失败，下次归档时重试"。</p>
-    <p style="margin-left:16px;color:var(--crimson)"><strong>不使用降级策略</strong> —— 不留脏数据。</p>
+    <ul>
+      <li>原始对话 / short-term .md <strong>保留不删</strong></li>
+      <li>通知前台 <span class="badge b-warn">⚠ 记忆整理失败，下次归档时重试</span></li>
+      <li><strong>不使用降级策略</strong> —— 不留脏数据</li>
+      <li>本次残留的临时文件（如有）一并清理</li>
+    </ul>
   </div>
 </section>
 
-<!-- ── File Structure ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">📁</span> 文件结构
-  </div>
-  <div class="arch">
-~/.personal-agent/memory/
-├── rules/
-│   └── rules.md              # 规则记忆（手动编辑，永久）
-├── short-term/
-│   ├── &lt;id&gt;-1.md          # 第 1 次压缩（前 50 条消息）
-│   ├── &lt;id&gt;-2.md          # 第 2 次压缩（50-100 条消息）
-│   └── &lt;id&gt;-3.md          # 第 3 次压缩…
-└── long-term/
-    ├── index.json             # 索引（结构化、追加、不修改旧条目）
-    ├── 019e64cf.md            # 每次归档一个独立文件
-    ├── 019e64ed.md
-    └── 019e6a36.md
-  </div>
-</section>
+<!-- ════ S6: 文件结构 ════ -->
+<section id="s6">
+  <div class="sec-hd"><span class="ico">📁</span><h2>文件结构 &amp; index.json</h2></div>
 
-<!-- ── index.json Schema ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">📋</span> index.json Schema
+  <div class="card">
+    <h3>✧ 目录结构</h3>
+    <pre>~/.personal-agent/memory/
+├── <span class="kw">rules/</span>
+│   └── <span class="str">rules.md</span>              <span class="cmt">← 规则记忆（手动编辑，永久）</span>
+├── <span class="kw">short-term/</span>
+│   ├── <span class="str">&lt;id&gt;-1.md</span>          <span class="cmt">← 第 1 次 compaction（前半段对话）</span>
+│   ├── <span class="str">&lt;id&gt;-2.md</span>          <span class="cmt">← 第 2 次 compaction（后半段对话）</span>
+│   └── <span class="str">&lt;id&gt;-3.md</span>          <span class="cmt">← 同一会话可触发多次</span>
+└── <span class="kw">long-term/</span>
+    ├── <span class="str">index.json</span>           <span class="cmt">← 索引（结构化，只追加不修改）</span>
+    ├── <span class="str">019e64cf.md</span>          <span class="cmt">← 每次归档一个独立文件</span>
+    ├── <span class="str">019e64ed.md</span>
+    └── <span class="str">019e6a36.md</span></pre>
   </div>
-  <div class="arch">
-{
-  "version": 1,
-  "updated": "2026-05-28T16:30:00Z",
-  "entries": [
+
+  <div class="card">
+    <h3>✧ index.json Schema</h3>
+    <pre>{
+  <span class="str">"version"</span>: <span class="num">1</span>,
+  <span class="str">"updated"</span>: <span class="str">"2026-05-28T16:30:00Z"</span>,
+  <span class="str">"entries"</span>: [
     {
-      "id": "019e6a36-ebd9-712d-9a9e-b000e9e70861",
-      "date": "2026-05-28",
-      "summary": "讨论记忆层三层架构：规则/长期/短期",
-      "file": "019e6a36-ebd9-712d-9a9e-b000e9e70861.md",
-      "tags": ["architecture", "memory"],
-      "importance": 4
+      <span class="str">"id"</span>:       <span class="str">"019e6a36-ebd9-..."</span>,  <span class="cmt">← 会话 UUID</span>
+      <span class="str">"date"</span>:     <span class="str">"2026-05-28"</span>,         <span class="cmt">← ISO 日期</span>
+      <span class="str">"summary"</span>:  <span class="str">"讨论记忆层三层架构…"</span>,<span class="cmt">← ≤ 50 字</span>
+      <span class="str">"file"</span>:     <span class="str">"019e6a36.md"</span>,         <span class="cmt">← 指向 long-term/ 下文件</span>
+      <span class="str">"tags"</span>:     [<span class="str">"architecture"</span>, <span class="str">"memory"</span>],
+      <span class="str">"importance"</span>: <span class="num">4</span>                     <span class="cmt">← 1-5 整数</span>
     }
   ]
-}
-
-写操作: 只追加 entries.push()，不修改旧条目。
-校验: id 不重复、file 指向存在、summary ≤ 50 字。
+}</pre>
+    <p><strong>写规则</strong>：只追加 <code>entries.push()</code>，不修改不删除旧条目。每次归档产生一个独立 .md 文件。</p>
   </div>
 </section>
 
-<!-- ── Memory Retrieval ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">🔍</span> 记忆检索
-  </div>
+<!-- ════ S7: 检索 ════ -->
+<section id="s7">
+  <div class="sec-hd"><span class="ico">🔍</span><h2>记忆检索</h2></div>
 
   <div class="card">
-    <h3>✧ 检索方式：大模型自主决策</h3>
-    <p>pa-mio 不写关键词匹配逻辑。澪号的 systemPrompt 中包含以下指令：</p>
-    <div class="arch" style="white-space:normal">
-<b>你有长期记忆，存放在 ~/.personal-agent/memory/long-term/</b>
+    <h3>✧ 大模型自主决策检索</h3>
+    <p>pa-mio <strong>不写关键词匹配逻辑</strong>。检索权交给澪号自己判断。</p>
+    <p>澪号的 systemPrompt 中包含：</p>
+    <pre><span class="kw">你有长期记忆</span>，存放在 ~/.personal-agent/memory/long-term/
 
-检索方式：
-  1. 先读 index.json 了解有哪些记忆条目及其摘要
-  2. 根据当前对话内容判断需要读哪些 .md
-  3. 不需要全部读完，只读相关的那几个
+检索方法：
+  <span class="num">1.</span> 先读 <span class="str">index.json</span> 浏览所有条目及其摘要
+  <span class="num">2.</span> 根据当前对话判断需要读哪些 .md
+  <span class="num">3.</span> <span class="kw">不需要全部读完</span>，只读相关的那几个
 
-<b>你有短期记忆，存放在 short-term/&lt;当前会话id&gt;-*.md</b>
-  - 可能有多个文件（-1、-2、-3…），按序号读
-  - 只能读自己当前会话的短期记忆
-  - 需要其他会话的信息 → 查长期记忆
-    </div>
-    <p class="callout">♡ 代码层拦截 <code>short-term/</code> 跨会话读取 —— <code>tool_call</code> 事件中检查路径不含当前 session ID 即 block。</p>
+<span class="kw">你有短期记忆</span>，存放在 short-term/&lt;当前会话id&gt;-*.md
+  · 可能有多个文件（-1、-2、-3…），按序号读
+  · <span class="kw">只能读自己当前会话</span>的短期记忆
+  · 需要其他会话的信息 → 查长期记忆</pre>
+    <p class="callout">♡ <strong>代码层拦截</strong>跨会话短期记忆读取 —— <code>tool_call</code> 事件中检查 read 路径，short-term/ 且不含当前 session ID → 直接 block。</p>
   </div>
 </section>
 
-<!-- ── Rule Memory ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">📌</span> 规则记忆
-  </div>
+<!-- ════ S8: 规则记忆 ════ -->
+<section id="s8">
+  <div class="sec-hd"><span class="ico">📌</span><h2>规则记忆</h2></div>
+
   <div class="card">
-    <p>规则记忆是 <code>rules/rules.md</code>，手动编辑，每次对话无条件拼入 prompt。</p>
-    <p>用于存放：</p>
+    <p><code>rules/rules.md</code>，用户手动编辑，每次对话<strong>无条件</strong>拼入 prompt。</p>
+    <p>典型用途：</p>
     <table>
-      <tr><td>♡</td><td>特定行为规则（如"晚上 10 点后说话小声一点"）</td></tr>
-      <tr><td>♡</td><td>定时事项（如"每周五提醒我清缓存"）</td></tr>
-      <tr><td>♡</td><td>永久性的用户偏好</td></tr>
+      <tr><td style="width:24px">♡</td><td>行为规则（如"晚上 10 点后说话小声一点"）</td></tr>
+      <tr><td>♡</td><td>定时/周期事项（如"每周末提醒我备份"）</td></tr>
+      <tr><td>♡</td><td>永久用户偏好（如"回答问题默认中文"）</td></tr>
     </table>
-    <p>拼入位置：Slot 0 之后、身份层之前，优先级高于身份默认行为。</p>
+    <p>拼入位置：<strong>Slot 0 之后、身份层（Slot 1）之前</strong>——优先级高于身份默认行为。</p>
   </div>
 </section>
 
-<!-- ── Summary ── -->
-<section>
-  <div class="section-title">
-    <span class="icon">♡</span> 设计原则
+<!-- ════ S9: 坑点与风险 ════ -->
+<section id="s9">
+  <div class="sec-hd"><span class="ico">⚠</span><h2>潜在坑点 &amp; 风险清单</h2></div>
+  <p style="color:var(--silver); font-size:.9em; margin-bottom:8px">
+    以下是实际实现中大概率会遇到的问题。每个坑都标了严重程度和应对方向。
+  </p>
+
+  <div class="pit">
+    <div class="num">1</div>
+    <h4>Pi newSession 的 session 替换生命周期陷阱</h4>
+    <p><code>ctx.newSession()</code> 触发 <code>session_shutdown</code> → 当前扩展实例被销毁 → 新 session 绑定新实例。</p>
+    <p><code>withSession</code> 回调运行在旧闭包中，但旧 <code>pi</code> / 旧 <code>ctx</code> 已失效。<strong>在回调中使用旧对象会抛异常</strong>。</p>
+    <p style="margin-top:8px">→ 只使用 <code>withSession</code> 参数提供的 <code>ctx</code>。在 <code>setup</code> 阶段注册记忆 Agent 的工具。</p>
+    <div class="risk"><span class="badge b-risk">严重</span> 用错 ctx 直接 crash。所有 session 替换操作必须严格遵循 Pi 文档的生命周期约束。</div>
   </div>
+
+  <div class="pit">
+    <div class="num">2</div>
+    <h4>compaction 时机 —— 记忆 Agent 拿到的是截断后的对话</h4>
+    <p>compaction 事件的语义是"即将压缩"——此时 Pi 已计算好 cut point，准备丢弃早期消息。</p>
+    <p>如果在 <code>session_before_compact</code> 中直接取 <code>ctx.sessionManager.getBranch()</code>，可能拿到的是已经被标记待裁剪的上下文。</p>
+    <p style="margin-top:8px">→ 需要在 compaction 触发<strong>之前</strong>（如 <code>agent_end</code> 中检查上下文长度）就抓取完整对话 snapshot。</p>
+    <div class="risk"><span class="badge b-warn">中等</span> 时序问题可能导致记忆 Agent 拿到残缺对话。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">3</div>
+    <h4>write_memory 工具 —— Python 进程调用</h4>
+    <p>Pi custom tool 的 <code>execute</code> 中通过 <code>pi.exec()</code> 调 Python 校验脚本。需要考虑：</p>
+    <ul>
+      <li>Python 进程超时（卡死）→ 设置 timeout 并视为基础设施错误</li>
+      <li>Python 返回非 JSON → 需要 try-catch 包裹，返回明确错误给 LLM</li>
+      <li>脚本路径跨平台 → 使用绝对路径或相对于 <code>ctx.cwd</code></li>
+      <li>Python 环境 → 确认 <code>python</code> 或 <code>python3</code> 在 PATH 中</li>
+    </ul>
+    <div class="risk"><span class="badge b-warn">中等</span> 需要写健壮的 wrapper，处理各种 Python 异常情况。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">4</div>
+    <h4>index.json 并发写入冲突</h4>
+    <p>虽然记忆 Agent 是串行队列（一次只跑一个），但手动归档和自动 compaction 可能在极短时间内先后触发。</p>
+    <p>→ 使用简单的文件锁（如 <code>index.lock</code> 标记文件），写入前检查锁，写入后释放。</p>
+    <div class="risk"><span class="badge b-warn">中等</span> 并发概率低但后果严重（索引损坏）。加锁即可消除。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">5</div>
+    <h4>跨会话短期记忆隔离 —— 代码约束的可靠性</h4>
+    <p>在 <code>tool_call</code> 事件中拦截 <code>read</code> 工具，检查路径是否含当前 session ID。</p>
+    <p>但 <code>tool_call</code> 事件中的 <code>ctx.sessionManager</code> 在并行工具模式下不保证包含 sibling 工具结果。不过 read 是单次调用，不受此影响。</p>
+    <p>→ 核心逻辑：</p>
+    <pre><span class="kw">if</span> (path.<span class="fn">includes</span>(<span class="str">"short-term/"</span>)
+    <span class="kw">&&</span> !path.<span class="fn">includes</span>(currentSessionId)) {
+  <span class="kw">return</span> { <span class="str">block</span>: <span class="num">true</span>, <span class="str">reason</span>: <span class="str">"跨会话短期记忆禁止读取"</span> };
+}</pre>
+    <div class="risk"><span class="badge b-ok">低风险</span> 逻辑简单，不容易出错。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">6</div>
+    <h4>记忆 Agent 的 systemPrompt 设计 —— 太松 vs 太紧</h4>
+    <p>prompt 太松 → LLM 输出格式随意，校验通过率低。</p>
+    <p>prompt 太紧 → LLM 逐字抄录原对话，总结质量差。</p>
+    <p>→ 需要在 prompt 中给出：</p>
+    <ul>
+      <li><strong>正确示例</strong>（期望的 summary 长度和风格）</li>
+      <li><strong>反例</strong>（"不要这样写…"）</li>
+      <li><strong>字段约束</strong>（每个字段的具体要求）</li>
+      <li><strong>自检步骤</strong>（写完后的自查清单）</li>
+    </ul>
+    <div class="risk"><span class="badge b-warn">中等</span> 需要迭代调试 prompt。建议先写一版，跑 5-10 个真实对话测试校验通过率。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">7</div>
+    <h4>归档后的清理 —— 删除失败导致脏数据</h4>
+    <p>归档成功后需要删除：原会话 JSONL、所有 short-term/&lt;id&gt;-*.md。</p>
+    <p>如果删除失败（文件被占用、权限不足），会出现：</p>
+    <ul>
+      <li>会话列表中残留已归档会话</li>
+      <li>短期记忆文件残留但对应的会话已不存在</li>
+    </ul>
+    <p>→ 删除前先确认新文件写入成功 → 删旧文件 → 删失败时记录日志 + 通知用户手动清理。</p>
+    <div class="risk"><span class="badge b-ok">低风险</span> 写入先成功再删，失败有日志。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">8</div>
+    <h4>记忆 Agent 自身上下文溢出</h4>
+    <p>超长对话（数百条消息）传入记忆 Agent 时，Agent 自己的 context window 可能装不下。</p>
+    <p>→ 短期压缩时传入的对话片段需要<strong>长度上限</strong>（如最近 200 条或 ~50K tokens）。</p>
+    <p>长期归档时，如果短期 .md 文件很多（>5 个），分批传给记忆 Agent。</p>
+    <div class="risk"><span class="badge b-warn">中等</span> 需要设计分段策略。建议写入 systemPrompt："如果输入过长，先总结前半段，再总结后半段，最后合并"。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">9</div>
+    <h4>旧记忆系统迁移 —— mio_memories.json</h4>
+    <p>当前 pa-mio 使用 <code>~/.personal-agent/mio_memories.json</code>（JSON 数组，CJK 关键词检索）。</p>
+    <p>迁移到新系统需要：</p>
+    <ul>
+      <li>一次性脚本：读取 mio_memories.json → 每条生成一个 <code>long-term/migrated-N.md</code></li>
+      <li>index.json 中追加迁移条目（标记 <code>tags: ["migrated"]</code>）</li>
+      <li>pa-mio 删除 <code>searchMemories()</code> 等旧检索逻辑</li>
+      <li>保留 mio_memories.json 作为备份（不删除，只不再使用）</li>
+    </ul>
+    <div class="risk"><span class="badge b-ok">低风险</span> 但需要脚本 + 测试。迁移后旧数据可保留备份。</div>
+  </div>
+
+  <div class="pit">
+    <div class="num">10</div>
+    <h4>校验错误信息的质量决定重试成功率</h4>
+    <p>如果 Python 返回 "validation failed"，LLM 不知道哪里错了。</p>
+    <p>→ 错误信息必须是<strong>可操作的</strong>：</p>
+    <table>
+      <tr><th>差 ❌</th><th>好 ✓</th></tr>
+      <tr><td><code>summary too long</code></td><td><code>summary 当前 62 字（超过 50 字限制），请精简 12 字</code></td></tr>
+      <tr><td><code>invalid date</code></td><td><code>date 格式错误：'5月28日' 应为 ISO 格式 '2026-05-28'</code></td></tr>
+      <tr><td><code>missing field</code></td><td><code>缺少必填字段 'importance'（应为 1-5 的整数）</code></td></tr>
+    </table>
+    <div class="risk"><span class="badge b-warn">中等</span> 错误信息质量直接影响 3 次重试成功率。需要认真设计。</div>
+  </div>
+
+</section>
+
+<!-- ════ S10: 执行方案 ════ -->
+<section id="s10">
+  <div class="sec-hd"><span class="ico">🚀</span><h2>执行方案</h2></div>
+  <p style="color:var(--silver); font-size:.9em; margin-bottom:8px">
+    分 5 个阶段，每个阶段独立可测，不互相阻塞。
+  </p>
+
+  <div class="phase">
+    <h4><span class="badge b-wine">Phase 1</span> 基础设施 —— 目录 + Python 校验 + write_memory 工具</h4>
+    <ul class="checklist">
+      <li>创建 <code>~/.personal-agent/memory/{rules,short-term,long-term}/</code> 目录</li>
+      <li>编写 <code>validate_memory.py</code>：接收 content JSON → 按 schema 逐字段检查 → 返回 <code>{ok:true}</code> 或 <code>{error:"具体原因"}</code></li>
+      <li>在 pa-mio 中注册 <code>write_memory</code> 自定义工具：
+        <br>—— execute 中调 <code>pi.exec("python validate_memory.py", ...)</code>
+        <br>—— stdin 传入内容，stdout 读回校验结果
+        <br>—— 校验通过才写文件，不通过返回 error 给 LLM</li>
+      <li>在 pa-mio 中注册记忆 Agent 专用的 systemPrompt（含格式要求 + 自检指令 + 正确/反例）</li>
+      <li><strong>测试</strong>：手动调 write_memory 写入一个合法条目和一个非法条目，确认校验和写入行为正确</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4><span class="badge b-wine">Phase 2</span> 短期记忆 —— compaction → 记忆 Agent → short-term/</h4>
+    <ul class="checklist">
+      <li>pa-mio 监听 <code>agent_end</code>，检测上下文长度是否超过阈值（如 80% context window）</li>
+      <li>超阈值时：抓取完整对话片段 → <code>ctx.newSession()</code> 起记忆 Agent</li>
+      <li>记忆 Agent 读取对话片段 → 总结压缩 → 调 write_memory 写入 <code>short-term/&lt;id&gt;-N.md</code></li>
+      <li>读取时自动检查已有 -N 文件，自增序号</li>
+      <li>pa-mio 添加 <code>tool_call</code> 拦截：<code>short-term/</code> + 不含当前 session ID → block</li>
+      <li>后台进度通知前台（<code>api.sendMessage</code> 或 <code>ctx.ui</code>）</li>
+      <li><strong>测试</strong>：发 60 条消息 → 确认 short-term .md 生成 → 切到另一个会话 → 确认无法读取前一个会话的短期文件</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4><span class="badge b-wine">Phase 3</span> 长期记忆 —— 归档 → 记忆 Agent → long-term/ + index.json</h4>
+    <ul class="checklist">
+      <li>UI "归档会话"按钮 → WebSocket → server.js → Pi RPC 命令（或前端直接调 API）</li>
+      <li>记忆 Agent 接收该会话全部 <code>short-term/&lt;id&gt;-*.md</code> → 二次提炼 → 生成 <code>long-term/&lt;id&gt;.md</code></li>
+      <li>调 write_memory 追加 <code>index.json</code> 条目</li>
+      <li><strong>写入成功后</strong>：删原会话 JSONL + 删短期 .md 文件</li>
+      <li>失败时：不删任何文件，通知前台 "<span class="badge b-warn">⚠ 记忆整理失败</span>"</li>
+      <li>实现文件锁（<code>index.lock</code>），防止并发写 index.json</li>
+      <li><strong>测试</strong>：选一个已有短期记忆的会话 → 归档 → 确认 long-term .md + index 新增条目 + 原会话删除 + 短期文件删除</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4><span class="badge b-wine">Phase 4</span> 规则记忆 —— rules.md 注入</h4>
+    <ul class="checklist">
+      <li>创建 <code>rules/rules.md</code> 模板（带注释说明格式）</li>
+      <li>pa-mio 的 <code>assemblePrompt()</code> 在 Slot 0 之后、Slot 1 之前插入规则内容</li>
+      <li>如果 <code>rules.md</code> 不存在 → 跳过（不报错）</li>
+      <li><strong>测试</strong>：编辑 rules.md → 发消息 → 确认澪号行为受规则约束</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <h4><span class="badge b-wine">Phase 5</span> 迁移 —— 旧记忆 → 新格式 + 清理旧代码</h4>
+    <ul class="checklist">
+      <li>编写一次性迁移脚本 <code>migrate_memories.py</code></li>
+      <li>读取 <code>mio_memories.json</code> → 每条生成 <code>long-term/migrated-&lt;N&gt;.md</code></li>
+      <li>生成对应的 index.json 条目（标记 <code>tags: ["migrated"]</code>）</li>
+      <li>pa-mio 删除 <code>searchMemories()</code>、<code>extractKeywords()</code> 等旧检索代码</li>
+      <li>保留 <code>mio_memories.json</code> 作为备份，不再读取</li>
+      <li><strong>测试</strong>：跑迁移 → 检查 index.json + .md 数量 → 确认 pa-mio 不再引用旧文件</li>
+    </ul>
+  </div>
+
+  <div class="warn-block">
+    <h5>⚠ 阶段依赖关系</h5>
+    <p>Phase 1 是全部基础 → Phase 2 和 Phase 3 可部分并行（短期和长期共用 write_memory）→ Phase 4 独立 → Phase 5 必须在 Phase 3 完成后才能做（等 long-term 机制稳定后再迁移旧数据）</p>
+  </div>
+
+</section>
+
+<!-- ════ S11: 设计原则 ════ -->
+<section id="s11">
+  <div class="sec-hd"><span class="ico">♡</span><h2>设计原则</h2></div>
   <div class="card">
     <table>
-      <tr><td style="width:28px">1.</td><td><strong>解耦</strong> —— 记忆 Agent 独立于对话 Agent，不共享上下文</td></tr>
-      <tr><td>2.</td><td><strong>不解耦不写</strong> —— Agent 只调用 write_memory，Python 校验后落盘</td></tr>
-      <tr><td>3.</td><td><strong>只追加不修改</strong> —— index 只增条目，旧 .md 不动</td></tr>
-      <tr><td>4.</td><td><strong>失败不降级</strong> —— 格式错误 3 次放弃，原始数据保留，下次重试</td></tr>
-      <tr><td>5.</td><td><strong>不阻塞对话</strong> —— 记忆任务后台执行，前台进度可见</td></tr>
-      <tr><td>6.</td><td><strong>代码约束优先</strong> —— 跨会话短期记忆读取由代码拦截，不依赖 prompt 约束</td></tr>
+      <tr><td style="width:30px;text-align:center">1.</td><td><strong>解耦</strong> —— 记忆 Agent 独立于对话 Agent，不共享上下文，不互相阻塞</td></tr>
+      <tr><td style="text-align:center">2.</td><td><strong>不校验不写</strong> —— Agent 调 write_memory，Python 校验后才落盘，Agent 无 write 权限</td></tr>
+      <tr><td style="text-align:center">3.</td><td><strong>只追加不修改</strong> —— index.json 只 <code>push()</code>，旧 .md 永久不变</td></tr>
+      <tr><td style="text-align:center">4.</td><td><strong>失败不降级</strong> —— 3 次格式错误放弃，原始数据保留，下次重试，不留脏数据</td></tr>
+      <tr><td style="text-align:center">5.</td><td><strong>不阻塞对话</strong> —— 记忆任务后台执行，前台进度可见，澪号照常聊天</td></tr>
+      <tr><td style="text-align:center">6.</td><td><strong>代码约束优先</strong> —— 跨会话短期记忆读取由 <code>tool_call</code> 拦截，不依赖 prompt 请求</td></tr>
+      <tr><td style="text-align:center">7.</td><td><strong>记忆 Agent 无状态</strong> —— 每次任务独立 session，用完即毁，不留上下文残留</td></tr>
+      <tr><td style="text-align:center">8.</td><td><strong>检索权交给 LLM</strong> —— pa-mio 不写关键词匹配，澪号自己决定读哪些记忆</td></tr>
     </table>
   </div>
 </section>
@@ -573,8 +934,8 @@ for (let i=0;i<18;i++) {
 </div>
 
 <footer>
-  ♡ 澪号记忆系统 v1.0 · 2026-05-28 · Personal Agent<br>
-  <span style="color:var(--sakura)">｡.:*☆ 设计完成，等待实现 ☆*:.｡</span>
+  <span class="heart">♡</span> 澪号记忆系统 v1.0 · 2026-05-28 · Personal Agent<br>
+  <span style="color:var(--sakura)">｡.:*☆ 设计文档 · 坑点清单 · 执行方案 ☆*:.｡</span>
 </footer>
 
 </body>
