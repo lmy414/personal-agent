@@ -60,6 +60,35 @@ function trunc(s: string, maxLen: number): string {
   return s.slice(0, maxLen) + `\n... (截断，原 ${s.length} 字符)`;
 }
 
+function truncRequestBody(payloadStr: string, maxLen: number = 8192): string {
+  if (payloadStr.length <= maxLen) return payloadStr;
+
+  try {
+    const payload = JSON.parse(payloadStr);
+    if (!payload.messages || !Array.isArray(payload.messages)) {
+      return trunc(payloadStr, maxLen);
+    }
+    const msgs = payload.messages;
+    if (msgs.length <= 2) return trunc(payloadStr, maxLen);
+
+    const first = msgs[0];
+    const last = msgs[msgs.length - 1];
+    const skipped = msgs.length - 2;
+
+    payload.messages = [
+      first,
+      { role: "system", content: `... (省略 ${skipped} 条中间消息) ...` },
+      last,
+    ];
+
+    const result = JSON.stringify(payload, null, 2);
+    if (result.length > maxLen) return trunc(result, maxLen);
+    return result;
+  } catch {
+    return trunc(payloadStr, maxLen);
+  }
+}
+
 // ── 注册 ────────────────────────────────────────────
 export default function register(api: ExtensionAPI) {
   console.log("[pa-observe] 流水线透视已加载");
@@ -67,7 +96,6 @@ export default function register(api: ExtensionAPI) {
   let turnIndex = 0;
   let roundCount = 0;
   let stepData: Record<string, any> = {};
-  // 在执行开始前累积数据
   let promptSystem = "";
   let contextMsgs: any[] = [];
   let providerPayload: unknown = null;
@@ -75,6 +103,11 @@ export default function register(api: ExtensionAPI) {
   let toolCalls: any[] = [];
   let toolStartTimes: Record<string, number> = {};
   let lastAssistantContent = "";
+  let currentSessionFile: string | null = null;
+  let currentSessionId: string | null = null;
+
+  const paDir = path.join(os.homedir(), ".personal-agent");
+  const LAST_TRACE = path.join(paDir, "observe_last_trace.json");
 
   function reset() {
     stepData = {};
@@ -136,22 +169,29 @@ export default function register(api: ExtensionAPI) {
         ? providerPayload
         : JSON.stringify(providerPayload, null, 2);
       let model = "unknown", temp = "?";
+      let totalMsgs = 0;
       try {
         const p = typeof providerPayload === "string" ? JSON.parse(providerPayload) : providerPayload as any;
         model = p?.model || "unknown";
         temp = p?.temperature ?? "?";
+        totalMsgs = Array.isArray(p?.messages) ? p.messages.length : 0;
       } catch {}
+      const truncated = payloadStr.length > 8192;
       steps.push({
         id: "api_request", title: "API 请求体", icon: "api",
         badge: providerStatus ? `${providerStatus}` : "→", badgeType: providerStatus === 200 ? "ok" : "info",
-        subtitle: "before_provider_request 事件捕获——这是最终发给 DeepSeek 的完整 HTTP 请求体，包含组装后的 system prompt、消息历史、工具定义、模型参数。",
+        subtitle: truncated
+          ? `共 ${totalMsgs} 条消息（${(payloadStr.length / 1024).toFixed(1)}KB）。显示首条 system prompt + 最后一条消息。`
+          : "before_provider_request 事件捕获——最终发给 DeepSeek 的完整 HTTP 请求体。",
         meta: [
           { k: "端点", v: "POST chat/completions" },
           { k: "Model", v: model },
           { k: "Temp", v: `${temp}` },
+          { k: "消息数", v: `${totalMsgs}` },
           { k: "Body", v: `~${(payloadStr.length / 1024).toFixed(1)}KB` },
-        ],
-        detail: { type: "api_request", body: trunc(payloadStr, 8192) },
+          truncated ? { k: "显示", v: "首1 + 尾1" } : null,
+        ].filter(Boolean) as any,
+        detail: { type: "api_request", body: truncRequestBody(payloadStr, 8192) },
       });
     }
 
@@ -222,13 +262,13 @@ export default function register(api: ExtensionAPI) {
       detail: { type: "memory", note: "由 pa-mio 扩展处理，pa-observe 仅报告" },
     });
 
-    const trace = { turnIndex, steps, timestamp: Date.now() };
-    const paDir = path.join(os.homedir(), ".personal-agent");
+    const trace = { turnIndex, sessionFile: currentSessionFile, sessionId: currentSessionId, steps, timestamp: Date.now() };
     if (!fs.existsSync(paDir)) fs.mkdirSync(paDir, { recursive: true });
-    const traceFile = path.join(paDir, "observe_last_trace.json");
+
+    const json = JSON.stringify(trace, null, 2);
     try {
-      fs.writeFileSync(traceFile, JSON.stringify(trace, null, 2), "utf-8");
-      console.log(`[pa-observe] trace written to ${traceFile}, ${steps.length} steps, turn #${turnIndex}`);
+      fs.writeFileSync(LAST_TRACE, json, "utf-8");
+      console.log(`[pa-observe] trace written, ${steps.length} steps, turn #${turnIndex}`);
     } catch (e) {
       console.error("[pa-observe] write failed:", e);
     }
@@ -299,10 +339,12 @@ export default function register(api: ExtensionAPI) {
     sendTrace();
   });
 
-  api.on("session_start", () => {
+  api.on("session_start", (_event, ctx) => {
     turnIndex = 0;
     roundCount = 0;
     reset();
-    console.log("[pa-observe] session reset");
+    currentSessionFile = ctx.sessionManager.getSessionFile() ?? null;
+    currentSessionId = ctx.sessionManager.getSessionId() ?? null;
+    console.log("[pa-observe] session reset, sessionId:", currentSessionId, "file:", currentSessionFile);
   });
 }
