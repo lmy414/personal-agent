@@ -60,12 +60,16 @@ pi
 personal-agent/
 ├── pa.bat                         # 一键启动
 ├── README.md                      # 项目说明
-├── ROADMAP.md                     # 路线图
-├── DESIGN.md                      # 设计文档
-├── PROJECT.md                     # 本文件
-├── TEST_CHECKLIST.md              # 测试清单
-├── SESSION-STATE.md               # 项目状态总览
 ├── main.js                        # Electron 桌面壳
+├── docs/
+│   ├── ROADMAP.md                 # 路线图
+│   ├── DESIGN.md                  # 设计文档
+│   ├── PROJECT.md                 # 本文件
+│   ├── TEST_CHECKLIST.md          # 测试清单
+│   ├── SESSION-STATE.md           # 项目状态总览
+│   ├── observe-issues.md          # 流水线透视问题清单
+│   ├── issues-2026-05-29.md       # 问题日志
+│   └── archive/                   # 归档文档（v0.3.0 HTML 等）
 ├── .pi/
 │   └── settings.json              # Pi 配置（扩展 + 技能 + 模型默认值）
 ├── extensions/

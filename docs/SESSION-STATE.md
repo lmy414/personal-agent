@@ -41,15 +41,19 @@ Electron 窗口 → wgnr-pi Web UI → WebSocket → Pi RPC → DeepSeek API
 
 1. **server.js**：
    - `spawn(PI_BIN, ...)` 加了 `shell: true`（Windows 兼容）
-   - `parseSessions()` 路径编码正则改为 `replace(/[/\\:]/g, "-")` 匹配 Pi 的 `getDefaultSessionDir`
+   - `parseSessions()` 路径编码正则改为 `replace(/[/\\:*?"<>|]/g, "-")` 匹配 Pi 的 `getDefaultSessionDir`
+   - `process.env.HOME` → `homedir()`（跨平台兼容）
+   - `parseSessions()` 的 `lastTimestamp` 添加 `new Date().toISOString()` fallback
    - RPC 事件加了白名单过滤（`default: broadcast(data)` 改为只转发 10 个已知事件类型）
    - `/api/sessions` 加了日志
+   - `parseSessions()` 加了调试日志（`[sessions]` 前缀）
 
 2. **public/index.html**（全中文汉化 + 多项修复）：
    - 全部 UI 文字中文化
    - `marked.setOptions` → `marked.use`（marked 18.x API 兼容）
    - `loadSessions()` 加了 localStorage 缓存保护（API 返回空时不覆盖已有列表）
    - `groupByDate` 标签引号修复（`label:"今天"` 不能漏引号）
+   - `groupByDate` NaN 时间戳防御（`isNaN(raw) ? 0 : raw`）
    - `renderSessionList` 加了 try/catch
    - `applyMode` 对 `mode-pi` 加了 `?.` 空检查
    - JS 函数名 `toggleArchived` / `loadArchivedSessions` 从 replace_all 误伤中恢复
@@ -225,7 +229,16 @@ wgnr-pi (`%APPDATA%\npm\node_modules\wgnr-pi`) 已纳入 Git 管理：
 
 ---
 
-## 四-B、流水线透视面板（2026-05-27 新增，2026-05-28 修复）
+## 四-B、流水线透视面板（2026-05-27 新增，2026-05-29 修复）
+
+### v0.5.2 Windows 兼容性修复（2026-05-29）
+
+修复新会话在侧边栏消失的问题，根因是三个 bug 叠加：
+1. `cwdKey` 计算只处理 Unix 路径分隔符 `/`，Windows 的 `\` 和 `:` 未替换
+2. `process.env.HOME` 在 Windows 上可能未设置
+3. 前端 `groupByDate()` 不处理 `NaN` 时间戳
+
+详见 `docs/issues-2026-05-29.md` 和 `docs/observe-issues.md`。
 
 ### v0.4.1 BUG 修复（2026-05-28）
 
@@ -300,6 +313,7 @@ wgnr-pi /api/observe_trace → 前端 fetch → renderTrace()
 - [x] 澪号 System Prompt（Harness 注入管线）✅
 - [x] wgnr-pi 历史工具渲染修复 ✅
 - [x] 流水线透视面板（pa-observe + Debug 面板 UI） ✅
+- [x] Windows 路径兼容性修复（新会话侧边栏消失） ✅
 - [ ] 导出 Free Bird 群数据
 
 ### 中期
@@ -330,11 +344,11 @@ rm D:/claude/personal-agent/qq_analyze.js D:/claude/personal-agent/qq_deep_analy
 | 文件 | 用途 |
 |------|------|
 | `personal-agent/README.md` | 项目说明 |
-| `personal-agent/ROADMAP.md` | 路线图 |
-| `personal-agent/DESIGN.md` | 设计文档 |
-| `personal-agent/PROJECT.md` | 项目总览 |
-| `personal-agent/TEST_CHECKLIST.md` | 测试清单 |
-| `personal-agent/SESSION-STATE.md` | 项目状态总览（本文件） |
+| `personal-agent/docs/ROADMAP.md` | 路线图 |
+| `personal-agent/docs/DESIGN.md` | 设计文档 |
+| `personal-agent/docs/PROJECT.md` | 项目总览 |
+| `personal-agent/docs/TEST_CHECKLIST.md` | 测试清单 |
+| `personal-agent/docs/SESSION-STATE.md` | 项目状态总览（本文件） |
 | `personal-agent/pa.bat` | 一键启动 |
 | `personal-agent/.pi/settings.json` | Pi 配置 |
 | `personal-agent/main.js` | Electron 入口 |

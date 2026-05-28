@@ -185,18 +185,18 @@ pa-observe (Pi 扩展, ~230 行)
                       renderTrace() → DOM 渲染
 ```
 
-### 数据传递方案（v0.4.1 更新）
+### 数据传递方案（v0.5.2 更新）
 
 选择文件 + HTTP 轮询而非 WebSocket 推送，原因：
 - Pi 的 `api.sendMessage()` 自定义消息经过 RPC 序列化后，`details` 字段可能丢失或格式变化
 - 文件写入 + HTTP 端点更可靠，前端控制拉取节奏
 - wgnr-pi server.js 只需加一个 ~10 行的 Express 路由
 
-**Session 匹配机制**（v0.4.1）：
-- pa-observe 将 `sessionFile`（完整路径）写入 trace JSON
-- API 参数使用 `sessionFile` 而非 `sessionId`（UUID）——因为 Pi RPC 和扩展侧返回的 UUID 不一致
-- server 端精确路径匹配：`trace.sessionFile === requestSessionFile`
-- 前端 `fetchObserveTrace` 每次 `await` 后校验 `currentSessionFile !== sfile` 快照，丢弃竞态窗口中的过期响应
+**Session 匹配机制**（v0.5.2）：
+- pa-observe 将 `sessionId`（ULID）写入 trace JSON，API 使用 `sessionId` 查询
+- server 端 `cwdKey` 使用 `replace(/[/\\:*?"<>|]/g, "-")` 兼容 Windows 路径
+- server 端 `homedir()` 替代 `process.env.HOME`，跨平台可靠
+- 前端 `groupByDate()` 添加 `isNaN` 防御，防止无效时间戳导致会话不可见
 
 ### 前端面板
 

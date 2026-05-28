@@ -15,6 +15,7 @@
 - [x] **wgnr-pi 修复** — 工具调用块历史渲染 + 目录列表双换行修复
 - [x] **pa-observe** — 流水线透视扩展（~316 行），7 步全链路追踪 + 右侧 Debug 面板 UI
 - [x] **pa-observe BUG 修复** — session 切换绑定 + 跨会话数据污染 + 竞态守卫（v0.4.1）
+- [x] **Windows 路径兼容性修复** — cwdKey + homedir + groupByDate NaN 防御，新会话侧边栏消失问题（v0.5.2）
 
 ## 近期规划
 
