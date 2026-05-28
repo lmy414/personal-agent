@@ -13,8 +13,12 @@ import * as path from "path";
 let workspaceRoot = "D:\\claude";
 
 function resolveSafe(filePath: string): string | null {
-  const resolved = path.resolve(workspaceRoot, filePath.startsWith(workspaceRoot) ? path.relative(workspaceRoot, filePath) : filePath);
-  if (!resolved.startsWith(workspaceRoot)) return null;
+  const normalizedRoot = path.normalize(workspaceRoot + path.sep);
+  const target = filePath.startsWith(workspaceRoot)
+    ? filePath
+    : path.join(workspaceRoot, filePath);
+  const resolved = path.normalize(target);
+  if (!resolved.startsWith(normalizedRoot)) return null;
   return resolved;
 }
 
@@ -42,7 +46,10 @@ function listDir(dirPath: string, depth = 0, maxDepth = 2): string[] {
       lines.push(`${indent}📁 ${entry.name}/`);
       lines.push(...listDir(path.join(dirPath, entry.name), depth + 1, maxDepth));
     } else {
-      const size = formatSize(fs.statSync(path.join(dirPath, entry.name)).size);
+      let size = "";
+      try {
+        size = formatSize(fs.statSync(path.join(dirPath, entry.name)).size);
+      } catch { size = "?"; }
       lines.push(`${indent}📄 ${entry.name}  ${size}`);
       if (lines.length > 200) { lines.push(`${indent}... (truncated)`); return lines; }
     }

@@ -14,27 +14,7 @@ let dailyBudget = 10;    // USD
 let warnOnBudget = true;
 let blockOnBudget = false;
 
-function getTodayCost(): number {
-  if (!fs.existsSync(DB_PATH)) return 0;
-  const db = new Database(DB_PATH, { readonly: true });
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = db.prepare("SELECT model, tokens_input, tokens_output FROM usage_log WHERE date = ?").all(today) as any[];
-  db.close();
-
-  let total = 0;
-  for (const row of rows) {
-    const p = getPricing(row.model);
-    total += (row.tokens_input / 1e6) * p.input + (row.tokens_output / 1e6) * p.output;
-  }
-  return total;
-}
-
-function getMonthCost(): number {
-  if (!fs.existsSync(DB_PATH)) return 0;
-  const db = new Database(DB_PATH, { readonly: true });
-  const rows = db.prepare("SELECT model, tokens_input, tokens_output FROM usage_log WHERE date >= date('now','start of month','localtime')").all() as any[];
-  db.close();
-
+function calcCost(rows: Array<{ model: string; tokens_input: number; tokens_output: number }>): number {
   let total = 0;
   for (const row of rows) {
     const p = getPricing(row.model);
@@ -46,6 +26,31 @@ function getMonthCost(): number {
 // ── Extension ──────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
+  let db: Database.Database | null = null;
+
+  pi.on("session_start", async () => {
+    if (fs.existsSync(DB_PATH)) {
+      db = new Database(DB_PATH, { readonly: true });
+    }
+  });
+
+  pi.on("session_shutdown", async () => {
+    if (db) { db.close(); db = null; }
+  });
+
+  function getTodayCost(): number {
+    if (!db) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = db.prepare("SELECT model, tokens_input, tokens_output FROM usage_log WHERE date = ?").all(today) as any[];
+    return calcCost(rows);
+  }
+
+  function getMonthCost(): number {
+    if (!db) return 0;
+    const rows = db.prepare("SELECT model, tokens_input, tokens_output FROM usage_log WHERE date >= date('now','start of month','localtime')").all() as any[];
+    return calcCost(rows);
+  }
+
   // Check on each turn start
   pi.on("turn_start", async (_event, ctx) => {
     if (!warnOnBudget) return;

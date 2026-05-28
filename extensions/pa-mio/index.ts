@@ -3,6 +3,9 @@
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import fs from "fs";
+import path from "path";
+import os from "os";
+import { HEDGE_WORDS } from "../shared/counters";
 
 // ── 路径 ─────────────────────────────────────────────
 const CHAR_DIR = "D:/claude/personal-agent/mio-harness/character";
@@ -34,41 +37,34 @@ const LANGUAGE_ANCHOR = [
 ].join("");
 
 // ── 计数器 ───────────────────────────────────────────
-const HEDGE_WORDS = [
-  "我觉得可能", "大概是吧", "也许是吧", "应该是吧",
-  "我也不太确定", "可能不太对", "我也不是很懂",
-];
-
 function checkResponse(text: string, roundCount: number): string | null {
+  const corrections: string[] = [];
+
   const hedgeCount = HEDGE_WORDS.filter(w => text.includes(w)).length;
-  if (hedgeCount >= 2) {
-    return "你不需要叠甲。有观点直接说。不确定就说'不确定，我查一下'。";
-  }
-  const emojiCount = (text.match(/[\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FAFF}☀-➿⭐❤]/gu) || []).length;
-  if (emojiCount >= 3) {
-    return "你几乎不使用 emoji。文字本身就够了。";
-  }
+  if (hedgeCount >= 2) corrections.push("你不需要叠甲。有观点直接说。不确定就说'不确定，我查一下'。");
+
+  const emojiCount = (text.match(/\p{Emoji}/gu) || []).length;
+  if (emojiCount >= 3) corrections.push("你几乎不使用 emoji。文字本身就够了。");
+
   const exclaim = (text.match(/[！!]/g) || []).length;
-  if (exclaim >= 2) {
-    return "你几乎不用感叹号。你不是在生气，你只是在说话。";
-  }
-  if (text.length > 200) {
-    return "短句。你刚才太啰嗦了。";
-  }
+  if (exclaim >= 2) corrections.push("你几乎不用感叹号。你不是在生气，你只是在说话。");
+
+  if (text.length > 200) corrections.push("短句。你刚才太啰嗦了。");
+
   if (roundCount < 10) {
     for (const sig of ["hhh", "嗯嗯", "摸摸"]) {
       if (text.includes(sig)) {
-        return "hhh和嗯嗯是你在信任的人面前才会用的。现在你们还不够熟。";
+        corrections.push("hhh和嗯嗯是你在信任的人面前才会用的。现在你们还不够熟。");
+        break;
       }
     }
   }
-  return null;
+
+  if (corrections.length === 0) return null;
+  return corrections.join(" ");
 }
 
 // ── 记忆（JSON 文件） ────────────────────────────────
-import path from "path";
-import os from "os";
-
 const PA_DIR = path.join(os.homedir(), ".personal-agent");
 const MEMORY_FILE = path.join(PA_DIR, "mio_memories.json");
 
@@ -171,7 +167,7 @@ async function extractMemories(transcript: string) {
       body: JSON.stringify({
         model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
         messages: [
-          { role: "system", content: "从以下对话中提取值得长期保存的信息。一句话一条。分类: user_fact/milestone/technical。输出纯 JSON 数组。" },
+          { role: "system", content: "从以下对话中提取值得长期保存的信息。一句话一条。分类: user_fact/milestone/technical。输出 JSON: {\"facts\":[{\"content\":\"...\",\"category\":\"...\",\"importance\":1-5}]}" },
           { role: "user", content: transcript },
         ],
         temperature: 0.3, max_tokens: 500,
@@ -181,9 +177,10 @@ async function extractMemories(transcript: string) {
     });
     if (!res.ok) { console.error("[pa-mio] extract HTTP", res.status); return []; }
     const data = await res.json() as any;
-    const raw = data?.choices?.[0]?.message?.content || "[]";
+    const raw = data?.choices?.[0]?.message?.content || "{\"facts\":[]}";
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return Array.isArray(parsed) ? parsed : [];
+    const facts = Array.isArray(parsed) ? parsed : (parsed?.facts || []);
+    return Array.isArray(facts) ? facts : [];
   } catch (e) { console.error("[pa-mio] extract error:", e); return []; }
 }
 

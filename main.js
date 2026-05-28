@@ -3,8 +3,11 @@
  * Spawns wgnr-pi backend, waits for it, then opens the web UI in a window.
  */
 const { app, BrowserWindow, Tray, Menu, nativeImage } = require("electron");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 const PORT = 4815;
 const URL = `http://127.0.0.1:${PORT}`;
@@ -14,10 +17,51 @@ let tray = null;
 let serverProc = null;
 let isQuitting = false;
 
+// ── Diagnostic logging ──────────────────────────────────────
+const LOG_DIR = path.join(os.homedir(), ".personal-agent", "logs");
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+const MAIN_LOG = path.join(LOG_DIR, `pa-main-${Date.now()}.log`);
+const logStream = fs.createWriteStream(MAIN_LOG, { flags: "a" });
+
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  console.log(line);
+  logStream.write(line + "\n");
+}
+function logErr(msg) {
+  const line = `[${new Date().toISOString()}] ERROR: ${msg}`;
+  console.error(line);
+  logStream.write(line + "\n");
+}
+process.on("uncaughtException", (err) => { logErr(`UNCAUGHT: ${err.message}\n${err.stack}`); });
+process.on("unhandledRejection", (reason) => { logErr(`UNHANDLED: ${reason}`); });
+
+// ── Port cleanup ───────────────────────────────────────────
+function killExistingPort() {
+  try {
+    const out = execSync(`netstat -ano | findstr :${PORT}`, { encoding: "utf8", timeout: 3000 });
+    const lines = out.trim().split(/\r?\n/);
+    const seen = new Set();
+    for (const line of lines) {
+      const m = line.match(/\s+(\d+)\s*$/);
+      if (m && !seen.has(m[1])) {
+        seen.add(m[1]);
+        try { execSync(`taskkill /PID ${m[1]} /F /T`, { timeout: 3000 }); } catch {}
+      }
+    }
+    if (seen.size > 0) log(`Cleaned up ${seen.size} process(es) holding port ${PORT}`);
+  } catch {}
+}
+
 // ── Backend ───────────────────────────────────────────────────
 
 function startBackend() {
-  serverProc = spawn("wgnr-pi", [], {
+  killExistingPort();
+
+  // stdout and stderr go directly to logStream, avoiding pipe buffer backpressure
+  // Use local wgnr-pi (not global) so server.js is modifiable
+  const serverScript = path.join(__dirname, "node_modules", "wgnr-pi", "server.js");
+  serverProc = spawn("node", [serverScript], {
     cwd: __dirname,
     env: {
       ...process.env,
@@ -25,25 +69,33 @@ function startBackend() {
       WGPI_PORT: String(PORT),
       WGPI_PI_BIN: "pi-node.cmd",
     },
-    stdio: "ignore",
+    stdio: ["pipe", logStream, logStream],
     shell: true,
   });
 
-  serverProc.on("error", (err) => console.error("wgnr-pi error:", err.message));
+  serverProc.on("error", (err) => logErr(`wgnr-pi spawn error: ${err.message}`));
+  serverProc.on("exit", (code, signal) => {
+    log(`wgnr-pi exited with code ${code}, signal ${signal}`);
+    serverProc = null;
+  });
 }
 
 function waitForServer(retries = 50, interval = 500) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let n = 0;
     const check = () => {
+      // Abort if server process died
+      if (serverProc && serverProc.exitCode != null) {
+        logErr(`Server exited prematurely (code ${serverProc.exitCode}), aborting wait`);
+        return reject(new Error(`Server exited with code ${serverProc.exitCode}`));
+      }
       http.get(URL, (res) => {
         if (res.statusCode === 200) {
-          // Give the WebSocket server a moment to initialize
           setTimeout(resolve, 1500);
         } else if (++n < retries) setTimeout(check, interval);
       }).on("error", () => {
         if (++n < retries) setTimeout(check, interval);
-        else console.error("Server did not start");
+        else logErr("Server did not start after " + retries + " retries");
       });
     };
     check();
@@ -112,7 +164,6 @@ function createTray() {
 // ── Lifecycle ─────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
-  // Register F12 via menu accelerator (more reliable than before-input-event)
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {
       label: "File",
@@ -125,7 +176,13 @@ app.whenReady().then(async () => {
   ]));
 
   startBackend();
-  await waitForServer();
+  try {
+    await waitForServer();
+  } catch (e) {
+    logErr("Failed to start server: " + e.message);
+    app.quit();
+    return;
+  }
   createWindow();
   createTray();
 });

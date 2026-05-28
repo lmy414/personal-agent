@@ -83,6 +83,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     db = createDB();
     const sid = ctx.sessionManager.getSessionId();
+    if (!sid) { console.warn("[pa-sqlite] session_id missing, skipping"); return; }
     const sfile = ctx.sessionManager.getSessionFile() ?? undefined;
 
     const existing = db.prepare("SELECT id FROM conversations WHERE session_id = ?").get(sid) as
@@ -107,7 +108,7 @@ export default function (pi: ExtensionAPI) {
 
     const msg = event.message as Record<string, any>;
     const role = msg.role ?? "unknown";
-    if (role === "toolResult") return; // skip tool results, keep only conversational messages
+    if (role === "tool" || role === "toolResult") return; // skip tool messages, keep only conversational messages
 
     const content = extractText(msg.content);
     if (!content.trim()) return;
