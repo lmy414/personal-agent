@@ -1,13 +1,13 @@
 # Personal Agent — 项目总览
 
-> v0.4.1 · 2026-05-28 · ~1178 行扩展代码 + Pi + wgnr-pi + 澪号 Harness + 流水线透视
+> v0.5.2 · 2026-05-29 · ~1178 行扩展代码 + Pi + wgnr-pi + 澪号 Harness + 流水线透视
 
 ## 当前状态
 
 | 模块 | 功能 | 状态 |
 |------|------|------|
 | **对话** | DeepSeek V3/R1 流式对话 | 正常 |
-| **会话** | 多会话管理（新建/切换/归档/删除） | 正常 |
+| **会话** | 多会话管理（新建/切换/归档/删除） | 正常（v0.5.2 修复 Windows 路径兼容性） |
 | **持久化** | SQLite 自动保存所有消息 | 正常 |
 | **用量** | Token 统计 + 成本计算（USD/CNY） | 正常 |
 | **文件** | 工作区浏览 + 文件预览（Markdown/代码/HTML） | 正常 |
@@ -21,7 +21,7 @@
 ## 技术架构
 
 ```
-Personal Agent v0.4.0
+Personal Agent v0.5.2
 ├── Pi v0.73.0               Agent 框架（Agent 循环 + 工具系统 + RPC）
 ├── DeepSeek API             V3 (chat) + R1 (reasoner)
 ├── wgnr-pi                  Web UI（原生 JS + WebSocket）
@@ -121,7 +121,7 @@ personal-agent/
 | `~/.personal-agent/agent.db` | SQLite 数据库（4 张表） |
 | `~/.personal-agent/mio_memories.json` | 澪号记忆存储（JSON 数组，最多 500 条） |
 | `C:/Users/Mirror/AppData/Roaming/npm/pi-node.cmd` | Pi 启动包装脚本 |
-| `C:/Users/Mirror/AppData/Roaming/npm/node_modules/wgnr-pi/` | Web UI（已汉化 + 工具渲染修复） |
+| `C:/Users/Mirror/AppData/Roaming/npm/node_modules/wgnr-pi/` | Web UI（已汉化 + 工具渲染修复 + Windows 路径兼容） |
 
 ## 调试
 
