@@ -60,7 +60,7 @@ function startBackend() {
 
   // stdout and stderr go directly to logStream, avoiding pipe buffer backpressure
   // Use local wgnr-pi (not global) so server.js is modifiable
-  const serverScript = path.join(__dirname, "node_modules", "wgnr-pi", "server.js");
+  const serverScript = path.join(__dirname, "vendor", "wgnr-pi", "server.js");
   serverProc = spawn("node", [serverScript], {
     cwd: __dirname,
     env: {

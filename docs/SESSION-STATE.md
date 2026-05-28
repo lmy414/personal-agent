@@ -1,7 +1,7 @@
 # Personal Agent — 项目状态总览
 
 > 最后更新：2026-05-29
-> 当前阶段：v0.5.2 — Windows 路径兼容性修复，新会话侧边栏消失问题已解决
+> 当前阶段：v0.5.3 — wgnr-pi fork 纳入 vendor/ 目录，patch 永久可追溯
 
 ---
 
@@ -35,11 +35,20 @@ Electron 窗口 → wgnr-pi Web UI → WebSocket → Pi RPC → DeepSeek API
 - SQLite：`~/.personal-agent/agent.db`
 - 旧 Electron 数据：`%APPDATA%/personal-agent/agent.db`（未迁移）
 
-### wgnr-pi 魔改记录
+### wgnr-pi Fork 方案（v0.5.3）
 
-修改了 `%APPDATA%\npm\node_modules\wgnr-pi/` 下三个文件：
+wgnr-pi 的魔改版本以 fork 仓库形式存放在 `vendor/wgnr-pi/`，不再通过 npm install 安装。
 
-1. **server.js**：
+**Fork 仓库**：https://github.com/lmy414/wgnr-pi
+
+**优势**：
+- 所有 patch 永久保存在 git 中，`npm install` 不会丢失
+- 升级时从 fork 仓库 `git pull` 上游变更，手动解决冲突
+- patch 内容可追溯、可审查
+
+**main.js 引用路径**：`vendor/wgnr-pi/server.js`（不再指向 `node_modules/wgnr-pi/`）
+
+**修改内容**（server.js）：
    - `spawn(PI_BIN, ...)` 加了 `shell: true`（Windows 兼容）
    - `parseSessions()` 路径编码正则改为 `replace(/[/\\:*?"<>|]/g, "-")` 匹配 Pi 的 `getDefaultSessionDir`
    - `process.env.HOME` → `homedir()`（跨平台兼容）
@@ -48,7 +57,7 @@ Electron 窗口 → wgnr-pi Web UI → WebSocket → Pi RPC → DeepSeek API
    - `/api/sessions` 加了日志
    - `parseSessions()` 加了调试日志（`[sessions]` 前缀）
 
-2. **public/index.html**（全中文汉化 + 多项修复）：
+2. **public/index.html**（全中文汉化 + 多项修复 + 流水线透视面板）：
    - 全部 UI 文字中文化
    - `marked.setOptions` → `marked.use`（marked 18.x API 兼容）
    - `loadSessions()` 加了 localStorage 缓存保护（API 返回空时不覆盖已有列表）
@@ -214,18 +223,15 @@ Slot 8: 用户消息
 - 提取：对话结束后独立 DeepSeek API 调用（不受澪号人格限制）
 - 触发条件：对话 >10 条消息 + 尚未提取过
 
-### wgnr-pi 修改（Git 跟踪）
+### wgnr-pi 修改（Fork 仓库）
 
-wgnr-pi (`%APPDATA%\npm\node_modules\wgnr-pi`) 已纳入 Git 管理：
+Fork 仓库：https://github.com/lmy414/wgnr-pi
+本地副本：`vendor/wgnr-pi/`（纳入 personal-agent 主仓库 git 跟踪）
 
 | Commit | 变更 |
 |--------|------|
-| `0627584` | 原始 npm 安装版本 |
-| `b6a769f` | history 事件渲染 toolCall + toolResult 消息 |
-| `c5cd68e` | 工具块包裹 .msg 容器（CSS 修复） |
-| `9475e6b` | 修复目录列表双换行 bug（移除冗余 `<br>`，history 路径加 `pre-wrap`） |
-| *未提交* | 全中文汉化 + marked.use API 兼容 + localStorage 缓存保护 + 多项 UI 修复 |
-| *未提交* | **流水线透视面板** — 新增 pa-observe 扩展 + wgnr-pi 调试面板 CSS/HTML/JS + /api/observe_trace 端点 |
+| `227f2b2` | 原始 wgnr-ai/wgnr-pi v1.5.2 |
+| `cb0a429` | Windows 兼容 + 全中文汉化 + 流水线透视面板 + /api/observe_trace 端点 + 多项 bug 修复 |
 
 ---
 

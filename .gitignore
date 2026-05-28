@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+vendor/wgnr-pi/node_modules/
 
 # Runtime data (DB, logs)
 logs/

@@ -1,6 +1,6 @@
 # Personal Agent — 路线图
 
-> v0.5.2 · 流水线透视已部署 + Windows 兼容性修复 · 2026-05-29
+> v0.5.3 · wgnr-pi fork 纳入 vendor/，patch 永久可追溯 · 2026-05-29
 
 ## 已完成
 
@@ -16,6 +16,7 @@
 - [x] **pa-observe** — 流水线透视扩展（~316 行），7 步全链路追踪 + 右侧 Debug 面板 UI
 - [x] **pa-observe BUG 修复** — session 切换绑定 + 跨会话数据污染 + 竞态守卫（v0.4.1）
 - [x] **Windows 路径兼容性修复** — cwdKey + homedir + groupByDate NaN 防御，新会话侧边栏消失问题（v0.5.2）
+- [x] **wgnr-pi Fork 可持续性** — fork 纳入 vendor/ 目录，patch 永久保存在 git 中（v0.5.3）
 
 ## 近期规划
 

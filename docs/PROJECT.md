@@ -61,6 +61,11 @@ personal-agent/
 ├── pa.bat                         # 一键启动
 ├── README.md                      # 项目说明
 ├── main.js                        # Electron 桌面壳
+├── vendor/
+│   └── wgnr-pi/                   # Web UI fork（github.com/lmy414/wgnr-pi）
+│       ├── server.js              # Express 服务端（Windows 兼容 + observe API）
+│       ├── public/index.html      # 前端（全中文 + 流水线透视面板）
+│       └── bin/wgnr-pi.js         # CLI 入口
 ├── docs/
 │   ├── ROADMAP.md                 # 路线图
 │   ├── DESIGN.md                  # 设计文档
@@ -125,7 +130,7 @@ personal-agent/
 | `~/.personal-agent/agent.db` | SQLite 数据库（4 张表） |
 | `~/.personal-agent/mio_memories.json` | 澪号记忆存储（JSON 数组，最多 500 条） |
 | `C:/Users/Mirror/AppData/Roaming/npm/pi-node.cmd` | Pi 启动包装脚本 |
-| `C:/Users/Mirror/AppData/Roaming/npm/node_modules/wgnr-pi/` | Web UI（已汉化 + 工具渲染修复 + Windows 路径兼容） |
+| `vendor/wgnr-pi/` | Web UI fork（已汉化 + 工具渲染修复 + Windows 路径兼容 + 流水线透视面板） |
 
 ## 调试
 
