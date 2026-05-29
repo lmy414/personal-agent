@@ -3,7 +3,7 @@
  * Spawns wgnr-pi backend, waits for it, then opens the web UI in a window.
  */
 const { app, BrowserWindow, Tray, Menu, nativeImage } = require("electron");
-const { spawn, execSync } = require("child_process");
+const { spawn, execSync, execFileSync } = require("child_process");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -46,18 +46,18 @@ process.on("unhandledRejection", (reason) => { logErr(`UNHANDLED: ${reason}`); }
 // ── Port cleanup ───────────────────────────────────────────
 function killExistingPort() {
   try {
-    const out = execSync(`netstat -ano | findstr :${PORT}`, { encoding: "utf8", timeout: 3000 });
-    const lines = out.trim().split(/\r?\n/);
+    const out = execFileSync("cmd", ["/c", `netstat -ano | findstr :${PORT}`], { encoding: "utf8", timeout: 3000, windowsHide: true });
     const seen = new Set();
-    for (const line of lines) {
+    for (const line of out.trim().split(/\r?\n/)) {
       const m = line.match(/\s+(\d+)\s*$/);
-      if (m && !seen.has(m[1])) {
+      if (m && !seen.has(m[1]) && /^\d+$/.test(m[1])) {
         seen.add(m[1]);
-        try { execSync(`taskkill /PID ${m[1]} /F /T`, { timeout: 3000 }); } catch {}
+        try { execFileSync("taskkill", ["/PID", m[1], "/F", "/T"], { timeout: 3000, windowsHide: true }); log(`Killed PID ${m[1]}`); }
+        catch (e) { logErr(`Failed to kill PID ${m[1]}: ${e.message}`); }
       }
     }
     if (seen.size > 0) log(`Cleaned up ${seen.size} process(es) holding port ${PORT}`);
-  } catch {}
+  } catch (e) { if (e.status !== 1) logErr("killExistingPort error: " + e.message); }
 }
 
 // ── Backend ───────────────────────────────────────────────────
@@ -77,7 +77,8 @@ function startBackend() {
       WGPI_PI_BIN: "pi-node.cmd",
     },
     stdio: ["pipe", outStream, errStream],
-    shell: true,
+    shell: false,
+    windowsHide: true,
   });
 
   serverProc.on("error", (err) => logErr(`wgnr-pi spawn error: ${err.message}`));

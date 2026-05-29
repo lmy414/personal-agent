@@ -9,7 +9,7 @@
  *   PI_WEB_PORT=8080 PI_WEB_CWD=/path node server.js
  */
 
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
@@ -281,7 +281,8 @@ app.post("/api/observe_trace", (req, res) => {
 app.post("/api/restart", (_req, res) => {
   try {
     restarting = true;
-    if (piProc && !piProc.killed) { piProc.kill("SIGTERM"); piProc = null; }
+    killPiTree();
+    piProc = null;
     busy = false;
     setPiHealth(false);
     broadcast({ type: "status", busy: false, piConnected: false });
@@ -472,7 +473,8 @@ function ensurePi() {
     cwd: CWD,
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env },
-    shell: true,
+    shell: false,
+    windowsHide: true,
   });
 
   console.log(`  pi PID: ${piProc.pid}`);
@@ -541,7 +543,9 @@ function sendRpc(command, params) {
   if (!piProc || piProc.killed) return;
   const id = `${++requestId}`;
   const msg = JSON.stringify({ id, type: command, ...params }) + "\n";
-  piProc.stdin.write(msg);
+  try {
+    piProc.stdin.write(msg, (err) => { if (err) console.error("[sendRpc] write error:", err.message); });
+  } catch (err) { console.error("[sendRpc] sync write error:", err.message); }
 }
 
 function handleRpcEvent(data) {
@@ -666,9 +670,18 @@ function handleRpcEvent(data) {
 }
 
 // ── Graceful shutdown ───────────────────────────────────────────────────
+function killPiTree() {
+  if (!piProc) return;
+  if (process.platform === "win32") {
+    try { execSync(`taskkill /PID ${piProc.pid} /T /F`, { timeout: 5000, windowsHide: true }); } catch {}
+  } else {
+    piProc.kill("SIGTERM");
+  }
+}
+
 function shutdown() {
   console.log("→ shutting down");
-  if (piProc && !piProc.killed) piProc.kill("SIGTERM");
+  killPiTree();
   wss.close();
   server.close();
   process.exit(0);
