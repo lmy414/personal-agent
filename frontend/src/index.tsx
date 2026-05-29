@@ -7,5 +7,6 @@ import './extensions/tool-panel'
 import './extensions/chat-renderer'
 import './extensions/chat-input'
 import './extensions/status-bar'
+import './extensions/right-panel'
 
 render(() => <App />, document.getElementById('root')!)
