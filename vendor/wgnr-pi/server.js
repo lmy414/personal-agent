@@ -11,7 +11,7 @@
 
 import { spawn, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import express from "express";
@@ -194,48 +194,56 @@ app.get("/api/sessions/archived", (_req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+function assertSafePath(inputPath, baseDir) {
+  const resolved = resolve(inputPath);
+  const resolvedBase = resolve(baseDir);
+  const isInside = process.platform === "win32"
+    ? resolved.toLowerCase().startsWith(resolvedBase.toLowerCase())
+    : resolved.startsWith(resolvedBase);
+  if (!isInside || !inputPath.endsWith(".jsonl")) throw new Error("Invalid path");
+  return resolved;
+}
+
 // Restore archived session
 app.post("/api/sessions/restore", (req, res) => {
   const { file } = req.body || {};
-  if (!file || !file.endsWith(".jsonl")) return res.status(400).json({ error: "Invalid file" });
   const sessionBaseDir = join(homedir(), ".pi", "agent", "sessions");
-  if (!file.startsWith(sessionBaseDir)) return res.status(403).json({ error: "Forbidden" });
   try {
-    const dest = join(dirname(file), "..", basename(file));
-    renameSync(file, dest);
-    res.json({ ok: true, restoredTo: dest });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    if (!file) return res.status(400).json({ error: "Invalid file" });
+    const safeFile = assertSafePath(file, sessionBaseDir);
+    const dest = join(dirname(safeFile), "..", basename(safeFile));
+    const safeDest = assertSafePath(dest, sessionBaseDir);
+    renameSync(safeFile, safeDest);
+    res.json({ ok: true, restoredTo: safeDest });
+  } catch(e) { res.status(e.message === "Invalid path" ? 403 : 500).json({ error: e.message }); }
 });
 
 // Archive session (move to archived/ subfolder)
 app.post("/api/sessions/archive", (req, res) => {
   const { file } = req.body || {};
-  if (!file || !file.endsWith(".jsonl")) return res.status(400).json({ error: "Invalid file" });
   const sessionBaseDir = join(homedir(), ".pi", "agent", "sessions");
-  if (!file.startsWith(sessionBaseDir)) return res.status(403).json({ error: "Forbidden" });
   try {
-    const archiveDir = join(dirname(file), "archived");
+    if (!file) return res.status(400).json({ error: "Invalid file" });
+    const safeFile = assertSafePath(file, sessionBaseDir);
+    const archiveDir = join(dirname(safeFile), "archived");
     if (!existsSync(archiveDir)) mkdirSync(archiveDir, { recursive: true });
-    const dest = join(archiveDir, basename(file));
-    renameSync(file, dest);
-    res.json({ ok: true, archivedTo: dest });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    const dest = join(archiveDir, basename(safeFile));
+    const safeDest = assertSafePath(dest, sessionBaseDir);
+    renameSync(safeFile, safeDest);
+    res.json({ ok: true, archivedTo: safeDest });
+  } catch (e) { res.status(e.message === "Invalid path" ? 403 : 500).json({ error: e.message }); }
 });
 
 // Delete session permanently
 app.delete("/api/sessions", (req, res) => {
   const { file } = req.body || {};
-  if (!file || !file.endsWith(".jsonl")) return res.status(400).json({ error: "Invalid file" });
   const sessionBaseDir = join(homedir(), ".pi", "agent", "sessions");
-  if (!file.startsWith(sessionBaseDir)) return res.status(403).json({ error: "Forbidden" });
   try {
-    unlinkSync(file);
+    if (!file) return res.status(400).json({ error: "Invalid file" });
+    const safeFile = assertSafePath(file, sessionBaseDir);
+    unlinkSync(safeFile);
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(e.message === "Invalid path" ? 403 : 500).json({ error: e.message }); }
 });
 
 // Observe trace — serve session-specific trace or fall back to live file
