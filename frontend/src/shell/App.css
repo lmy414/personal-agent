@@ -1,0 +1,163 @@
+/* ====== CSS Variables ====== */
+:root {
+  --glass-bg: rgba(15, 15, 25, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(16px) saturate(140%);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --accent: #8b9cf0;
+  --left-col: 400px;
+  --right-panel-w: 0px;
+  --gap: 10px;
+  --margin: 12px;
+}
+
+/* ====== Reset ====== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #root {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0a0a12;
+  color: var(--text-primary);
+}
+
+/* ====== Scene Layer (z=0) ====== */
+.scene-layer {
+  position: fixed; inset: 0; z-index: 0;
+}
+.scene-bg {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+.character-sprite-placeholder {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  height: 85vh; width: 320px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(to top, rgba(232,196,196,0.15), transparent);
+  border-radius: 20px 20px 0 0;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+
+/* ====== Glass base ====== */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+/* ====== Overlay Grid (z=10) ====== */
+.overlay {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid;
+  grid-template-columns: var(--left-col) 1fr var(--right-panel-w);
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+  padding: var(--margin);
+  pointer-events: none;
+}
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* Slot assignments */
+.slot-left-top    { grid-column: 1; grid-row: 1; }
+.slot-left-middle { grid-column: 1; grid-row: 2; overflow: hidden; display: flex; flex-direction: column; }
+.slot-left-bottom { grid-column: 1; grid-row: 3; }
+.slot-center      { grid-column: 2; grid-row: 1 / 4; }
+.slot-right       { grid-column: 3; grid-row: 1 / 4; }
+
+/* ====== Custom scrollbar ====== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ====== Right panel drag ====== */
+.right-panel {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.right-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-all;
+}
+.drag-handle {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 30;
+  background: transparent;
+  transition: background 0.15s;
+}
+.drag-handle:hover,
+.drag-handle.active {
+  background: var(--accent);
+}
+.expand-tab {
+  position: absolute;
+  right: -28px; top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-lr;
+  padding: 8px 4px;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  z-index: 35;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-left: none;
+}
+.expand-tab:hover {
+  color: var(--accent);
+}
+
+/* ====== Tab bar ====== */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ====== Utility ====== */
+.hidden { display: none; }
+
+/* ====== Message bubbles ====== */
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.message-enter {
+  animation: msgIn 0.3s ease;
+}
