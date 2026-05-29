@@ -5,10 +5,12 @@ import os
 import re
 from collections import Counter
 
-DB = os.path.expandvars(r"%USERPROFILE%\.personal-agent\agent.db")
+DB_DIR = os.path.join(os.path.expanduser("~"), ".personal-agent")
+DB = os.path.join(DB_DIR, "agent.db")
 
 
 def ensure_table():
+    os.makedirs(DB_DIR, exist_ok=True)
     conn = sqlite3.connect(DB)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS mio_memories (
@@ -46,9 +48,9 @@ def search_memories(user_message: str, limit: int = 5) -> list:
     if not keywords:
         return []
 
-    like_clauses = " OR ".join(
-        f"content LIKE '%{kw}%'" for kw in keywords[:10]
-    )
+    limit = min(max(int(limit), 1), 100)
+    like_params = [f"%{kw}%" for kw in keywords[:10]]
+    like_clauses = " OR ".join("content LIKE ?" for _ in like_params)
 
     conn = sqlite3.connect(DB)
     sql = f"""
@@ -59,9 +61,9 @@ def search_memories(user_message: str, limit: int = 5) -> list:
         FROM mio_memories
         WHERE {like_clauses}
         ORDER BY weight DESC
-        LIMIT {limit}
+        LIMIT ?
     """
-    rows = conn.execute(sql).fetchall()
+    rows = conn.execute(sql, like_params + [limit]).fetchall()
     conn.close()
 
     return [
