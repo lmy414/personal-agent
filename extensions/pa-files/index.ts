@@ -7,19 +7,26 @@ import { Type } from "@mariozechner/pi-ai";
 import { defineTool } from "@mariozechner/pi-coding-agent";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 
 // ── State ──────────────────────────────────────────────────────
 
 let workspaceRoot = "D:\\claude";
 
+const ALLOWED_ROOTS = [process.cwd(), path.join(os.homedir(), "Documents")];
+
+function isAllowedRoot(dir: string): boolean {
+  return ALLOWED_ROOTS.some((r) => {
+    const rel = path.relative(r, dir);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  });
+}
+
 function resolveSafe(filePath: string): string | null {
-  const normalizedRoot = path.normalize(workspaceRoot + path.sep);
-  const target = filePath.startsWith(workspaceRoot)
-    ? filePath
-    : path.join(workspaceRoot, filePath);
-  const resolved = path.normalize(target);
-  if (!resolved.startsWith(normalizedRoot)) return null;
-  return resolved;
+  const target = path.resolve(workspaceRoot, filePath);
+  const rel = path.relative(workspaceRoot, target);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  return target;
 }
 
 // ── File listing ───────────────────────────────────────────────
@@ -71,9 +78,10 @@ function previewFile(filePath: string): string {
   if (content.length > 8000) content = content.slice(0, 8000) + "\n\n... (truncated)";
 
   const ext = path.extname(filePath).toLowerCase();
-  if (ext === ".md") return content; // Pi TUI renders markdown natively
+  const binaryExts = [".jpg", ".png", ".gif", ".pdf", ".exe", ".dll", ".obj", ".bat", ".cmd", ".ps1", ".vbs", ".js", ".wsf", ".scr", ".com", ".msi", ".reg", ".zip", ".rar", ".7z"];
+  if (ext === ".md") return content;
   if (ext === ".html") return stripHtmlTags(content);
-  if ([".jpg", ".png", ".gif", ".pdf", ".exe", ".dll", ".obj"].includes(ext)) {
+  if (binaryExts.includes(ext)) {
     return `[Binary file: ${ext} — ${formatSize(fs.statSync(filePath).size)}]`;
   }
   return content;
@@ -173,6 +181,10 @@ export default function (pi: ExtensionAPI) {
         const newRoot = path.resolve(args.trim());
         if (!fs.existsSync(newRoot) || !fs.statSync(newRoot).isDirectory()) {
           ctx.ui.notify(`Not a valid directory: ${newRoot}`, "warning");
+          return;
+        }
+        if (!isAllowedRoot(newRoot)) {
+          ctx.ui.notify(`Not in allowed list. Allowed: ${ALLOWED_ROOTS.join(", ")}`, "warning");
           return;
         }
         workspaceRoot = newRoot;
