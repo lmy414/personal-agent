@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Chat UI</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #f5f0eb;
+    --bg-secondary: rgba(255, 255, 255, 0.72);
+    --bg-tertiary: #e8e0d8;
+    --text-primary: #c75b5b;
+    --text-secondary: #3d3d3d;
+    --text-muted: #8a8a8a;
+    --border: rgba(0,0,0,0.08);
+    --accent: #c75b5b;
+    --sidebar-width: 320px;
+    --toolbar-height: 50px;
+    --chat-width: 480px;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--toolbar-height);
+    background: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    z-index: 100;
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+
+  .toolbar-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .toolbar-btn:hover { color: var(--text-secondary); background: rgba(0,0,0,0.04); }
+
+  .toolbar-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .toolbar-spacer { flex: 1; }
+
+  /* Layout */
+  .main-layout {
+    display: flex;
+    height: 100vh;
+    padding-top: var(--toolbar-height);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: rgba(255, 255, 255, 0.72);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* Character Card */
+  .character-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .character-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+
+  .character-info { flex: 1; }
+
+  .character-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .character-tokens {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.03);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .action-btn:hover {
+    background: rgba(199, 91, 91, 0.1);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .action-btn.active {
+    background: rgba(199, 91, 91, 0.15);
+    color: var(--accent);
+  }
+
+  /* Description Box */
+  .description-box {
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-height: 200px;
+    overflow-y: auto;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .description-box .user-tag {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .description-box .action-tag {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  /* Settings */
+  .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .setting-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .setting-sublabel {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Toggle Switch */
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.15);
+    border-radius: 20px;
+    transition: 0.3s;
+  }
+
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .toggle input:checked + .toggle-slider {
+    background: var(--accent);
+  }
+
+  .toggle input:checked + .toggle-slider::after {
+    left: 18px;
+  }
+
+  /* Slider */
+  .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.1);
+    outline: none;
+  }
+
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .slider-value {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* Textarea */
+  .styled-textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .styled-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(0,0,0,0.06);
+  }
+
+  /* Center Area */
+  .center-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .character-bg {
+    position: absolute;
+    inset: 0;
+    background: url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80') center/cover;
+  }
+
+  .character-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      rgba(245, 240, 235, 0.75) 0%,
+      rgba(245, 240, 235, 0.35) 40%,
+      rgba(245, 240, 235, 0.15) 60%,
+      rgba(245, 240, 235, 0.5) 100%
+    );
+  }
+
+  /* Chat Panel */
+  .chat-panel {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    bottom: 16px;
+    width: var(--chat-width);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+    padding: 12px;
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.08);
+    border-radius: 2px;
+  }
+
+  .message {
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(0,0,0,0.04);
+    border-radius: 12px;
+    padding: 10px 12px;
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+
+  .message-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .message-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .message-content {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  .message-content .highlight {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .message-content .emphasis {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  /* Chat Input */
+  .chat-input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    padding: 8px 12px;
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  }
+
+  .chat-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    max-height: 100px;
+  }
+
+  .chat-input::placeholder { color: var(--text-muted); }
+
+  .chat-attach-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .sidebar { display: none; }
+  }
+
+  @media (max-width: 768px) {
+    .chat-panel {
+      left: 16px;
+      width: auto;
+    }
+    .character-bg::after {
+      background: rgba(245, 240, 235, 0.7);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<nav class="toolbar">
+  <button class="toolbar-btn">&#9776;</button>
+  <span class="toolbar-title">Misaka Mikoto</span>
+  <div class="toolbar-spacer"></div>
+  <button class="toolbar-btn">&#9881;</button>
+  <button class="toolbar-btn">&#127912;</button>
+  <button class="toolbar-btn">A</button>
+  <button class="toolbar-btn">&#128203;</button>
+  <button class="toolbar-btn">&#128512;</button>
+  <button class="toolbar-btn">&#128101;</button>
+  <button class="toolbar-btn">&#9206;</button>
+</nav>
+
+<!-- Main Layout -->
+<div class="main-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <!-- Character Card -->
+    <div class="sidebar-section">
+      <div class="character-card">
+        <img src="https://i.pravatar.cc/150?img=5" alt="Avatar" class="character-avatar">
+        <div class="character-info">
+          <div class="character-name">Misaka Mikoto</div>
+          <div class="character-tokens">160 Tokens (360 Permanent Tokens)</div>
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button class="action-btn active">&#9733;</button>
+        <button class="action-btn">&#9998;</button>
+        <button class="action-btn">&#128203;</button>
+        <button class="action-btn">&#128465;</button>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="sidebar-section">
+      <div class="section-title">Description</div>
+      <div class="description-box">
+        <span class="user-tag">{{user}}:</span> Could you describe your appearance?<br><br>
+        <span class="user-tag">{{char}}:</span> Are you blind or something?<br>
+        <span class="action-tag">*Misaka sighs and sips her coconut juice*</span><br><br>
+        Fine, be it your way. I have short brown hair and brown eyes and wear my school uniform most of the time. I also wear shorts under my skirt.
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="sidebar-section">
+      <div class="section-title">Poe.com API Settings</div>
+
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Context Size (tokens)</div>
+        </div>
+        <div class="slider-container">
+          <input type="range" class="slider" min="0" max="8192" value="2048" id="contextSlider">
+          <span class="slider-value" id="contextValue">2048</span>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Streaming</div>
+          <div class="setting-sublabel">Display but separate text chunks as they are generated.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Auto-purge API context (save JB)</div>
+          <div class="setting-sublabel">Delete non-JB messages from Poe context before sending a new message.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Auto-jailbreak</div>
+          <div class="setting-sublabel">Send the jailbreak message before first generation after page refresh.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Send character note</div>
+          <div class="setting-sublabel">Send with every prompt to modify bot responses.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Jailbreak -->
+    <div class="sidebar-section">
+      <div class="section-title">Jailbreak activation message</div>
+      <textarea class="styled-textarea" placeholder="Enter jailbreak message..."></textarea>
+    </div>
+  </aside>
+
+  <!-- Center Area -->
+  <div class="center-area">
+    <div class="character-bg"></div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+      <div class="chat-messages">
+        <!-- Character Message -->
+        <div class="message">
+          <div class="message-header">
+            <img src="https://i.pravatar.cc/150?img=5" alt="Avatar" class="message-avatar">
+            <span class="message-name">Misaka Mikoto</span>
+          </div>
+          <div class="message-content">
+            On a warm summer day, you run through the park on your way home from work. You get hot and think about buying yourself a drink from the vending machine. Near the nearest vending machine, you notice a grown woman repeatedly kicking it. She has short hair and wears shorts under her skirt. You remember Academy City's third strongest esper, the Railgun. Is that really her?<br><br>
+            <span class="highlight">What are you looking at? It's none of your business.</span><br><br>
+            She looks at you with displeasure and anger, but at the same time with sadness and confusion, and crosses her arms over her chest.
+          </div>
+        </div>
+
+        <!-- User Message -->
+        <div class="message">
+          <div class="message-header">
+            <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" class="message-avatar">
+            <span class="message-name">You</span>
+          </div>
+          <div class="message-content">
+            Geez sorry!
+          </div>
+        </div>
+
+        <!-- Character Message -->
+        <div class="message">
+          <div class="message-header">
+            <img src="https://i.pravatar.cc/150?img=5" alt="Avatar" class="message-avatar">
+            <span class="message-name">Misaka Mikoto</span>
+          </div>
+          <div class="message-content">
+            You quickly apologize, realizing that you were staring. <span class="emphasis">"I'm sorry, I didn't mean to intrude. I just recognized you and was surprised to see you here."</span><br><br>
+            Misaka Mikoto gives a small nod, still looking a little annoyed. <span class="highlight">"Yeah, well, I'm just taking a break from all the Academy stuff. It gets pretty intense sometimes."</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="chat-input-area">
+        <button class="chat-menu-btn">&#9776;</button>
+        <textarea class="chat-input" rows="1" placeholder="Type a message..."></textarea>
+        <button class="chat-attach-btn">&#128206;</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Context slider
+  const slider = document.getElementById('contextSlider');
+  const value = document.getElementById('contextValue');
+  slider.addEventListener('input', () => value.textContent = slider.value);
+
+  // Auto-resize textarea
+  const textarea = document.querySelector('.chat-input');
+  textarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  });
+</script>
+
+</body>
+</html>
