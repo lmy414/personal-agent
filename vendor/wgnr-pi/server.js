@@ -469,7 +469,10 @@ function ensurePi() {
 
   console.log("→ spawning pi --mode rpc");
   setPiHealth(false);
-  piProc = spawn(PI_BIN, ["--mode", "rpc"], {
+  const isCmd = process.platform === "win32" && PI_BIN.endsWith(".cmd");
+  const spawnCmd = isCmd ? "cmd" : PI_BIN;
+  const spawnArgs = isCmd ? ["/c", PI_BIN, "--mode", "rpc"] : ["--mode", "rpc"];
+  piProc = spawn(spawnCmd, spawnArgs, {
     cwd: CWD,
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env },
