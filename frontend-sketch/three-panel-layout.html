@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Agent — 三栏角色界面</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --glass-bg: rgba(15, 15, 25, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(20px) saturate(160%);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --accent: #8b9cf0;
+  --sidebar-width: 260px;
+  --rightbar-width: 300px;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0a0a12;
+}
+
+/* ========== 底层：场景 + 立绘 ========== */
+.scene-layer {
+  position: fixed; inset: 0; z-index: 0;
+}
+.scene-bg {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+.character-sprite {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  height: 90vh;
+  pointer-events: none;
+  filter: drop-shadow(0 0 60px rgba(0,0,0,0.6));
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+
+/* ========== 玻璃拟态基础 ========== */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+/* ========== 顶部栏 ========== */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(10, 10, 18, 0.7);
+  backdrop-filter: blur(24px);
+}
+.topbar-left, .topbar-right { display: flex; align-items: center; gap: 8px; }
+.topbar-title { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+.icon-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); cursor: pointer;
+  transition: all 0.2s; background: transparent; border: none;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+/* ========== 三栏布局容器 ========== */
+.layout {
+  position: fixed; inset: 44px 0 0 0; z-index: 10;
+  display: flex;
+}
+
+/* ========== 左侧栏 ========== */
+.sidebar-left {
+  width: var(--sidebar-width);
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--glass-border);
+  transition: width 0.3s ease, margin-left 0.3s ease;
+}
+.sidebar-left.collapsed {
+  width: 44px;
+  margin-left: 0;
+}
+.sidebar-left.collapsed .panel-content { display: none; }
+
+.panel-header {
+  height: 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-secondary); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.panel-content {
+  flex: 1; overflow-y: auto;
+  padding: 8px;
+}
+
+/* 会话列表 */
+.session-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  color: var(--text-secondary); font-size: 13px;
+  cursor: pointer; transition: all 0.15s;
+  margin-bottom: 2px;
+}
+.session-item:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+.session-item.active { background: rgba(139, 156, 240, 0.15); color: var(--accent); }
+.session-icon { width: 16px; height: 16px; opacity: 0.6; }
+
+/* 文件管理 */
+.file-tree { font-size: 12px; color: var(--text-secondary); }
+.file-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: 4px; cursor: pointer;
+}
+.file-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+.file-indent { width: 14px; }
+
+/* ========== 中间对话区 ========== */
+.chat-area {
+  flex: 1;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+
+/* 消息流 */
+.messages {
+  flex: 1; overflow-y: auto;
+  padding: 20px 24px;
+  scroll-behavior: smooth;
+}
+
+.message {
+  display: flex; gap: 12px; margin-bottom: 20px;
+  animation: msgIn 0.3s ease;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  flex-shrink: 0; overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.1);
+}
+.message-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.message-body {
+  max-width: 80%;
+}
+.message-name {
+  font-size: 12px; color: var(--text-secondary);
+  margin-bottom: 4px; font-weight: 500;
+}
+.message-bubble {
+  padding: 12px 16px; border-radius: 14px;
+  font-size: 14px; line-height: 1.6;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.message.user { flex-direction: row-reverse; }
+.message.user .message-body { align-items: flex-end; display: flex; flex-direction: column; }
+.message.user .message-bubble {
+  background: rgba(139, 156, 240, 0.15);
+  border-color: rgba(139, 156, 240, 0.2);
+}
+
+/* 输入区 */
+.input-area {
+  padding: 12px 20px 20px;
+}
+.input-box {
+  display: flex; align-items: flex-end; gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.input-box textarea {
+  flex: 1; background: transparent; border: none;
+  color: var(--text-primary); font-size: 14px;
+  resize: none; outline: none; line-height: 1.5;
+  max-height: 120px; min-height: 20px;
+  font-family: inherit;
+}
+.input-box textarea::placeholder { color: var(--text-secondary); }
+.send-btn {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: white; border: none;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.send-btn:hover { opacity: 0.85; }
+
+/* ========== 右侧栏 ========== */
+.sidebar-right {
+  width: var(--rightbar-width);
+  border-left: 1px solid var(--glass-border);
+  display: flex; flex-direction: column;
+  transition: width 0.3s ease, margin-right 0.3s ease;
+}
+.sidebar-right.collapsed {
+  width: 44px;
+}
+.sidebar-right.collapsed .panel-content { display: none; }
+
+/* 预览区 */
+.preview-box {
+  height: 180px; border-radius: 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px dashed rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* 扩展面板 */
+.extension-card {
+  padding: 10px; border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 8px;
+}
+.extension-card h4 {
+  font-size: 12px; color: var(--text-primary); margin-bottom: 6px;
+}
+.extension-card p {
+  font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+}
+
+/* ========== 滚动条 ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ========== 响应式 ========== */
+@media (max-width: 1100px) {
+  .sidebar-right { width: 44px; }
+  .sidebar-right .panel-content { display: none; }
+}
+@media (max-width: 800px) {
+  .sidebar-left { width: 44px; }
+  .sidebar-left .panel-content { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- 底层：场景 + 立绘 -->
+<div class="scene-layer">
+  <!-- 场景背景（占位色，实际替换为图片） -->
+  <div class="scene-bg" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"></div>
+  <!-- 角色立绘（占位） -->
+  <img class="character-sprite" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='600'%3E%3Crect fill='%23e8c4c4' width='400' height='600' rx='20'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999' font-size='20'%3EMio 立绘%3C/text%3E%3C/svg%3E" alt="Mio">
+</div>
+
+<!-- 顶部栏 -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="icon-btn" onclick="toggleLeft()" title="切换左侧栏">☰</button>
+    <span class="topbar-title">🌸 Mio Agent</span>
+  </div>
+  <div class="topbar-right">
+    <button class="icon-btn" title="设置">⚙</button>
+    <button class="icon-btn" onclick="toggleRight()" title="切换右侧栏">◧</button>
+  </div>
+</header>
+
+<!-- 三栏布局 -->
+<div class="layout">
+
+  <!-- 左侧栏：会话 + 文件 -->
+  <aside class="sidebar-left glass" id="sidebarLeft">
+    <!-- 会话列表 -->
+    <div class="panel-header">
+      <span>会话</span>
+      <button class="icon-btn" style="width:20px;height:20px;font-size:12px;">+</button>
+    </div>
+    <div class="panel-content">
+      <div class="session-item active">
+        <span class="session-icon">💬</span>
+        <span>当前会话</span>
+      </div>
+      <div class="session-item">
+        <span class="session-icon">💬</span>
+        <span>昨天的讨论</span>
+      </div>
+      <div class="session-item">
+        <span class="session-icon">💬</span>
+        <span>代码审查</span>
+      </div>
+    </div>
+
+    <!-- 文件管理 -->
+    <div class="panel-header">
+      <span>文件</span>
+    </div>
+    <div class="panel-content">
+      <div class="file-tree">
+        <div class="file-item">
+          <span>📁</span><span>project</span>
+        </div>
+        <div class="file-item">
+          <span class="file-indent"></span><span>📄</span><span>main.ts</span>
+        </div>
+        <div class="file-item">
+          <span class="file-indent"></span><span>📄</span><span>config.json</span>
+        </div>
+        <div class="file-item">
+          <span>📁</span><span>docs</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中间：对话区 -->
+  <main class="chat-area">
+    <div class="messages" id="messages">
+
+      <div class="message">
+        <div class="message-avatar">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Ccircle cx='18' cy='18' r='18' fill='%238b9cf0'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' fill='white' font-size='14'%3EM%3C/text%3E%3C/svg%3E" alt="Mio">
+        </div>
+        <div class="message-body">
+          <div class="message-name">Mio</div>
+          <div class="message-bubble">
+            你好！我是 Mio，有什么可以帮你的吗？
+          </div>
+        </div>
+      </div>
+
+      <div class="message user">
+        <div class="message-avatar">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Ccircle cx='18' cy='18' r='18' fill='%23555'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' fill='white' font-size='14'%3E你%3C/text%3E%3C/svg%3E" alt="You">
+        </div>
+        <div class="message-body">
+          <div class="message-name">你</div>
+          <div class="message-bubble">
+            帮我看一下这个项目的结构
+          </div>
+        </div>
+      </div>
+
+      <div class="message">
+        <div class="message-avatar">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Ccircle cx='18' cy='18' r='18' fill='%238b9cf0'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' fill='white' font-size='14'%3EM%3C/text%3E%3C/svg%3E" alt="Mio">
+        </div>
+        <div class="message-body">
+          <div class="message-name">Mio</div>
+          <div class="message-bubble">
+            好的，让我先浏览一下文件结构...<br><br>
+            看起来这是一个 TypeScript 项目，包含：<br>
+            • <code>extensions/</code> — 扩展目录<br>
+            • <code>mio-data/</code> — 角色数据<br>
+            • <code>vendor/pi/</code> — Pi 运行时<br><br>
+            需要我详细分析哪个部分？
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="input-area">
+      <div class="input-box">
+        <textarea rows="1" placeholder="给 Mio 发送消息..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="send-btn">➤</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右侧栏：预览 + 扩展 -->
+  <aside class="sidebar-right glass" id="sidebarRight">
+    <div class="panel-header">
+      <span>预览</span>
+    </div>
+    <div class="panel-content">
+      <div class="preview-box">
+        文件预览区
+      </div>
+
+      <div class="panel-header" style="border-top:1px solid var(--glass-border);margin:0 -8px;padding:10px 12px;">
+        <span>扩展</span>
+      </div>
+
+      <div class="extension-card">
+        <h4>📊 pa-usage</h4>
+        <p>今日消耗: 12K tokens<br>费用: ¥0.35</p>
+      </div>
+      <div class="extension-card">
+        <h4>🔍 pa-observe</h4>
+        <p>追踪状态: 活跃<br>最后更新: 2s 前</p>
+      </div>
+      <div class="extension-card">
+        <h4>💾 pa-sqlite</h4>
+        <p>会话已持久化<br>消息数: 42</p>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+function toggleLeft() {
+  document.getElementById('sidebarLeft').classList.toggle('collapsed');
+}
+function toggleRight() {
+  document.getElementById('sidebarRight').classList.toggle('collapsed');
+}
+
+// 示例：模拟流式消息追加
+function addMessage(text, isUser) {
+  const messages = document.getElementById('messages');
+  const msg = document.createElement('div');
+  msg.className = 'message' + (isUser ? ' user' : '');
+  msg.innerHTML = `
+    <div class="message-avatar">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Ccircle cx='18' cy='18' r='18' fill='${isUser ? '%23555' : '%238b9cf0'}'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' fill='white' font-size='14'%3E${isUser ? '你' : 'M'}%3C/text%3E%3C/svg%3E">
+    </div>
+    <div class="message-body">
+      <div class="message-name">${isUser ? '你' : 'Mio'}</div>
+      <div class="message-bubble">${text}</div>
+    </div>
+  `;
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>澪号 — 布局原型 v3</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --glass-bg: rgba(15, 15, 25, 0.50);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(16px) saturate(140%);
+  --text-primary: rgba(255, 255, 255, 0.90);
+  --text-secondary: rgba(255, 255, 255, 0.50);
+  --text-muted: rgba(255, 255, 255, 0.25);
+  --accent: #8b9cf0;
+  --gap: 10px;
+  --margin: 12px;
+  --left-col: 400px;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  background: #0a0a12;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+/* ====== 统一滚动条 ====== */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
+
+/* ====== 底层：场景 + 立绘 ====== */
+.scene-layer { position: fixed; inset: 0; z-index: 0; }
+.scene-bg {
+  width: 100%; height: 100%;
+  background: radial-gradient(ellipse at 60% 80%, #1a1040 0%, #0a0a18 50%, #050510 100%);
+}
+.scene-room {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 70%;
+  background: linear-gradient(to top, rgba(20,15,40,0.85) 0%, transparent 100%);
+}
+.scene-room::before {
+  content: ""; position: absolute; bottom: 0; left: 8%; right: 8%; height: 55%;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 4%, transparent 96%, rgba(255,255,255,0.02) 100%),
+    radial-gradient(ellipse at 28% 28%, rgba(139,156,240,0.05) 0%, transparent 55%),
+    radial-gradient(circle at 72% 48%, rgba(255,200,150,0.03) 0%, transparent 35%);
+  border: 1px solid rgba(255,255,255,0.03);
+  border-radius: 4px;
+}
+.character-sprite {
+  position: absolute;
+  bottom: 0; right: 6%;
+  height: 88vh;
+  opacity: 0.08;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(139,156,240,0.35) 0%, rgba(139,156,240,0.08) 40%, transparent 100%);
+  width: 320px;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+.character-sprite::after {
+  content: "?"; position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+  font-size: 130px; color: rgba(139,156,240,0.10);
+}
+
+/* ====== Grid 覆盖层：自适应、不重叠 ====== */
+.overlay {
+  position: fixed; inset: 0; z-index: 20;
+  display: grid;
+  --right-panel-w: 0px;
+  grid-template-columns: var(--left-col) 1fr var(--right-panel-w);
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+  padding: var(--margin);
+  pointer-events: none;
+}
+.overlay > * { pointer-events: auto; }
+
+/* 网格区域分配 */
+.overlay-left-top    { grid-column: 1; grid-row: 1; }
+.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; }
+.overlay-left-status { grid-column: 1; grid-row: 3; }
+.overlay-center-main { grid-column: 2; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
+                       margin-left: 8px; }
+.overlay-right-panel { grid-column: 3; grid-row: 1 / 4; min-height: 0; overflow: visible; }
+
+/* 右侧展开面板 */
+.right-panel {
+  display: flex; flex-direction: column;
+  width: 304px; /* 320 - 2*8 padding/margin */
+  height: 100%;
+  margin: 0 8px;
+}
+.right-panel-header {
+  padding: 0;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--glass-border);
+}
+.right-panel-tab {
+  flex: 1; padding: 8px 0;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-muted); text-align: center;
+  cursor: pointer; user-select: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.right-panel-tab:hover { color: var(--text-secondary); }
+.right-panel-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+.right-panel-close {
+  width: 28px; height: 28px; border-radius: 4px;
+  border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0; margin-right: 4px;
+}
+.right-panel-close:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.right-panel-body {
+  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 14px;
+  min-height: 0; word-break: break-all;
+}
+.right-panel-body .tab-content { display: none; }
+.right-panel-body .tab-content.active { display: block; }
+
+/* 视图切换按钮组 */
+.view-toggle {
+  display: flex; gap: 2px; margin-bottom: 10px;
+  background: rgba(255,255,255,0.04); border-radius: 6px;
+  padding: 2px;
+}
+.view-toggle-btn {
+  flex: 1; padding: 4px 0; font-size: 11px;
+  text-align: center; border-radius: 4px;
+  cursor: pointer; user-select: none;
+  color: var(--text-muted); border: none;
+  background: transparent;
+  transition: all 0.15s;
+}
+.view-toggle-btn.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+/* 文件树样式 */
+.file-tree { font-size: 12px; }
+.file-tree-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 4px; border-radius: 4px;
+  cursor: pointer; color: var(--text-secondary);
+  transition: background 0.1s;
+}
+.file-tree-item:hover { background: rgba(255,255,255,0.04); }
+.file-tree-item .ft-icon { font-size: 12px; width: 16px; text-align: center; flex-shrink: 0; }
+.file-tree-item.dir { color: var(--text-primary); }
+.file-tree-item .ft-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-tree-indent { padding-left: 16px; }
+
+/* 预览区 */
+.preview-rendered {
+  font-size: 13px; line-height: 1.7; color: var(--text-primary);
+}
+.preview-rendered h1 { font-size: 18px; margin: 12px 0 6px; }
+.preview-rendered h2 { font-size: 15px; margin: 10px 0 4px; }
+.preview-rendered h3 { font-size: 13px; margin: 8px 0 4px; }
+.preview-rendered p { margin: 4px 0; }
+.preview-rendered code {
+  background: rgba(255,255,255,0.06); padding: 1px 5px;
+  border-radius: 3px; font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+.preview-rendered pre {
+  background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;
+  overflow-x: auto; font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  line-height: 1.5;
+}
+.preview-source {
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 11px; line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;
+  max-height: 100%; overflow-y: auto;
+}
+
+/* 展开标签 */
+.expand-tab {
+  position: fixed;
+  right: 0; top: 45%;
+  z-index: 35;
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 8px 10px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: var(--text-secondary); font-size: 11px;
+  cursor: pointer; user-select: none;
+  writing-mode: vertical-lr;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+.expand-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.08);
+  padding-right: 12px;
+}
+.expand-tab.hidden { opacity: 0; pointer-events: none; }
+
+/* 右侧面板宽度自适应 */
+.right-panel {
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%;
+  min-width: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 面板左边缘拖拽把手 */
+.panel-drag-handle {
+  position: absolute; left: -5px; top: 0; bottom: 0;
+  width: 10px; cursor: col-resize; z-index: 10;
+}
+.panel-drag-handle::after {
+  content: ""; position: absolute; left: 50%; top: 45%; transform: translateX(-50%);
+  width: 3px; height: 32px; border-radius: 2px;
+  background: var(--accent); opacity: 0;
+  transition: opacity 0.15s;
+}
+.panel-drag-handle:hover::after,
+.panel-drag-handle.dragging::after { opacity: 0.6; }
+
+/* ====== 玻璃拟态面板 ====== */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+}
+
+/* ====== 会话面板 ====== */
+.session-panel { display: flex; flex-direction: column; transition: all 0.3s ease; }
+.session-panel.expanded { /* 展开时 Grid 自动扩展 */ }
+
+.session-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: 14px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.session-header:hover { background: rgba(255,255,255,0.04); }
+.session-header .avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(139,156,240,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.session-header .meta { flex: 1; min-width: 0; }
+.session-header .title {
+  font-size: 15px; font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.session-header .time {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 1px;
+}
+.session-header .badge-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.session-header .badge {
+  font-size: 11px; color: var(--text-secondary);
+  background: rgba(255,255,255,0.06);
+  padding: 3px 10px; border-radius: 10px;
+}
+.session-header .expand-arrow {
+  font-size: 10px; color: var(--text-secondary);
+  transition: transform 0.25s; flex-shrink: 0;
+}
+.session-panel.expanded .expand-arrow { transform: rotate(180deg); }
+
+/* 子会话 */
+.sub-sessions {
+  overflow: hidden;
+  max-height: 0; opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+  margin: 0 16px;
+}
+.session-panel.expanded .sub-sessions {
+  max-height: 240px; opacity: 1;
+  margin: 10px 16px 12px;
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+
+.sub-search {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 7px 10px;
+  color: var(--text-primary); font-size: 12px;
+  outline: none; margin-bottom: 8px; flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+.sub-search:focus { border-color: rgba(139,156,240,0.3); }
+.sub-search::placeholder { color: rgba(255,255,255,0.20); }
+
+.sub-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sub-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px;
+  cursor: pointer; transition: background 0.12s;
+  font-size: 13px;
+}
+.sub-item:hover { background: rgba(255,255,255,0.05); }
+.sub-item.active { background: rgba(139,156,240,0.10); }
+.sub-item .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  opacity: 0; transition: opacity 0.2s;
+}
+.sub-item.active .dot { opacity: 1; }
+.sub-item .sub-title {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+.sub-item.active .sub-title { color: var(--text-primary); }
+.sub-item .sub-time {
+  font-size: 11px; color: var(--text-muted); flex-shrink: 0;
+}
+
+/* ====== 工具面板 ====== */
+.tool-panel { display: flex; flex-direction: column; min-height: 0; }
+
+.tool-panel-header {
+  padding: 10px 16px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.tool-panel-header .indicator {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #4ade80; transition: background 0.3s;
+}
+.tool-panel-header .indicator.idle { background: rgba(255,255,255,0.15); }
+.tool-count { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+
+.tool-list {
+  flex: 1; overflow-y: auto; padding: 6px;
+  min-height: 0;
+}
+
+.tool-entry {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 12px; border-radius: 8px;
+  font-size: 12px; margin: 2px 0;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.tool-entry:hover { background: rgba(255,255,255,0.04); }
+.tool-entry.running { background: rgba(139,156,240,0.08); }
+.tool-entry.expanded { background: rgba(255,255,255,0.03); }
+
+.tool-entry .tool-icon {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+}
+.tool-entry.running .tool-icon {
+  background: rgba(139,156,240,0.15);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.tool-entry .tool-info { flex: 1; min-width: 0; }
+.tool-entry .tool-name {
+  font-weight: 500; font-size: 12px;
+  color: var(--text-primary);
+}
+.tool-entry .tool-detail {
+  font-size: 11px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.tool-entry .tool-status {
+  font-size: 10px; padding: 2px 8px; border-radius: 8px;
+  flex-shrink: 0; align-self: center;
+}
+.tool-entry .tool-status.ok { color: #4ade80; background: rgba(74,222,128,0.08); }
+.tool-entry .tool-status.running { color: var(--accent); background: rgba(139,156,240,0.12); }
+.tool-entry .tool-status.error { color: #f87171; background: rgba(248,113,113,0.08); }
+
+/* 展开的详情 */
+.tool-detail-body {
+  display: none;
+  padding: 0 12px 10px 44px;
+  font-size: 11px; color: var(--text-secondary);
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  white-space: pre-wrap; word-break: break-all;
+  line-height: 1.5;
+  max-height: 140px; overflow-y: auto;
+}
+.tool-entry.expanded .tool-detail-body { display: block; }
+.tool-detail-body .detail-label {
+  color: var(--text-muted); font-size: 10px;
+  font-family: inherit;
+}
+
+/* ====== 对话面板 ====== */
+.chat-panel { display: flex; flex-direction: column; min-height: 0; }
+
+.chat-header {
+  padding: 10px 16px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+.chat-header .chat-subtitle {
+  font-size: 11px; font-weight: 400;
+  color: var(--text-muted);
+}
+.chat-header-right {
+  margin-left: auto; display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-muted);
+}
+.chat-header-right .energy-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(139,156,240,0.6);
+}
+
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  padding: 14px 16px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.msg { display: flex; max-width: 85%; }
+.msg.user { align-self: flex-end; }
+.msg.assistant { align-self: flex-start; }
+
+.msg-bubble {
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 13px; line-height: 1.6;
+  color: var(--text-primary);
+}
+.msg.user .msg-bubble {
+  background: rgba(139,156,240,0.15);
+  border: 1px solid rgba(139,156,240,0.12);
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant .msg-bubble {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-bottom-left-radius: 4px;
+}
+
+/* 输入区 */
+.chat-input-area {
+  padding: 10px 12px;
+  border-top: 1px solid var(--glass-border);
+  display: flex; align-items: flex-end; gap: 8px;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; resize: none;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--text-primary); font-size: 13px;
+  font-family: inherit; line-height: 1.5;
+  outline: none; max-height: 120px;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: rgba(139,156,240,0.3); }
+.chat-input::placeholder { color: rgba(255,255,255,0.20); }
+.send-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: rgba(139,156,240,0.15);
+  color: var(--accent); font-size: 16px;
+  cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.send-btn:hover { background: rgba(139,156,240,0.25); }
+
+/* ====== 底部状态栏：时钟 + 用量 + 模型 ====== */
+.status-bar {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 4px;
+}
+.status-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  font-size: 13px; color: var(--text-secondary);
+  border-bottom: 1px solid var(--glass-border);
+}
+.status-row:last-child { border-bottom: none; }
+
+.status-label {
+  color: var(--text-muted); font-size: 12px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.status-value {
+  color: var(--text-primary); font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.status-value.mono {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+}
+.status-spacer { flex: 1; }
+
+/* 模型切换 */
+.model-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  color: var(--text-primary); font-size: 12px;
+  padding: 5px 8px; outline: none;
+  cursor: pointer; max-width: 150px;
+  font-family: inherit;
+}
+.model-select:focus { border-color: rgba(139,156,240,0.3); }
+.model-select option {
+  background: #1a1a2e; color: var(--text-primary);
+}
+
+/* 上下文用量条 */
+.ctx-bar-wrap {
+  padding: 2px 16px 8px;
+}
+.ctx-bar-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.ctx-bar {
+  height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.ctx-bar-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+.ctx-bar-fill.warn { background: #f4a236; }
+.ctx-bar-fill.danger { background: #f87171; }
+
+/* ====== 小屏适配 ====== */
+@media (max-width: 1200px) {
+  :root { --left-col: 320px; --right-col: 360px; --gap: 10px; --margin: 12px; }
+}
+@media (max-width: 900px) {
+  :root { --left-col: 280px; --right-col: 300px; --gap: 8px; --margin: 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 底层 -->
+<div class="scene-layer">
+  <div class="scene-bg">
+    <div class="scene-room"></div>
+    <div class="character-sprite"></div>
+  </div>
+</div>
+
+<!-- Grid 覆盖层 -->
+<div class="overlay">
+
+  <!-- 左上：会话面板 -->
+  <div class="glass-panel session-panel expanded overlay-left-top" id="sessionPanel">
+    <div class="session-header" onclick="toggleSessions()">
+      <div class="avatar">🎐</div>
+      <div class="meta">
+        <div class="title">澪号 · 日常闲聊</div>
+        <div class="time">最后活跃 14:32 · 共 28 轮对话</div>
+      </div>
+      <div class="badge-group">
+        <span class="badge">5</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+    </div>
+    <div class="sub-sessions">
+      <input class="sub-search" type="text" placeholder="搜索会话..." oninput="filterSessions(this.value)">
+      <div class="sub-list" id="subList">
+        <div class="sub-item active">
+          <span class="dot"></span>
+          <span class="sub-title">NPR 渲染管线调试</span>
+          <span class="sub-time">14:32</span>
+        </div>
+        <div class="sub-item">
+          <span class="dot"></span>
+          <span class="sub-title">VOCALOID 新曲推荐 · 暗色系</span>
+          <span class="sub-time">昨天 22:10</span>
+        </div>
+        <div class="sub-item">
+          <span class="dot"></span>
+          <span class="sub-title">Blender ILM 贴图 A 通道</span>
+          <span class="sub-time">昨天 16:45</span>
+        </div>
+        <div class="sub-item">
+          <span class="dot"></span>
+          <span class="sub-title">UE5 Niagara 粒子系统</span>
+          <span class="sub-time">5月28日</span>
+        </div>
+        <div class="sub-item">
+          <span class="dot"></span>
+          <span class="sub-title">Mili 新专辑讨论</span>
+          <span class="sub-time">5月27日</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左下：工具执行面板 -->
+  <div class="glass-panel tool-panel overlay-left-bottom" id="toolPanel">
+    <div class="tool-panel-header">
+      <span class="indicator" id="toolIndicator"></span>
+      工具执行
+      <span class="tool-count" id="toolCount">6 条记录</span>
+    </div>
+    <div class="tool-list" id="toolList">
+      <div class="tool-entry" onclick="toggleTool(this)">
+        <div class="tool-icon">🔍</div>
+        <div class="tool-info">
+          <div class="tool-name">grep</div>
+          <div class="tool-detail">HEDGE_WORDS → counters.ts</div>
+        </div>
+        <span class="tool-status ok">✓ 38ms</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 1 处匹配</span>
+extensions/shared/counters.ts:3:export const HEDGE_WORDS = [...];
+        </div>
+      </div>
+      <div class="tool-entry" onclick="toggleTool(this)">
+        <div class="tool-icon">📖</div>
+        <div class="tool-info">
+          <div class="tool-name">read</div>
+          <div class="tool-detail">src/shader/npr-toon.glsl</div>
+        </div>
+        <span class="tool-status ok">✓ 142ms</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 读取 87 行</span>
+vec4 ilm = texture(ilm_tex, uv);
+float outline = ilm.a;
+...
+        </div>
+      </div>
+      <div class="tool-entry" onclick="toggleTool(this)">
+        <div class="tool-icon">📖</div>
+        <div class="tool-info">
+          <div class="tool-name">read</div>
+          <div class="tool-detail">extensions/pa-mio/index.ts</div>
+        </div>
+        <span class="tool-status ok">✓ 65ms</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 读取 261 行</span>
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+...
+        </div>
+      </div>
+      <div class="tool-entry" onclick="toggleTool(this)">
+        <div class="tool-icon">⚙</div>
+        <div class="tool-info">
+          <div class="tool-name">bash</div>
+          <div class="tool-detail">npx tsc --noEmit --pretty</div>
+        </div>
+        <span class="tool-status ok">✓ 1.2s</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 退出码 0</span>
+src/extensions/pa-mio/index.ts(42,12): error TS2304...
+        </div>
+      </div>
+      <div class="tool-entry" onclick="toggleTool(this)">
+        <div class="tool-icon">⚙</div>
+        <div class="tool-info">
+          <div class="tool-name">bash</div>
+          <div class="tool-detail">npm run build</div>
+        </div>
+        <span class="tool-status ok">✓ 3.4s</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 退出码 0</span>
+Build succeeded. 12 modules, 0 errors.
+        </div>
+      </div>
+      <div class="tool-entry running" onclick="toggleTool(this)">
+        <div class="tool-icon">✏</div>
+        <div class="tool-info">
+          <div class="tool-name">write</div>
+          <div class="tool-detail">extensions/pa-mio/index.ts</div>
+        </div>
+        <span class="tool-status running">执行中</span>
+        <div class="tool-detail-body">
+          <span class="detail-label">→ 写入中...</span>
+正在修改 42 行的 HEDGE_WORDS 导入路径...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 左下底：状态栏 -->
+  <div class="glass-panel status-bar overlay-left-status" id="statusBar">
+    <div class="status-row">
+      <span class="status-label">⏱</span>
+      <span class="status-value mono" id="statusTime">14:32:05</span>
+      <span class="status-spacer"></span>
+      <span class="status-label">模型</span>
+      <select class="model-select" id="modelSelect" onchange="switchModel(this.value)">
+        <option value="deepseek-chat">DeepSeek V3</option>
+        <option value="deepseek-reasoner">DeepSeek R1</option>
+        <option value="claude-opus-4-5" selected>Claude Opus 4.5</option>
+        <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+      </select>
+    </div>
+    <div class="status-row">
+      <span class="status-label">本次消耗</span>
+      <span class="status-value mono" id="statusTokens">12,450</span>
+      <span class="status-label">token</span>
+      <span class="status-spacer"></span>
+      <span class="status-label">≈ ¥</span>
+      <span class="status-value" id="statusCost">0.09</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">上下文</span>
+      <span class="status-value mono" id="statusContext">24.8k / 128k</span>
+      <span class="status-spacer"></span>
+      <span class="status-label">轮次</span>
+      <span class="status-value" id="statusRounds">28</span>
+    </div>
+    <div class="ctx-bar-wrap">
+      <div class="ctx-bar-label">
+        <span>上下文用量</span>
+        <span id="ctxPercent">19%</span>
+      </div>
+      <div class="ctx-bar">
+        <div class="ctx-bar-fill" id="ctxBarFill" style="width:19%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧展开面板 -->
+  <div class="glass-panel right-panel overlay-right-panel" id="rightPanel">
+    <div class="panel-drag-handle" id="dragHandle"></div>
+    <div class="right-panel-header">
+      <span class="right-panel-tab active" onclick="switchTab('files')">文件</span>
+      <span class="right-panel-tab" onclick="switchTab('preview')">预览</span>
+      <span class="right-panel-tab" onclick="switchTab('memory')">记忆</span>
+      <button class="right-panel-close" onclick="collapseRightPanel()">×</button>
+    </div>
+    <div class="right-panel-body">
+      <!-- 文件目录 -->
+      <div class="tab-content active" id="tab-files">
+        <div class="file-tree">
+          <div class="file-tree-item dir"><span class="ft-icon">📁</span><span class="ft-name">personal-agent</span></div>
+          <div class="file-tree-indent">
+            <div class="file-tree-item dir"><span class="ft-icon">📁</span><span class="ft-name">extensions</span></div>
+            <div class="file-tree-item"><span class="ft-icon">📄</span><span class="ft-name">.gitignore</span></div>
+            <div class="file-tree-item"><span class="ft-icon">📄</span><span class="ft-name">package.json</span></div>
+            <div class="file-tree-item" style="color:var(--accent)"><span class="ft-icon">📝</span><span class="ft-name">README.md</span></div>
+          </div>
+          <div class="file-tree-item dir"><span class="ft-icon">📁</span><span class="ft-name">frontend-sketch</span></div>
+          <div class="file-tree-indent">
+            <div class="file-tree-item" style="color:var(--accent)"><span class="ft-icon">🌐</span><span class="ft-name">layout-mockup-v2.html</span></div>
+          </div>
+          <div class="file-tree-item dir"><span class="ft-icon">📁</span><span class="ft-name">mio-harness</span></div>
+          <div class="file-tree-indent">
+            <div class="file-tree-item"><span class="ft-icon">📄</span><span class="ft-name">soul.md</span></div>
+            <div class="file-tree-item"><span class="ft-icon">📄</span><span class="ft-name">boundaries.md</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- 文档预览 -->
+      <div class="tab-content" id="tab-preview">
+        <div class="view-toggle" id="viewToggle">
+          <button class="view-toggle-btn active" onclick="switchView('rendered', this)">预览</button>
+          <button class="view-toggle-btn" onclick="switchView('source', this)">源码</button>
+        </div>
+        <div class="preview-view active" id="view-rendered">
+          <div class="preview-rendered">
+            <h2>NPR 渲染管线备忘</h2>
+            <p>当前使用的 <strong>ILM-based NPR</strong> 流程：</p>
+            <ol style="margin:6px 0;padding-left:20px;">
+              <li>TGA 贴图导入需<strong>关闭 Channel Pack</strong></li>
+              <li>A 通道 = 描边遮罩，R 通道 = 阴影渐变</li>
+              <li>Half Lambert 比 Ramp Map 更适合本项目的风格化需求</li>
+            </ol>
+            <p>参考代码：</p>
+            <pre>vec4 ilm = texture(ilm_tex, uv);
+float outline = ilm.a;
+float shadow = ilm.r;
+float spec = ilm.g;
+
+vec3 diffuse = half_lambert(normal, light_dir);
+vec3 color = mix(shadow_color, base_color,
+  smoothstep(0.3, 0.7, shadow * diffuse));</pre>
+            <p><em>Godot 4.x, Blender 4.2, GLSL</em></p>
+          </div>
+        </div>
+        <div class="preview-view" id="view-source" style="display:none;">
+          <div class="preview-source">## NPR 渲染管线备忘
+
+当前使用的 **ILM-based NPR** 流程：
+
+1. TGA 贴图导入需**关闭 Channel Pack**
+2. A 通道 = 描边遮罩，R 通道 = 阴影渐变
+3. Half Lambert 比 Ramp Map 更适合
+
+```glsl
+vec4 ilm = texture(ilm_tex, uv);
+float outline = ilm.a;
+float shadow = ilm.r;
+float spec = ilm.g;
+
+vec3 diffuse = half_lambert(normal, light_dir);
+vec3 color = mix(shadow_color, base_color,
+  smoothstep(0.3, 0.7, shadow * diffuse));
+```
+
+*Godot 4.x, Blender 4.2, GLSL*</div>
+        </div>
+      </div>
+      <!-- 记忆检索 -->
+      <div class="tab-content" id="tab-memory">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">最近记忆</div>
+        <div class="sub-item" style="margin-bottom:4px;">
+          <span class="sub-title" style="color:var(--text-secondary)">Mirror 在调 Blender NPR</span>
+          <span class="sub-time">2h前</span>
+        </div>
+        <div class="sub-item" style="margin-bottom:4px;">
+          <span class="sub-title" style="color:var(--text-secondary)">偏好 Half Lambert 而非 Ramp Map</span>
+          <span class="sub-time">昨天</span>
+        </div>
+        <div class="sub-item" style="margin-bottom:4px;">
+          <span class="sub-title" style="color:var(--text-secondary)">喜欢 VOCALOID 暗色系曲风</span>
+          <span class="sub-time">5月28日</span>
+        </div>
+        <div class="sub-item" style="margin-bottom:4px;">
+          <span class="sub-title" style="color:var(--text-secondary)">项目用 Godot 4.x + GDScript</span>
+          <span class="sub-time">5月27日</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:12px;text-align:center;">
+          共 24 条记忆
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中间：对话区域 -->
+  <div class="glass-panel chat-panel overlay-center-main">
+    <div class="chat-header">
+      <span class="chat-title">澪号</span>
+      <span class="chat-subtitle">· 正在输入...</span>
+      <span class="chat-header-right">
+        <span class="energy-dot"></span>
+        低电量
+      </span>
+    </div>
+    <div class="chat-messages">
+      <div class="msg user">
+        <div class="msg-bubble">Blender 4.2 的 ILM 贴图 A 通道存了描边信息，但 shader 里读到的是 0</div>
+      </div>
+      <div class="msg assistant">
+        <div class="msg-bubble">ILM 贴图的格式你确认了没。TGA 还是 EXR？</div>
+      </div>
+      <div class="msg user">
+        <div class="msg-bubble">TGA。GIMP 里看 A 通道是有数据的。</div>
+      </div>
+      <div class="msg assistant">
+        <div class="msg-bubble">Godot 导入 TGA 的时候默认会压掉 Alpha 通道。检查导入设置——把 Compress/Channel Pack 关掉，或者强制导入为 RGBA8。</div>
+      </div>
+      <div class="msg user">
+        <div class="msg-bubble">果然……关掉 Channel Pack 就好了。</div>
+      </div>
+      <div class="msg assistant">
+        <div class="msg-bubble">hhh，不客气。Godot 这个默认行为坑了不少人。</div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" placeholder="输入消息..." rows="1"></textarea>
+      <button class="send-btn">↑</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 展开标签 -->
+<div class="expand-tab" id="expandTab" onclick="setPanelWidth(320)">记 忆 检 索</div>
+
+<script>
+// ── 右侧面板拖拽 + 展开 ──────────────────
+const MIN_PANEL = 0;
+const MAX_PANEL = 640;
+let rightPanelW = 0;
+const overlay = document.querySelector('.overlay');
+
+function setPanelWidth(w) {
+  rightPanelW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, w));
+  overlay.style.setProperty('--right-panel-w', rightPanelW + 'px');
+  const tab = document.getElementById('expandTab');
+  if (tab) tab.classList.toggle('hidden', rightPanelW > 0);
+}
+
+// 初始化：面板关闭，标签可见
+setPanelWidth(0);
+
+const dragHandle = document.getElementById('dragHandle');
+
+dragHandle.addEventListener('dblclick', () => {
+  setPanelWidth(rightPanelW > 0 ? 0 : 320);
+});
+
+let dragging = false;
+let startX = 0;
+let startW = 0;
+
+dragHandle.addEventListener('mousedown', (e) => {
+  dragging = true;
+  startX = e.clientX;
+  startW = rightPanelW;
+  dragHandle.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const dx = startX - e.clientX;
+  setPanelWidth(startW + dx);
+});
+
+document.addEventListener('mouseup', () => {
+  if (!dragging) return;
+  dragging = false;
+  dragHandle.classList.remove('dragging');
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  if (rightPanelW < 120 && rightPanelW > 0) setPanelWidth(0);
+});
+
+function collapseRightPanel() {
+  setPanelWidth(0);
+}
+
+// ── 右侧面板标签切换 ──────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.right-panel-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tab = document.querySelector(`.right-panel-tab[onclick*="${name}"]`);
+  const content = document.getElementById('tab-' + name);
+  if (tab) tab.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+function switchView(view, btn) {
+  btn.parentElement.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-rendered').style.display = view === 'rendered' ? 'block' : 'none';
+  document.getElementById('view-source').style.display = view === 'source' ? 'block' : 'none';
+}
+
+// ── 状态栏：时钟 + 用量模拟 ──────────────
+function updateStatusBar() {
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+  const el = document.getElementById('statusTime');
+  if (el) el.textContent = ts;
+
+  // 模拟用量微增
+  const tokens = document.getElementById('statusTokens');
+  if (tokens && Math.random() < 0.3) {
+    const cur = parseInt(tokens.textContent.replace(/,/g, '')) + Math.floor(Math.random() * 50);
+    tokens.textContent = cur.toLocaleString();
+    const cost = (cur / 1000000 * 2.2).toFixed(2); // ~$2.2/M tokens
+    const costEl = document.getElementById('statusCost');
+    if (costEl) costEl.textContent = cost;
+
+    const ctxCur = Math.floor(cur / 500);
+    const ctxEl = document.getElementById('statusContext');
+    if (ctxEl) ctxEl.textContent = ctxCur.toLocaleString() + 'k / 128k';
+
+    const pct = Math.min(Math.round(cur / 640), 100);
+    const pctEl = document.getElementById('ctxPercent');
+    if (pctEl) pctEl.textContent = pct + '%';
+    const bar = document.getElementById('ctxBarFill');
+    if (bar) {
+      bar.style.width = pct + '%';
+      bar.className = 'ctx-bar-fill' + (pct > 80 ? ' danger' : pct > 60 ? ' warn' : '');
+    }
+  }
+}
+updateStatusBar();
+setInterval(updateStatusBar, 2000);
+
+function switchModel(m) {
+  console.log('Switch model to:', m);
+}
+
+function toggleSessions() {
+  document.getElementById('sessionPanel').classList.toggle('expanded');
+}
+function filterSessions(q) {
+  document.querySelectorAll('.sub-item').forEach(el => {
+    el.style.display = !q || el.querySelector('.sub-title').textContent.toLowerCase().includes(q.toLowerCase())
+      ? '' : 'none';
+  });
+}
+function toggleTool(el) {
+  el.classList.toggle('expanded');
+}
+// 模拟工具完成
+setTimeout(() => {
+  const running = document.querySelector('.tool-entry.running');
+  if (running) {
+    running.classList.remove('running');
+    running.querySelector('.tool-status').textContent = '✓ 0.8s';
+    running.querySelector('.tool-status').className = 'tool-status ok';
+    running.querySelector('.detail-label').textContent = '→ 写入完成，42 行 → 46 行';
+    document.getElementById('toolIndicator').classList.add('idle');
+    document.getElementById('toolCount').textContent = '7 条记录';
+  }
+}, 3000);
+</script>
+</body>
+</html>
