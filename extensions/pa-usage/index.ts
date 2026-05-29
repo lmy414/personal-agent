@@ -36,15 +36,17 @@ function recordUsage(db: Database.Database, model: string, tokensIn: number, tok
 }
 
 function getStats(db: Database.Database, period: string) {
-  let dateFilter: string;
-  if (period === "today") dateFilter = "date = date('now','localtime')";
-  else if (period === "month") dateFilter = "date >= date('now','start of month','localtime')";
-  else if (period === "14d") dateFilter = "date >= date('now','-14 days','localtime')";
-  else dateFilter = "1=1";
+  const VALID_PERIODS = ["today", "month", "14d"] as const;
+  const safePeriod = VALID_PERIODS.includes(period as any) ? period : "all";
 
-  const rows = db.prepare(
-    `SELECT date, model, tokens_input, tokens_output, request_count FROM usage_log WHERE ${dateFilter} ORDER BY date DESC`,
-  ).all() as Array<{ date: string; model: string; tokens_input: number; tokens_output: number; request_count: number }>;
+  const sqlByPeriod: Record<string, string> = {
+    today: `SELECT date, model, tokens_input, tokens_output, request_count FROM usage_log WHERE date = date('now','localtime') ORDER BY date DESC`,
+    month: `SELECT date, model, tokens_input, tokens_output, request_count FROM usage_log WHERE date >= date('now','start of month','localtime') ORDER BY date DESC`,
+    "14d": `SELECT date, model, tokens_input, tokens_output, request_count FROM usage_log WHERE date >= date('now','-14 days','localtime') ORDER BY date DESC`,
+    all: `SELECT date, model, tokens_input, tokens_output, request_count FROM usage_log ORDER BY date DESC`,
+  };
+
+  const rows = db.prepare(sqlByPeriod[safePeriod]).all() as Array<{ date: string; model: string; tokens_input: number; tokens_output: number; request_count: number }>;
 
   let totalInput = 0, totalOutput = 0, totalRequests = 0, totalCostUsd = 0;
 
