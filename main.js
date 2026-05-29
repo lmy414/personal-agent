@@ -20,20 +20,27 @@ let isQuitting = false;
 // ── Diagnostic logging ──────────────────────────────────────
 const LOG_DIR = path.join(os.homedir(), ".personal-agent", "logs");
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
-const MAIN_LOG = path.join(LOG_DIR, `pa-main-${Date.now()}.log`);
-const logStream = fs.createWriteStream(MAIN_LOG, { flags: "a" });
+const MAIN_OUT_LOG = path.join(LOG_DIR, `pa-main-out-${Date.now()}.log`);
+const MAIN_ERR_LOG = path.join(LOG_DIR, `pa-main-err-${Date.now()}.log`);
+const outStream = fs.createWriteStream(MAIN_OUT_LOG, { flags: "a" });
+const errStream = fs.createWriteStream(MAIN_ERR_LOG, { flags: "a" });
 
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}`;
   console.log(line);
-  logStream.write(line + "\n");
+  outStream.write(line + "\n", (e) => { if (e) console.error("outStream write error:", e.message); });
 }
 function logErr(msg) {
   const line = `[${new Date().toISOString()}] ERROR: ${msg}`;
   console.error(line);
-  logStream.write(line + "\n");
+  errStream.write(line + "\n", (e) => { if (e) console.error("errStream write error:", e.message); });
 }
-process.on("uncaughtException", (err) => { logErr(`UNCAUGHT: ${err.message}\n${err.stack}`); });
+process.on("uncaughtException", (err) => {
+  logErr(`UNCAUGHT: ${err.message}\n${err.stack}`);
+  outStream?.end?.(); errStream?.end?.();
+  if (serverProc && !serverProc.killed) serverProc.kill();
+  setTimeout(() => process.exit(1), 500);
+});
 process.on("unhandledRejection", (reason) => { logErr(`UNHANDLED: ${reason}`); });
 
 // ── Port cleanup ───────────────────────────────────────────
@@ -69,7 +76,7 @@ function startBackend() {
       WGPI_PORT: String(PORT),
       WGPI_PI_BIN: "pi-node.cmd",
     },
-    stdio: ["pipe", logStream, logStream],
+    stdio: ["pipe", outStream, errStream],
     shell: true,
   });
 
@@ -187,9 +194,15 @@ app.whenReady().then(async () => {
   createTray();
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", async () => {
   isQuitting = true;
-  if (serverProc && !serverProc.killed) serverProc.kill();
+  if (serverProc && !serverProc.killed) {
+    serverProc.kill();
+    await Promise.race([new Promise((r) => serverProc.once("close", r)), new Promise((r) => setTimeout(r, 3000))]);
+  }
+  outStream.end();
+  errStream.end();
+  await Promise.race([new Promise((r) => outStream.once("finish", r)), new Promise((r) => setTimeout(r, 2000))]);
 });
 
 app.on("window-all-closed", () => {}); // stay in tray
