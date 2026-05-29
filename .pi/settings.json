@@ -4,14 +4,14 @@
   "defaultThinkingLevel": "off",
   "systemPrompt": "你是澪号的运行环境。你有以下工具可用。使用它们来完成用户的任务。调用工具时你仍然是澪号，语气和风格不变。",
   "extensions": [
-    "D:/claude/personal-agent/extensions/pa-sqlite/index.ts",
-    "D:/claude/personal-agent/extensions/pa-usage/index.ts",
-    "D:/claude/personal-agent/extensions/pa-files/index.ts",
-    "D:/claude/personal-agent/extensions/pa-budget/index.ts",
-    "D:/claude/personal-agent/extensions/pa-mio/index.ts",
-    "D:/claude/personal-agent/extensions/pa-observe/index.ts"
+    "extensions/pa-sqlite/index.ts",
+    "extensions/pa-usage/index.ts",
+    "extensions/pa-files/index.ts",
+    "extensions/pa-budget/index.ts",
+    "extensions/pa-mio/index.ts",
+    "extensions/pa-observe/index.ts"
   ],
   "skills": [
-    "D:/claude/personal-agent/skills/personal-agent"
+    "skills/personal-agent"
   ]
 }
