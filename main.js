@@ -46,13 +46,15 @@ process.on("unhandledRejection", (reason) => { logErr(`UNHANDLED: ${reason}`); }
 // ── Port cleanup ───────────────────────────────────────────
 function killExistingPort() {
   try {
-    const out = execFileSync("cmd", ["/c", `netstat -ano | findstr :${PORT}`], { encoding: "utf8", timeout: 3000, windowsHide: true });
+    const out = execFileSync("cmd", ["/c", `netstat -ano | findstr :${PORT} | findstr LISTENING`], { encoding: "utf8", timeout: 3000, windowsHide: true });
     const seen = new Set();
     for (const line of out.trim().split(/\r?\n/)) {
       const m = line.match(/\s+(\d+)\s*$/);
-      if (m && !seen.has(m[1]) && /^\d+$/.test(m[1])) {
+      if (m && !seen.has(m[1])) {
+        const pid = parseInt(m[1], 10);
+        if (pid <= 4) continue;
         seen.add(m[1]);
-        try { execFileSync("taskkill", ["/PID", m[1], "/F", "/T"], { timeout: 3000, windowsHide: true }); log(`Killed PID ${m[1]}`); }
+        try { execFileSync("taskkill", ["/PID", m[1], "/F"], { timeout: 3000, windowsHide: true }); log(`Killed PID ${m[1]}`); }
         catch (e) { logErr(`Failed to kill PID ${m[1]}: ${e.message}`); }
       }
     }
