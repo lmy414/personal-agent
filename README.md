@@ -2,6 +2,17 @@
 
 基于 Pi + DeepSeek 的个人 AI 助手。终端 Agent + Web UI + SQLite 持久化 + 用量追踪。
 
+## 📖 文档索引（新智能体请先看这里）
+
+> 全部文档已拆分为 **< 200 行**的小文件，支持按需读取。
+
+- **5 分钟快速上手** → [`docs/guide/QUICKSTART.md`](docs/guide/QUICKSTART.md)
+- **按场景导航** → [`docs/INDEX.md`](docs/INDEX.md)
+- **架构设计** → [`docs/design/00-overview.md`](docs/design/00-overview.md)
+- **扩展开发** → [`docs/handbook/00-principles.md`](docs/handbook/00-principles.md)
+- **安全审计** → [`docs/audit/00-summary.md`](docs/audit/00-summary.md)
+- **项目状态** → [`docs/state/00-overview.md`](docs/state/00-overview.md)
+
 ## 前置依赖
 
 `pa.bat` 通过 Electron 启动桌面窗口，依赖全局安装的 `electron`：
@@ -68,6 +79,25 @@ personal-agent/
 │   └── character/                 # soul / boundaries / knowledge / language
 └── mio-data/                      # 数据档案（角色卡 + 分析报告 + 设计档案）
 ```
+
+## 文档位置说明
+
+本项目所有文档已按主题拆分为 **< 200 行**的小文件，存放位置如下：
+
+| 文档类别 | 目录 | 内容 | 入口文件 |
+|----------|------|------|----------|
+| **顶层索引** | `docs/` | 全项目文档导航 | [`docs/INDEX.md`](docs/INDEX.md) |
+| **快速上手** | `docs/guide/` | 新智能体 5 分钟入门、HTML 文档索引 | [`docs/guide/QUICKSTART.md`](docs/guide/QUICKSTART.md) |
+| **架构设计** | `docs/design/` | 技术选型、扩展设计、Harness、流水线透视、架构债务 | [`docs/design/00-overview.md`](docs/design/00-overview.md) |
+| **扩展手册** | `docs/handbook/` | 扩展开发规范、API 速查、模板、反模式 | [`docs/handbook/00-principles.md`](docs/handbook/00-principles.md) |
+| **代码审计** | `docs/audit/` | 安全问题（严重/中危/轻微）及修复代码 | [`docs/audit/00-summary.md`](docs/audit/00-summary.md) |
+| **项目状态** | `docs/state/` | 部署状态、数据收集、角色卡、Harness 部署、路线图 | [`docs/state/00-overview.md`](docs/state/00-overview.md) |
+| **问题记录** | `docs/` 根目录 | 当日已知问题、流水线透视问题 | `docs/issues-2026-05-29.md` / `docs/observe-issues.md` |
+| **设计档案** | `mio-data/design/` | 澪号角色系统的 11 份设计文档 | [`mio-data/design/INDEX.md`](mio-data/design/INDEX.md) |
+| **分析报告** | `mio-data/analysis/` | 平台分析（知乎/B站/GitHub/网易云/QQ 等） | `mio-data/analysis/` |
+| **群聊分析** | `mio-data/groups/` | 5 个 QQ 群聊分析报告 | `mio-data/groups/` |
+
+> **注意**：根目录下超过 200 行的大文件（`docs/DESIGN.md`、`docs/EXTENSION-HANDBOOK.md`、`docs/audit-report-2026-05-29.md`、`docs/SESSION-STATE.md`）仅为归档，**请勿直接阅读**。请按上表读取拆分后的小文件。
 
 ## 数据位置
 

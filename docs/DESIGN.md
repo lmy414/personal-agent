@@ -195,7 +195,7 @@ pa-observe (Pi 扩展, ~230 行)
 
 **Session 匹配机制**（v0.5.2）：
 - pa-observe 将 `sessionId`（ULID）写入 trace JSON，API 使用 `sessionId` 查询
-- server 端 `cwdKey` 使用 `replace(/[/\\:*?"<>|]/g, "-")` 兼容 Windows 路径
+- server 端 `cwdKey` 使用 `replace(/[/\:*?"<>|]/g, "-")` 兼容 Windows 路径
 - server 端 `homedir()` 替代 `process.env.HOME`，跨平台可靠
 - 前端 `groupByDate()` 添加 `isNaN` 防御，防止无效时间戳导致会话不可见
 
@@ -220,3 +220,180 @@ pa-observe (Pi 扩展, ~230 行)
 | 金色 | `#D4AF37` | AI 标签、工具调用 |
 | 文字 | `#e0e0e0` | 正文 |
 | 次级文字 | `#8892a4` | 时间戳、辅助信息 |
+
+---
+
+## 8. 架构债务与改进方向（v0.6.0 规划）
+
+> 以下改进点来源于 2026-05-29 全项目代码审计（`docs/audit-report-2026-05-29.md`）和扩展架构调研（`docs/EXTENSION-HANDBOOK.md`）。
+
+### 8.1 扩展架构：从隐式耦合到显式契约
+
+#### 问题：数据库 Schema 隐式契约
+
+当前 `pa-sqlite`、`pa-usage`、`pa-budget` 形成强隐式耦合：
+
+- `pa-sqlite` 在 `session_start` 中创建 `messages`、`conversations`、`usage_log` 表
+- `pa-usage` 直接向 `usage_log` 写入数据
+- `pa-budget` 从 `usage_log` 读取数据计算成本
+
+**风险**：若 `pa-sqlite` 加载失败或被移除，`pa-usage` 和 `pa-budget` 会静默失败；若 schema 变更，下游扩展无版本感知。
+
+**改进方向**：
+1. **Schema 版本化**：每张共享表增加 `_schema_version` 字段或元数据表
+2. **自包含建表**：`pa-usage` 和 `pa-budget` 在 `session_start` 中用 `CREATE TABLE IF NOT EXISTS` 声明自己依赖的表，不假设 `pa-sqlite` 已执行
+3. **表名前缀自治**：所有扩展的数据库表使用 `pa_<name>_*` 前缀，明确归属
+
+#### 问题：pa-observe 内嵌 pa-mio 的计数器逻辑
+
+`pa-observe/index.ts` 第 19–57 行复制了 `pa-mio` 的 `runCounters()` / `checkResponse()` 逻辑，违反 DRY 原则。修改计数规则需要改两处，易遗漏。
+
+**改进方向**：
+1. **共享计数器引擎**：将计数器逻辑从 `pa-mio` 抽离到 `extensions/shared/counter-engine.ts`
+2. **pa-mio 和 pa-observe 统一导入**：`pa-mio` 使用引擎做注入修正，`pa-observe` 使用同一引擎做观测记录
+3. **配置驱动**：计数规则从硬编码改为 JSON 配置，扩展只读不写
+
+#### 问题：pa-observe 硬编码 pa-mio 的实现细节
+
+`pa-observe` 的 subtitle 中出现 `"9 个 Slot 按序注入——元指令 → 身份层..."`，一个通用观察扩展不应知晓特定角色（澪号）的 prompt 结构。
+
+**改进方向**：
+- `pa-observe` 只记录原始 systemPrompt 字符串，不做语义解析
+- 若需要展示结构化信息，由 `pa-mio` 通过 `details` 字段或独立文件输出元数据
+
+### 8.2 扩展与宿主边界：降低 wgnr-pi 耦合
+
+#### 问题：扩展向前端推送数据必须修改 server.js
+
+当前 `pa-observe` 通过写入文件 + `vendor/wgnr-pi/server.js` 新增 `/api/observe_trace` 端点实现面板数据传递。每新增一个需要面板的扩展，都要改 wgnr-pi。
+
+**改进方向**：
+1. **扩展内嵌 HTTP 子服务器**：扩展在独立端口起 Express/Koa 服务（如 `pa-observe` 起 `localhost:4816`），wgnr-pi 只负责 iframe 或反向代理
+2. **WebSocket 广播通道**：Pi 宿主提供 `api.broadcast(channel, payload)` API，wgnr-pi 作为 WebSocket 代理统一转发，扩展不直接操作 server.js
+3. **文件契约 + 自动路由发现**：wgnr-pi 扫描 `~/.personal-agent/` 下的 `.trace.json` 文件，自动暴露同名 REST 端点，扩展只需写文件
+
+### 8.3 systemPrompt 链式拼接的不可预测性
+
+多个扩展监听 `before_agent_start` 并返回 `{ systemPrompt }`，宿主按加载顺序链式拼接。`pa-mio` 可能覆盖/拼接 `pa-observe` 的内容，顺序依赖导致行为不可预测。
+
+**改进方向**：
+1. **Slot 化 systemPrompt**：宿主将 systemPrompt 划分为 `header`、`identity`、`tools`、`footer` 等 Slot，扩展声明自己要修改的 Slot，而非返回完整字符串
+2. **优先级权重**：扩展注册时声明 `priority: number`，高优先级扩展后执行，避免顺序依赖
+3. **显式合并策略**：提供 `append`（追加）、`prepend`（前置）、`replace`（替换）三种模式，默认 `append`
+
+### 8.4 进程模型：消除孤儿进程与 EPIPE
+
+#### 问题：shell: true + SIGTERM 导致孤儿进程
+
+`main.js` 和 `vendor/wgnr-pi/server.js` 均使用 `spawn(..., { shell: true })`。在 Windows 上：
+- `SIGTERM` 只会终止 `cmd.exe`，子进程（pi-node / wgnr-pi）被孤儿化
+- 路径中的特殊字符经过 `cmd.exe` 解析，存在命令注入风险
+
+**改进方向**：
+1. 两处 `spawn` 均改为 `shell: false`
+2. Windows 下使用 `taskkill /PID <pid> /T /F` 级联终止整个进程树
+3. `main.js` 的 `stdio` 使用独立流，避免双写同一 `fs.WriteStream` 导致 EPIPE
+
+#### 问题：全局 wgnr-pi 与本地 vendor 的运行时漂移
+
+崩溃日志显示实际运行的是全局 npm 目录的 `wgnr-pi`，而非本地 `vendor/wgnr-pi/`。本地 patch 不生效。
+
+**改进方向**：
+1. `main.js` 启动前校验实际加载的 `server.js` 绝对路径，与本地 vendor 路径比对
+2. 若检测到全局实例，强制终止并报警
+3. 长期：本地 vendor 使用独立端口（如 4816），避免与全局实例冲突
+
+### 8.5 配置层：从绝对路径到相对路径
+
+#### 问题：settings.json 全量硬编码绝对路径
+
+`.pi/settings.json` 中所有扩展和技能路径写死为 `D:/claude/personal-agent/...`，项目移动后全部失效。
+
+**改进方向**：
+1. settings.json 使用相对路径（如 `"extensions/pa-sqlite/index.ts"`）
+2. 加载器基于 `settings.json` 所在目录 `path.resolve()` 为绝对路径
+3. 校验解析后的路径必须在项目根目录内，防止 `../../../` 遍历
+
+#### 问题：package.json 缺少 Electron 依赖
+
+项目依赖全局安装的 Electron，版本不可控，其他机器 `npm install` 后无法运行。
+
+**改进方向**：
+- 根 `package.json` 添加 `"devDependencies": { "electron": "^33.0.0" }`
+- `pa.bat` 改为 `"%~dp0"` 相对路径，并检查 `electron` 是否在 PATH 中
+
+### 8.6 安全设计：路径与 SQL 的底线
+
+#### 问题：多处路径遍历
+
+- `pa-observe` 的 `traceKey()` 直接使用 `sessionId` 作为文件名
+- `pa-files` 的 `resolveSafe()` 使用 `startsWith` 在 Windows 上大小写敏感
+- `vendor/wgnr-pi/server.js` 的 Session API 和 `observe_trace` API 可被 `../` 绕过
+
+**改进方向**：
+1. 所有用户输入的路径参数使用 `path.resolve()` + 大小写不敏感的 `startsWith` 校验
+2. `sessionId` 等标识符作为文件名前先做 `sha256` 哈希
+3. REST API 的 ID 参数使用 `^[a-zA-Z0-9_-]+$` 白名单
+
+#### 问题：SQL 注入
+
+- `pa-usage/index.ts` 的 `getStats()` 将 `period` 直接拼接到 SQL
+- `mio-harness/memory.py` 使用 f-string 拼接 `LIKE` 子句
+
+**改进方向**：
+1. TypeScript 扩展：全部使用参数化查询或分支查询（`if (period === 'today') ...`）
+2. Python 模块：`sqlite3` 使用 `?` 占位符，禁止 f-string 拼接 SQL
+
+### 8.7 扩展生命周期：缺少 unload hook
+
+当前扩展工厂函数被调用一次即完成初始化，没有 `deactivate` / `unload` 钩子。宿主热重载或退出时，扩展的数据库连接、定时器、文件句柄可能泄漏。
+
+**改进方向**：
+1. 扩展工厂函数返回 `dispose` 函数：`export default function (pi) { ...; return { dispose() { db.close(); } }; }`
+2. 宿主在扩展卸载前调用 `extension.dispose()`
+3. 当前过渡方案：所有扩展在 `session_shutdown` 中清理资源，模块级状态重置
+
+### 8.8 共享层：稳定契约与版本控制
+
+#### 问题：shared/ 模块缺少版本和向后兼容保障
+
+`extensions/shared/db-config.ts`、`logger.ts`、`counters.ts` 被多个扩展导入，但无版本号。若修改 `getPricing()` 的返回值结构，所有调用方可能静默失败。
+
+**改进方向**：
+1. `shared/` 目录增加 `VERSION` 常量，扩展加载时校验
+2. 导出函数保持向后兼容：新增参数用可选参数或 options 对象，不删除旧函数
+3. 关键函数（如 `getPricing`）返回值使用明确接口而非 `any`
+
+### 8.9 数据持久化：从共享文件到扩展自治
+
+#### 问题：多个扩展读写同一 JSON 文件
+
+`pa-mio` 和 `pa-observe` 都可能访问 `~/.personal-agent/` 下的文件，没有锁机制或原子写入。
+
+**改进方向**：
+1. 每个扩展的数据存放在专属子目录：`~/.personal-agent/pa-<name>/`
+2. 写文件使用原子写入：`writeFileSync(tmp)` → `renameSync(tmp, target)`
+3. 共享状态通过 SQLite 事务管理，避免 JSON 文件的并发覆盖
+
+---
+
+## 9. 演进路线图
+
+| 版本 | 目标 | 关键改动 |
+|------|------|----------|
+| v0.5.4 | 安全加固 | 修复路径遍历、SQL 注入、`shell: true`、EPIPE 崩溃 |
+| v0.5.5 | 配置治理 | settings.json 相对路径、package.json 补全 Electron、pa.bat 相对路径 |
+| v0.6.0 | 架构解耦 | shared counter-engine、扩展表名前缀自治、systemPrompt Slot 化、pa-observe 去 mio 化 |
+| v0.6.5 | 进程治理 | 移除全局 wgnr-pi 依赖、本地 vendor 独立端口、孤儿进程清零 |
+| v0.7.0 | 扩展生态 | 扩展 unload hook、api.broadcast 前端通道、扩展市场清单格式 |
+
+---
+
+## 10. 参考文档
+
+| 文档 | 内容 |
+|------|------|
+| `docs/audit-report-2026-05-29.md` | 全项目代码审计报告，含 11 项严重、20 项中危、15 项轻微问题及修复代码 |
+| `docs/EXTENSION-HANDBOOK.md` | 扩展开发手册，含最小模板、接口速查、解耦通信模式、新增 checklist |
+| `docs/SESSION-STATE.md` | 会话状态管理设计 |
+| `docs/ROADMAP.md` | 功能路线图 |
