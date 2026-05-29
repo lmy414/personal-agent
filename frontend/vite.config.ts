@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      '@bridge': resolve(__dirname, '../bridge'),
     },
   },
 })

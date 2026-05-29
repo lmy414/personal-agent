@@ -13,7 +13,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@bridge/*": ["../bridge/*"]
     }
   },
   "include": ["src"]
