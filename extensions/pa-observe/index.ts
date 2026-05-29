@@ -97,8 +97,11 @@ export default function register(api: ExtensionAPI) {
   const LAST_TRACE = path.join(paDir, "observe_last_trace.json");
   const TRACE_DIR = path.join(paDir, "observe_traces");
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   function traceKey(sessionId: string): string {
-    return sessionId; // UUID, globally unique — no encoding needed
+    if (!UUID_RE.test(sessionId)) throw new Error("Invalid sessionId format");
+    return sessionId;
   }
 
   info("observe", "流水线透视已加载");

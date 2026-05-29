@@ -243,8 +243,11 @@ app.get("/api/observe_trace", (req, res) => {
   try {
     const sid = req.query.sessionId;
     const paDir = join(homedir(), ".personal-agent");
-    // If sessionId provided, look up the session-specific trace file first
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (sid && typeof sid === "string" && sid.length > 0) {
+      if (!UUID_RE.test(sid)) {
+        return res.status(400).json({ error: "Invalid sessionId format" });
+      }
       const sessionFile = join(paDir, "observe_traces", sid + ".json");
       console.log("[srv:observe] GET sid=" + sid.slice(-12) + " sessionFile=" + sessionFile.slice(-50) + " exists=" + existsSync(sessionFile));
       if (existsSync(sessionFile)) {
