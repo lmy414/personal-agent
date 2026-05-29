@@ -93,6 +93,7 @@ function truncRequestBody(payloadStr: string, maxLen: number = 8192): string {
 
 // ── 注册 ────────────────────────────────────────────
 export default function register(api: ExtensionAPI) {
+  console.log("[pa-observe] EXTENSION LOADED — register() called");
   const paDir = path.join(os.homedir(), ".personal-agent");
   const LAST_TRACE = path.join(paDir, "observe_last_trace.json");
   const TRACE_DIR = path.join(paDir, "observe_traces");
@@ -397,7 +398,8 @@ export default function register(api: ExtensionAPI) {
     roundCount++;
     agentRunning = false;
     const duration = agentStartTime ? `${((Date.now() - agentStartTime) / 1000).toFixed(1)}s` : "?";
-    info("observe", "agent end", { turn: turnIndex, round: roundCount, duration });
+    info("observe", "agent end", { turn: turnIndex, round: roundCount, duration, sessionId: currentSessionId?.slice(-12) });
+    console.log('[pa-observe] agent_end sessionId=', currentSessionId, 'turnIndex=', turnIndex);
     sendTrace();
   });
 
@@ -406,8 +408,11 @@ export default function register(api: ExtensionAPI) {
     roundCount = 0;
     agentRunning = false;
     reset();
-    currentSessionFile = ctx.sessionManager.getSessionFile() ?? null;
-    currentSessionId = ctx.sessionManager.getSessionId() ?? null;
+    const newFile = ctx.sessionManager.getSessionFile() ?? null;
+    const newId = ctx.sessionManager.getSessionId() ?? null;
+    console.log('[pa-observe] session_start oldSessionId=', currentSessionId, 'newSessionId=', newId, 'oldFile=', currentSessionFile, 'newFile=', newFile);
+    currentSessionFile = newFile;
+    currentSessionId = newId;
     info("observe", "session reset", { sessionId: currentSessionId?.slice(-12) });
 
     // Restore previous trace for this session, or start fresh
