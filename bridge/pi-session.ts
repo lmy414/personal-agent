@@ -22,30 +22,35 @@ interface SessionEntry {
 
 const sessions = new Map<string, SessionEntry>()
 
-// ========== 模型名映射 ==========
+// ========== 模型名映射（仅作参考，主逻辑从 registry 动态获取）==========
 
-const MODEL_MAP: Record<string, { provider: string; modelId: string }> = {
-  'deepseek-v3': { provider: 'deepseek', modelId: 'deepseek-v4-pro' },
-  'deepseek-v4-pro': { provider: 'deepseek', modelId: 'deepseek-v4-pro' },
-  'deepseek-v4-flash': { provider: 'deepseek', modelId: 'deepseek-v4-flash' },
-  'deepseek-r1': { provider: 'deepseek', modelId: 'deepseek-v4-flash' },
-}
+// 旧版硬编码映射，已废弃。保留为文档说明，不再参与任何运行时逻辑。
+// const MODEL_MAP: Record<string, { provider: string; modelId: string }> = {
+//   'deepseek-v3': { provider: 'deepseek', modelId: 'deepseek-v4-pro' },
+//   'deepseek-v4-pro': { provider: 'deepseek', modelId: 'deepseek-v4-pro' },
+//   'deepseek-v4-flash': { provider: 'deepseek', modelId: 'deepseek-v4-flash' },
+//   'deepseek-r1': { provider: 'deepseek', modelId: 'deepseek-v4-flash' },
+// }
 
 function resolveModelFromRegistry(registry: ModelRegistry, modelName: string): Model<any> {
-  const mapping = MODEL_MAP[modelName]
-  if (mapping) {
-    const model = registry.find(mapping.provider, mapping.modelId)
-    if (model) return model
-  }
-  // Fallback: return first available model
+  // 优先从 registry 直接查找匹配 modelName
   const all = registry.getAvailable()
-  if (all.length > 0) return all[0]
-  throw new Error(`No models available. Check DEEPSEEK_API_KEY or other provider credentials.`)
+  if (all.length === 0) {
+    throw new Error(`No models available. Check DEEPSEEK_API_KEY or other provider credentials.`)
+  }
+  const match = all.find((m) => m.id === modelName || m.name === modelName)
+  if (match) return match
+  // Fallback: 返回第一个可用模型
+  return all[0]
 }
 
-export function getAvailableModels(registry?: ModelRegistry): { id: string; name: string }[] {
-  if (!registry) return Object.keys(MODEL_MAP).map((id) => ({ id, name: id }))
-  return registry.getAll().map((m) => ({ id: m.id ?? m.name, name: m.name }))
+export function getAvailableModels(registry?: ModelRegistry): { id: string; name: string; contextWindow: number }[] {
+  if (!registry) return []
+  return registry.getAll().map((m) => ({
+    id: m.id ?? m.name,
+    name: m.name,
+    contextWindow: (m as any).contextWindow ?? 0,
+  }))
 }
 
 // ========== 会话生命周期 ==========

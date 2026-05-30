@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js'
+import { createSignal, For, onMount, onCleanup } from 'solid-js'
 import { SceneLayer } from './SceneLayer'
 import { registry, type Extension } from '@/registry'
 import './App.css'
@@ -11,10 +11,24 @@ export function App() {
   const [rightPanelW, setRightPanelW] = createSignal(320)
   const [panelVisible, setPanelVisible] = createSignal(true)
 
+  // P0-04: 监听右侧面板关闭事件
+  onMount(() => {
+    const handleClose = () => {
+      setRightPanelW(0)
+      setPanelVisible(false)
+    }
+    window.addEventListener('close-right-panel', handleClose)
+    onCleanup(() => window.removeEventListener('close-right-panel', handleClose))
+  })
+
   const handleDragStart = (e: MouseEvent) => {
     e.preventDefault()
     const startX = e.clientX
     const startW = rightPanelW()
+    const handle = e.currentTarget as HTMLElement
+    handle.classList.add('dragging')
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
 
     const onMove = (ev: MouseEvent) => {
       const w = startW - (ev.clientX - startX)
@@ -29,6 +43,9 @@ export function App() {
     }
 
     const onUp = () => {
+      handle.classList.remove('dragging')
+      document.body.style.userSelect = ''
+      document.body.style.cursor = ''
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
     }

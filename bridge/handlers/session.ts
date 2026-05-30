@@ -189,10 +189,12 @@ export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
 
 export function handleSessionRename(msg: ClientMessage, ws: WebSocket): void {
   const payload = msg.payload as { sessionId: string; title: string }
+  // P3-06: 标题防注入，限制 100 字符，去除 HTML 标签
+  const sanitized = payload.title.replace(/<[^>]*>/g, '').slice(0, 100)
   const db = getDB()
 
   db.prepare('UPDATE conversations SET title = ?, updated_at = datetime(?) WHERE session_id = ?').run(
-    payload.title, new Date().toISOString(), payload.sessionId,
+    sanitized, new Date().toISOString(), payload.sessionId,
   )
 
   updateSessionMeta(payload.sessionId, { title: payload.title })
@@ -239,4 +241,61 @@ export function handleSessionDelete(msg: ClientMessage, ws: WebSocket): void {
     ts: Date.now(),
     payload: { sessionId: payload.sessionId },
   }))
+}
+
+// ── session.compact（P3-01: 手动压缩上下文）───────────────────────
+
+export async function handleSessionCompact(msg: ClientMessage, ws: WebSocket): Promise<void> {
+  const session = getPiSession(msg.sessionId)
+  if (!session) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { code: 'SESSION_NOT_FOUND', message: '会话不存在', recoverable: true },
+    }))
+    return
+  }
+  if ((session as any).isStreaming) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { code: 'BUSY', message: '会话正在运行，无法压缩', recoverable: true },
+    }))
+    return
+  }
+
+  try {
+    const before = session.getContextUsage()
+    const beforeTokens = before?.tokens ?? 0
+    await (session as any).compact?.()
+    const after = session.getContextUsage()
+    const afterTokens = after?.tokens ?? 0
+    ws.send(JSON.stringify({
+      type: 'session.compacted',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: {
+        tokensBefore: beforeTokens,
+        tokensAfter: afterTokens,
+        contextWindow: after?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
+      },
+    }))
+  } catch (err) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: {
+        code: 'COMPACTION_FAILED',
+        message: err instanceof Error ? err.message : '压缩失败',
+        recoverable: true,
+      },
+    }))
+  }
 }

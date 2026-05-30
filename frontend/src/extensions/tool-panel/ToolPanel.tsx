@@ -17,6 +17,16 @@ const ICON_MAP: Record<string, string> = {
   ls: '📂',
 }
 
+function summarizeInput(toolName: string, input: Record<string, unknown>): string {
+  if (!input || Object.keys(input).length === 0) return '...'
+  // P2-04: 提取最有意义的参数摘要，而非 JSON 截断
+  const firstKey = Object.keys(input)[0]
+  const firstVal = input[firstKey]
+  if (typeof firstVal === 'string' && firstVal.length <= 40) return `${firstKey}: ${firstVal}`
+  if (typeof firstVal === 'string') return `${firstKey}: ${firstVal.slice(0, 37)}...`
+  return `${toolName}(${Object.keys(input).join(', ')})`
+}
+
 function ToolEntry(props: { tool: ToolCallEntry }) {
   const [expanded, setExpanded] = createSignal(false)
 
@@ -44,10 +54,13 @@ function ToolEntry(props: { tool: ToolCallEntry }) {
       <div class="tool-icon">{ICON_MAP[props.tool.toolName] ?? '🔧'}</div>
       <div class="tool-info">
         <div class="tool-name">{props.tool.toolName}</div>
-        <div class="tool-detail">{props.tool.input ? JSON.stringify(props.tool.input).slice(0, 60) : '...'}</div>
+        <div class="tool-detail">{summarizeInput(props.tool.toolName, props.tool.input)}</div>
       </div>
       <span class={`tool-status ${statusClass()}`}>{statusText()}</span>
       <div class="tool-detail-body">
+        <span class="detail-label">→ 输入:</span>
+        {JSON.stringify(props.tool.input, null, 2).slice(0, 500)}
+        {'\n\n'}
         <span class="detail-label">→ 输出:</span>
         {props.tool.output || (props.tool.status === 'running' ? '执行中...' : '(无输出)')}
       </div>

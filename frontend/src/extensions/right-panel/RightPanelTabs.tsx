@@ -1,4 +1,4 @@
-import { createSignal, Switch, Match, onMount, onCleanup } from 'solid-js'
+import { createSignal, onMount, onCleanup, Show } from 'solid-js'
 import { FileTree } from '@/extensions/file-tree/FileTree'
 import { DocPreview } from '@/extensions/doc-preview/DocPreview'
 import { MemoryView } from '@/extensions/memory-view/MemoryView'
@@ -36,22 +36,19 @@ export function RightPanelTabs() {
           </span>
         ))}
         <button class="right-panel-close" onClick={() => {
-          // Close handled by parent App.tsx via double-click or drag
           window.dispatchEvent(new CustomEvent('close-right-panel'))
         }}>×</button>
       </div>
-      <div class="tab-content active">
-        <Switch>
-          <Match when={activeTab() === 'files'}>
-            <FileTree />
-          </Match>
-          <Match when={activeTab() === 'preview'}>
-            <DocPreview />
-          </Match>
-          <Match when={activeTab() === 'memory'}>
-            <MemoryView />
-          </Match>
-        </Switch>
+      <div class="tab-content-persist" style={{ position: 'relative', flex: '1', 'min-height': '0', overflow: 'hidden' }}>
+        <div style={{ display: activeTab() === 'files' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
+          <FileTree />
+        </div>
+        <div style={{ display: activeTab() === 'preview' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
+          <DocPreview />
+        </div>
+        <div style={{ display: activeTab() === 'memory' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
+          <MemoryView />
+        </div>
       </div>
     </>
   )

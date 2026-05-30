@@ -30,6 +30,8 @@ export function DocPreview() {
 
   onMount(() => {
     const unsub = agent.subscribe('file.content', (msg: ServerMessage) => {
+      // P1-08: 仅处理当前 session 的文件内容
+      if (msg.sessionId && msg.sessionId !== agent.sessionId()) return
       setLoading(true)
       const payload = msg.payload as {
         path: string

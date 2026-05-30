@@ -1,8 +1,11 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
 import { readdirSync, statSync, readFileSync, existsSync } from 'fs'
-import { join, resolve, normalize, relative } from 'path'
+import { join, resolve, normalize, relative, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 const PROJECT_ROOT = resolve(join(__dirname, '..', '..'))
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'])
 

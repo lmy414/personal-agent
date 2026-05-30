@@ -59,6 +59,16 @@ export function initDB(): Database.Database {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS context_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL,
+      used_tokens INTEGER NOT NULL DEFAULT 0,
+      context_window INTEGER NOT NULL DEFAULT 0,
+      percent REAL NOT NULL DEFAULT 0,
+      model_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
   `)
 
   // 迁移：pa-sqlite 可能已创建 messages 表但缺少 message_id 列

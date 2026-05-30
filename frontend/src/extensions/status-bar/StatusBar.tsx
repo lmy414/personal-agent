@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from 'solid-js'
+import { createSignal, For, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
 function formatTime(date: Date): string {
@@ -9,7 +9,7 @@ function formatTime(date: Date): string {
 }
 
 export function StatusBar() {
-  const { status, switchModel } = useAgent()
+  const { status, switchModel, isStreaming, send } = useAgent()
   const [time, setTime] = createSignal(new Date())
 
   const timer = setInterval(() => setTime(new Date()), 1000)
@@ -30,8 +30,17 @@ export function StatusBar() {
   const contextText = () => {
     const used = status.contextUsed
     const max = status.contextMax
+    if (max === 0) return `${used} / --`
     if (used >= 1000) return `${(used / 1000).toFixed(1)}k / ${(max / 1000).toFixed(0)}k`
     return `${used} / ${(max / 1000).toFixed(0)}k`
+  }
+
+  const models = () => status.availableModels ?? []
+  const currentModel = () => status.model ?? ''
+
+  const getModelDisplayName = (id: string) => {
+    const m = models().find((m) => m.id === id)
+    return m?.name ?? id
   }
 
   return (
@@ -43,11 +52,20 @@ export function StatusBar() {
         <span class="status-label">模型</span>
         <select
           class="model-select"
+          disabled={isStreaming()}
           onChange={(e) => switchModel(e.currentTarget.value)}
         >
-          <option value="deepseek-v3">DeepSeek V3</option>
-          <option value="deepseek-r1">DeepSeek R1</option>
-          <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+          {models().length > 0 ? (
+            <For each={models()}>
+              {(m) => (
+                <option value={m.id} selected={m.id === currentModel()}>
+                  {m.name}
+                </option>
+              )}
+            </For>
+          ) : (
+            <option value={currentModel()}>{getModelDisplayName(currentModel()) || 'Loading...'}</option>
+          )}
         </select>
       </div>
       <div class="status-row">
@@ -68,7 +86,22 @@ export function StatusBar() {
       <div class="ctx-bar-wrap">
         <div class="ctx-bar-label">
           <span>上下文用量</span>
-          <span>{contextPercent()}%</span>
+          <span>
+            {contextPercent()}%
+            <button
+              class="compact-btn"
+              title="压缩上下文"
+              disabled={isStreaming()}
+              onClick={() => send('session.compact', {})}
+              style={{
+                background: 'none', border: 'none', color: isStreaming() ? 'var(--text-muted)' : 'var(--accent)',
+                cursor: isStreaming() ? 'default' : 'pointer', 'font-size': '14px', 'margin-left': '6px',
+                padding: '0', 'line-height': '1',
+              }}
+            >
+              ⟳
+            </button>
+          </span>
         </div>
         <div class="ctx-bar">
           <div

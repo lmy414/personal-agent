@@ -189,24 +189,46 @@ export function ChatRenderer() {
         </span>
       </div>
       <div class="chat-messages" ref={scrollRef}>
-        <For each={agent.messages().filter((m) => m.content || m.partial)}>
-          {(msg) => (
-            <div class={`msg ${msg.role} message-enter`}>
-              <div
-                class="msg-bubble"
-                innerHTML={
-                  msg.role === 'assistant' && msg.content
-                    ? renderMarkdown(msg.content)
-                    : undefined
-                }
-              >
-                {msg.role === 'assistant' && msg.content
-                  ? null
-                  : msg.content || (msg.partial ? '...' : '')}
-              </div>
+        <Show
+          when={agent.messages().some((m) => m.content || m.partial)}
+          fallback={
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">
+              向澪发送消息开始对话
             </div>
-          )}
-        </For>
+          }
+        >
+          <For each={agent.messages().filter((m) => m.content || m.partial)}>
+            {(msg) => (
+              <div class={`msg ${msg.role} message-enter`}>
+                <div
+                  class="msg-bubble"
+                  innerHTML={
+                    msg.role === 'assistant' && msg.content && !msg.attachments?.length
+                      ? renderMarkdown(msg.content)
+                      : undefined
+                  }
+                >
+                  {msg.role === 'user' && msg.attachments?.length ? (
+                    // P1-01: 附件消息不展开内容，仅显示徽章
+                    <div>
+                      <span>{msg.content || '请帮我分析这些文件'}</span>
+                      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                        <For each={msg.attachments}>
+                          {(att) => (
+                            <span class="chat-attachment-badge">
+                              {att.isImage ? '🖼️' : '📎'} {att.name}
+                            </span>
+                          )}
+                        </For>
+                      </div>
+                    </div>
+                  ) : msg.role === 'assistant' && msg.content ? null
+                    : msg.content || (msg.partial ? '...' : '')}
+                </div>
+              </div>
+            )}
+          </For>
+        </Show>
       </div>
 
       {/* attachment badges */}

@@ -41,6 +41,7 @@ interface AgentActions {
 
 export interface AgentContextValue {
   connected: () => boolean
+  isStreaming: () => boolean
   sessionId: () => string
   messages: () => MessageEntry[]
   toolCalls: () => ToolCallEntry[]
@@ -63,12 +64,13 @@ const AgentContext = createContext<AgentContextValue>()
 
 export const AgentProvider: Component<{ sessionId: string; children: JSX.Element }> = (props) => {
   const [connected, setConnected] = createSignal(false)
+  const [isStreaming, setIsStreaming] = createSignal(false)
   const [messages, setMessages] = createSignal<MessageEntry[]>([])
   const [toolCalls, setToolCalls] = createSignal<ToolCallEntry[]>([])
   const [sessions, setSessions] = createSignal<SessionInfo[]>([])
   const [currentSessionId, setCurrentSessionId] = createSignal(props.sessionId)
   const [status, setStatus] = createStore<StatusPayload>({
-    tokens: 0, cost: 0, contextUsed: 0, contextMax: 128000, roundCount: 0,
+    tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0,
   })
 
   // session 级缓存
@@ -82,7 +84,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let pumpRafId: number | null = null
+  let reconnectAttempts = 0
   const CHARS_PER_FRAME = 2
+  const pendingSends: string[] = []
 
   const getPendingChars = (sid: string): Map<string, string> => {
     let m = sessionPendingChars.get(sid)
@@ -104,13 +108,24 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
     ws.onopen = () => {
       setConnected(true)
-      ws!.send(JSON.stringify({
-        type: 'session.list',
-        id: crypto.randomUUID(),
-        sessionId: '',
-        ts: Date.now(),
-        payload: {},
-      }))
+      reconnectAttempts = 0
+      // 初始化：请求 session 列表 + 模型列表
+      const initMessages = [
+        JSON.stringify({
+          type: 'session.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {},
+        }),
+        JSON.stringify({
+          type: 'model.list', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {},
+        }),
+      ]
+      for (const raw of initMessages) {
+        ws!.send(raw)
+      }
+      // 刷待发送队列
+      while (pendingSends.length > 0) {
+        const raw = pendingSends.shift()!
+        ws!.send(raw)
+      }
     }
 
     ws.onmessage = (event) => {
@@ -121,7 +136,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     ws.onclose = () => {
       setConnected(false)
       if (reconnectTimer) clearTimeout(reconnectTimer)
-      reconnectTimer = setTimeout(connect, 3000)
+      const delay = Math.min(3000 * Math.pow(2, reconnectAttempts), 30000)
+      reconnectAttempts++
+      reconnectTimer = setTimeout(connect, delay)
     }
 
     ws.onerror = () => {
@@ -164,7 +181,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const handleServerMessage = (msg: ServerMessage) => {
-    const msgSid = (msg as any).sessionId ?? ''
+    const msgSid = msg.sessionId ?? ''
     const isCurrent = msgSid === currentSessionId()
 
     switch (msg.type) {
@@ -272,14 +289,19 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       // ── turn + status ──
 
       case 'turn.start':
+        setIsStreaming(true)
+        break
+
       case 'turn.end':
-        // turn 事件不直接更新 UI，仅状态追踪
+        setIsStreaming(false)
         break
 
       case 'session.state': {
         const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; roundCount: number }
-        setStatus({ ...status, contextUsed: p.contextUsed, roundCount: p.roundCount })
-        sessionStatus.set(msgSid, { ...status, contextUsed: p.contextUsed, roundCount: p.roundCount })
+        setStatus('contextUsed', p.contextUsed)
+        setStatus('roundCount', p.roundCount)
+        if (p.model) setStatus('model', p.model)
+        sessionStatus.set(msgSid, { ...status, contextUsed: p.contextUsed, roundCount: p.roundCount, model: p.model })
         setSessions((prev) => prev.map((s) =>
           s.id === msgSid ? { ...s, roundCount: p.roundCount } : s
         ))
@@ -365,6 +387,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
       case 'error':
         console.error('[bridge error]', msg.payload?.code, msg.payload?.message)
+        setIsStreaming(false)
         break
     }
 
@@ -378,14 +401,18 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const send = (type: string, payload: unknown) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return
-    ws.send(JSON.stringify({
+    const raw = JSON.stringify({
       type,
       id: crypto.randomUUID(),
       sessionId: currentSessionId() || props.sessionId,
       ts: Date.now(),
       payload,
-    }))
+    })
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      pendingSends.push(raw)
+      return
+    }
+    ws.send(raw)
   }
 
   const createSession = (model?: string) => send('session.create', { model })
@@ -417,6 +444,11 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const switchSession = (sid: string) => {
+    // P1-07: 切换前中止当前会话的流式输出
+    if (isStreaming()) {
+      send('message.cancel', {})
+      setIsStreaming(false)
+    }
     // 先存当前 session 状态
     syncSignalToCache()
     // 保存当前状态到 sessionStatus
@@ -476,6 +508,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
   const value: AgentContextValue = {
     connected,
+    isStreaming,
     sessionId: currentSessionId,
     messages,
     toolCalls,

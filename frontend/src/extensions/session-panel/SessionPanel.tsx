@@ -199,7 +199,7 @@ export function SessionPanel() {
             <Show when={subSessions().length === 0}>
               <div class="sub-item" style={{ color: 'var(--text-muted)', cursor: 'default' }}>
                 <span class="sub-title" style="color:var(--text-muted)">
-                  无匹配会话
+                  {searchQuery() ? '无匹配会话' : '暂无子会话，点击 + 创建'}
                 </span>
               </div>
             </Show>

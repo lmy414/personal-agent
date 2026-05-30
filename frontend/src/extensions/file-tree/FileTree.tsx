@@ -40,12 +40,17 @@ export function FileTree() {
       const payload = msg.payload as { path: string; entries: FileEntry[] }
       const entries: TreeNode[] = payload.entries
         .filter((e) => !e.name.startsWith('.') || e.name === '.gitignore')
-        .map((e) => ({
-          name: e.name,
-          type: e.type,
-          path: payload.path ? `${payload.path}/${e.name}`.replace(/\/\//g, '/') : e.name,
-          loaded: false,
-        }))
+        .map((e) => {
+          // P1-12: 统一用 / 分隔，避免 Windows 路径混用
+          const basePath = payload.path ? payload.path.replace(/\\/g, '/') : ''
+          const childPath = basePath ? `${basePath}/${e.name}` : e.name
+          return {
+            name: e.name,
+            type: e.type,
+            path: childPath,
+            loaded: false,
+          }
+        })
 
       if (tree().length === 0 || payload.path === '.' || payload.path.endsWith('\\')) {
         // root level

@@ -15,7 +15,7 @@ export type ClientMessage =
   | ClientMsg<'session.list', {}>
   | ClientMsg<'session.switch', { sessionId: string }>
   | ClientMsg<'session.delete', { sessionId: string }>
-  | ClientMsg<'message.send', { content: string; attachments?: AttachmentMeta[] }>
+  | ClientMsg<'message.send', { content: string; displayContent?: string; attachments?: AttachmentMeta[] }>
   | ClientMsg<'message.cancel', {}>
   | ClientMsg<'model.switch', { modelId: string }>
   | ClientMsg<'model.list', {}>
@@ -25,6 +25,7 @@ export type ClientMessage =
   | ClientMsg<'memory.list', { limit?: number; offset?: number }>
   | ClientMsg<'session.history', { sessionId: string }>
   | ClientMsg<'session.rename', { sessionId: string; title: string }>
+  | ClientMsg<'session.compact', {}>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -58,6 +59,7 @@ export type ServerMessage =
   | ServerMsg<'session.deleted', { sessionId: string }>
   // 系统
   | ServerMsg<'compaction', { beforeTokens: number; afterTokens: number }>
+  | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; contextWindow: number }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>
@@ -83,6 +85,8 @@ export interface StatusPayload {
   contextUsed: number
   contextMax: number
   roundCount: number
+  model?: string
+  availableModels?: { id: string; name: string; contextWindow: number }[]
 }
 
 export interface FileEntry {

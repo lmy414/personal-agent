@@ -105,9 +105,9 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
     return
   }
 
-  const payload = msg.payload as { content: string; attachments?: { path: string; name: string; isImage: boolean }[] }
+  const payload = msg.payload as { content: string; displayContent?: string; attachments?: { path: string; name: string; isImage: boolean }[] }
 
-  // 持久化用户消息到 SQLite（含附件元数据）
+  // 持久化用户消息到 SQLite（displayContent 用于展示，不含文件内容）
   try {
     const db = getDB()
     const conv = db.prepare('SELECT id FROM conversations WHERE session_id = ?').get(msg.sessionId) as { id: number } | undefined
@@ -115,7 +115,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
       const attsJson = payload.attachments?.length ? JSON.stringify(payload.attachments) : ''
       db.prepare(
         'INSERT INTO messages (conversation_id, message_id, role, content, attachments) VALUES (?, ?, ?, ?, ?)',
-      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.content, attsJson)
+      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.displayContent ?? payload.content, attsJson)
     }
   } catch (e) {
     console.warn('[message] failed to persist user message:', e)
@@ -342,6 +342,10 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
         try {
           const stats = session.getSessionStats()
           const ctx = session.getContextUsage()
+          // P1-05: contextMax 从 model.contextWindow 动态获取
+          const contextMax = ctx?.contextWindow
+            ?? (session as any).model?.contextWindow
+            ?? 0
           ws.send(JSON.stringify({
             type: 'status.update',
             id: `srv-${Date.now()}`,
@@ -351,10 +355,30 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
               tokens: stats.tokens.total,
               cost: stats.cost,
               contextUsed: ctx?.tokens ?? 0,
-              contextMax: ctx?.contextWindow ?? 128000,
+              contextMax,
               roundCount: newRoundCount,
+              model: (session as any).model?.id ?? '',
             },
           }))
+
+          // P3-02: 写入 context_log 持久化上下文用量
+          try {
+            const db = getDB()
+            const ctx = session.getContextUsage()
+            if (ctx) {
+              db.prepare(
+                'INSERT INTO context_log (session_id, used_tokens, context_window, percent, model_id) VALUES (?, ?, ?, ?, ?)',
+              ).run(
+                msg.sessionId,
+                ctx.tokens ?? 0,
+                contextMax,
+                ctx.percent ?? 0,
+                (session as any).model?.id ?? '',
+              )
+            }
+          } catch {
+            // context_log is non-critical
+          }
         } catch {
           // getSessionStats may throw if no session file is configured
         }
