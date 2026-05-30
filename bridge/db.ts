@@ -39,6 +39,7 @@ export function initDB(): Database.Database {
       tokens_input INTEGER DEFAULT 0,
       tokens_output INTEGER DEFAULT 0,
       model TEXT DEFAULT '',
+      attachments TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     );

@@ -30,8 +30,8 @@
 | 🔴 P0 | 功能完全不可用或数据错误 | 5 | 5 | 0 |
 | 🟠 P1 | 功能可用但有明显缺陷 | 12 | 10 | 2 |
 | 🟡 P2 | 体验 / 健壮性 / 边界情况 | 7 | 7 | 0 |
-| ⚪ P3 | 规范偏离 / 技术债务 / 未实现项 | 10 | 8 | 2 |
-| **合计** | | **34** | **30** | **4** |
+| ⚪ P3 | 规范偏离 / 技术债务 / 未实现项 | 12 | 11 | 1 |
+| **合计** | | **36** | **33** | **3** |
 
 > 最后更新：2026-05-31
 
@@ -216,6 +216,12 @@ messages: messages.map((m) => ({
 ### ❌ P3-10: TypeScript 类型缺口
 **现状：** Pi SDK 类型不完整导致 `(session as any).model` / `(session as any).isStreaming` 等多处 `as any`。Pi 升级后逐步消除。
 
+### ✅ P3-11: messages 表缺少 attachments 列
+> **已修复** — `db.ts` CREATE TABLE messages 补齐 `attachments TEXT DEFAULT ''`；`pa-sqlite/index.ts` 同时补齐 `message_id` 和 `attachments` 列及 ALTER TABLE 迁移。兼容旧库自动补列。
+
+### ✅ P3-12: 主会话「澪」被 AI 自动重命名
+> **已修复** — `message.ts:315` 导入 `isMainSession()`，`shouldName` 增加 `&& !isMain` 条件，跳过主会话的自动命名。`session.ts` 将 `isMainSession` 改为 `export`。
+
 ---
 
 ## 汇总矩阵
@@ -241,9 +247,10 @@ messages: messages.map((m) => ({
 | `memory.ts` | P0-03 | P1-11 | — | P3-08 |
 | `pi-session.ts` | — | P1-03 | — | P3-03 |
 | `protocol.ts` | — | — | — | P3-01, P3-05 |
-| `db.ts` | — | — | — | P3-02 |
+| `db.ts` | — | — | — | P3-02, P3-11 |
 | `dispatcher.ts` | — | — | — | P3-01 |
 | `App.css` | — | — | P2-05 | — |
+| `pa-sqlite/index.ts` | — | — | — | P3-11 |
 
 ### 修复依赖关系
 
@@ -265,14 +272,13 @@ P3-01 (protocol session.compact)
 
 ---
 
-## 剩余待修复（4 项）
+## 剩余待修复（3 项）
 
 | 编号 | 问题 | 优先级 | 说明 |
 |------|------|--------|------|
 | P1-06 | `partial: false` 硬编码 | 🟠 P1 | session.history 组装时写死 false |
 | P1-07 | `(session as any).isStreaming` | 🟠 P1 | Pi SDK 类型缺口，功能可工作 |
 | P1-11/P3-08 | Memory 无 SQLite 持久化 | 🟠/⚪ | 前后端仍用内存数组 |
-| P3-10 | TypeScript 类型缺口 | ⚪ P3 | Pi SDK 类型不完整导致多处 `as any` |
 
 ---
 

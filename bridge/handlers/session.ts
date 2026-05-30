@@ -205,7 +205,7 @@ export function handleSessionRename(msg: ClientMessage, ws: WebSocket): void {
 
 // ── session.delete（增强：级联删 SQLite，禁删澪）────────────────
 
-function isMainSession(sessionId: string): boolean {
+export function isMainSession(sessionId: string): boolean {
   return sessionId === getMainSessionId()
 }
 

@@ -33,11 +33,13 @@ function createDB(): Database.Database {
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       conversation_id INTEGER NOT NULL,
+      message_id TEXT DEFAULT '',
       role TEXT NOT NULL CHECK(role IN ('user','assistant','system','tool')),
       content TEXT NOT NULL,
       tokens_input INTEGER DEFAULT 0,
       tokens_output INTEGER DEFAULT 0,
       model TEXT DEFAULT '',
+      attachments TEXT DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     );
@@ -57,6 +59,10 @@ function createDB(): Database.Database {
       value TEXT NOT NULL
     );
   `);
+
+  // 迁移：补齐旧表缺少的列
+  try { db.exec("ALTER TABLE messages ADD COLUMN message_id TEXT DEFAULT ''") } catch { /* 列已存在 */ }
+  try { db.exec("ALTER TABLE messages ADD COLUMN attachments TEXT DEFAULT ''") } catch { /* 列已存在 */ }
 
   return db;
 }

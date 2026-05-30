@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agentmemory — 持久化记忆系统实现详解</title>
+<style>
+  :root {
+    --bg: #0a0a12; --surface: #14141f; --surface-2: #1c1c2e;
+    --border: rgba(255,255,255,0.06);
+    --text: rgba(255,255,255,0.90); --text-sec: rgba(255,255,255,0.55);
+    --text-muted: rgba(255,255,255,0.30);
+    --accent: #8b9cf0; --gold: #ffc000; --green: #4ade80; --cyan: #29abe2;
+    font-family: "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); line-height:1.7; overflow-x:hidden; }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px; }
+
+  .hero {
+    padding:80px 40px 60px; text-align:center;
+    background:radial-gradient(ellipse at 50% 30%, rgba(139,156,240,0.08) 0%, transparent 60%);
+    border-bottom:1px solid var(--border);
+  }
+  .hero h1 {
+    font-size:48px; font-weight:700; letter-spacing:-1px;
+    background:linear-gradient(135deg,var(--accent),var(--gold));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .hero p { color:var(--text-sec); font-size:18px; margin-top:12px; max-width:720px; margin-inline:auto; }
+  .hero .badge-row { margin-top:24px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .hero .badge { padding:6px 16px; border-radius:999px; font-size:13px; border:1px solid var(--border); background:var(--surface); color:var(--text-sec); }
+  .hero .badge strong { color:var(--text); }
+
+  .container { max-width:1100px; margin:0 auto; padding:0 24px; }
+
+  .toc {
+    position:sticky; top:0; z-index:100;
+    background:rgba(10,10,18,0.92); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:12px 24px; font-size:14px;
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+  }
+  .toc a { color:var(--text-sec); text-decoration:none; padding:4px 12px; border-radius:6px; transition:all 0.2s; }
+  .toc a:hover { color:var(--accent); background:rgba(139,156,240,0.08); }
+
+  section { padding:48px 0; }
+  section + section { border-top:1px solid var(--border); }
+
+  h2 { font-size:28px; font-weight:600; margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+  h2 .icon { width:32px; height:32px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:18px; background:var(--surface); border:1px solid var(--border); }
+  h3 { font-size:20px; font-weight:600; margin:32px 0 12px; color:var(--accent); }
+  p, li { color:var(--text-sec); margin-bottom:12px; }
+
+  code { background:var(--surface); padding:2px 8px; border-radius:4px; font-size:13px; color:var(--accent); font-family:"Fira Code",monospace; }
+  pre { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; overflow-x:auto; font-size:13px; line-height:1.6; margin:16px 0; font-family:"Fira Code",monospace; }
+
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+  th, td { padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); }
+  th { background:var(--surface); font-weight:600; color:var(--text); font-size:13px; text-transform:uppercase; letter-spacing:0.5px; }
+  td { color:var(--text-sec); }
+  tr:hover td { background:rgba(139,156,240,0.03); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; margin:16px 0; }
+  .card-title { font-weight:600; margin-bottom:8px; color:var(--text); }
+  .grid-2 { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+
+  .tag { display:inline-block; padding:2px 10px; border-radius:4px; font-size:11px; font-weight:600; letter-spacing:0.3px; text-transform:uppercase; }
+  .tag-core { background:rgba(139,156,240,0.15); color:var(--accent); }
+  .tag-memory { background:rgba(74,222,128,0.15); color:var(--green); }
+  .tag-hook { background:rgba(41,171,226,0.15); color:var(--cyan); }
+  .tag-tool { background:rgba(255,192,0,0.12); color:var(--gold); }
+
+  .flow { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; padding:24px; margin:16px 0; background:var(--surface); border:1px solid var(--border); border-radius:10px; font-size:13px; }
+  .flow .step { padding:8px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; color:var(--text); white-space:nowrap; }
+  .flow .arrow { color:var(--text-muted); font-size:18px; }
+
+  .highlight { border-left:3px solid var(--accent); background:rgba(139,156,240,0.04); padding:16px 20px; margin:16px 0; border-radius:0 8px 8px 0; font-size:14px; }
+  .highlight strong { color:var(--accent); }
+
+  details { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin:12px 0; cursor:pointer; }
+  details summary { font-weight:600; color:var(--text); outline:none; }
+  details[open] { padding-bottom:16px; }
+  details .inner { margin-top:12px; }
+
+  footer { text-align:center; padding:40px 24px; border-top:1px solid var(--border); color:var(--text-muted); font-size:13px; }
+  footer a { color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>agentmemory</h1>
+  <p>#1 Persistent memory for AI coding agents — 基于 iii engine 三原语构建<br>95.2% R@5 召回率 · 92% 更少 token · 53 MCP 工具 · 0 外部 DB</p>
+  <div class="badge-row">
+    <span class="badge"> from <strong>rohitg00/agentmemory</strong></span>
+    <span class="badge"> npm <strong>@agentmemory/agentmemory</strong></span>
+    <span class="badge"> TypeScript + iii-sdk</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <a href="#overview">概览</a>
+  <a href="#data-model">数据模型</a>
+  <a href="#pipeline">记忆流水线</a>
+  <a href="#consolidation">四层固化</a>
+  <a href="#storage">存储层</a>
+  <a href="#search">检索系统</a>
+  <a href="#hooks">钩子系统</a>
+  <a href="#tools">MCP 工具</a>
+  <a href="#lessons">经验教训</a>
+  <a href="#advanced">高级特性</a>
+  <a href="#config">配置</a>
+</nav>
+
+<section id="overview">
+<div class="container">
+  <h2><span class="icon">&#127963;</span> 系统概览</h2>
+  <p>agentmemory 基于 <strong>iii engine</strong> 三原语（KV / Function / Stream）构建，通过 Hook 自动捕获 AI 编码代理的每个操作，经过压缩、嵌入、索引、固化、遗忘的完整生命周期，实现上下文感知的长期记忆。</p>
+  <div class="highlight"><strong>核心理念：</strong>零外部数据库依赖，所有数据、索引、向量均存储在 iii engine KV 中。</div>
+
+  <h3>依赖树</h3>
+  <pre>iii-sdk          // iii engine 通信（KV / Function / Stream）
+zod               // 输出校验
+@anthropic-ai/sdk // LLM 压缩（可选）
+@xenova/transformers // 本地嵌入（可选，推荐）
+
+iii engine 三原语：
+KV       - 持久化键值存储
+Function - 远程函数调用
+Stream   - 实时事件流</pre>
+
+  <h3>启动流程</h3>
+  <pre>1. 加载配置 (loadConfig + loadEmbeddingConfig)
+2. 创建 LLM Provider + Embedding Provider
+3. registerWorker 连接到 iii engine
+4. 初始化 StateKV + VectorIndex + BM25 SearchIndex
+5. 注册 50+ Functions (每个 function = 一个 MCP 工具)
+6. 从持久化存储恢复索引 (IndexPersistence.load)
+7. 启动 REST API + MCP Server + Viewer</pre>
+</div>
+</section>
+
+<section id="data-model">
+<div class="container">
+  <h2><span class="icon">&#128000;</span> 数据模型</h2>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-hook">Raw</span> RawObservation</div>
+      <p>原始观测 — Hook 触发时直接存储的原始数据。</p>
+      <pre>interface RawObservation {
+  id, sessionId, timestamp, hookType,
+  toolName?, toolInput?, toolOutput?,
+  userPrompt?, raw, modality?
+}</pre>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-core">Struct</span> CompressedObservation</div>
+      <p>LLM 压缩后的结构化观测 — 提取的精华。</p>
+      <pre>interface CompressedObservation {
+  id, sessionId, timestamp, type,
+  title, subtitle?, facts: string[],
+  narrative, concepts: string[],
+  files: string[], importance: 1-10,
+  confidence?: 0-1
+}</pre>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-memory">Long</span> Memory</div>
+      <p>长期记忆 — 经过固化后的可持久化知识。</p>
+      <pre>interface Memory {
+  id, createdAt, updatedAt,
+  type: pattern|preference|architecture|
+        bug|workflow|fact,
+  title, content, strength: 1-10,
+  version, isLatest, supersedes?,
+  sourceObservationIds?
+}</pre>
+    </div>
+    <div class="card">
+      <div class="card-title">&#127919; Lesson</div>
+      <p>经验教训 — 带置信度衰减的知识点。</p>
+      <pre>interface Lesson {
+  id: fingerprint(content),
+  content, context,
+  confidence: 0-1, reinforcements,
+  decayRate: 0.05,
+  lastDecayedAt?, deleted?
+}</pre>
+    </div>
+  </div>
+
+  <h3>KV 命名空间</h3>
+  <table>
+    <tr><th>Key 模式</th><th>存储内容</th></tr>
+    <tr><td>mem:sessions</td><td>所有会话</td></tr>
+    <tr><td>mem:obs:{sessionId}</td><td>某会话的观测列表（含压缩数据）</td></tr>
+    <tr><td>mem:memories</td><td>长期记忆</td></tr>
+    <tr><td>mem:summaries</td><td>会话摘要</td></tr>
+    <tr><td>mem:lessons</td><td>经验教训</td></tr>
+    <tr><td>mem:graph:nodes / edges</td><td>知识图谱</td></tr>
+    <tr><td>mem:access</td><td>访问日志（LRU 淘汰依据）</td></tr>
+    <tr><td>mem:index:bm25</td><td>BM25 索引序列化快照</td></tr>
+    <tr><td>mem:image-refs</td><td>图片引用计数（GC 依据）</td></tr>
+  </table>
+</div>
+</section>
+
+<section id="pipeline">
+<div class="container">
+  <h2><span class="icon">&#9881;</span> 记忆流水线</h2>
+  <p>从 Hook 触发到记忆固化的完整数据流：</p>
+
+  <div class="flow" style="flex-direction:column; gap:4px; background:none; border:none;">
+    <div class="flow">
+      <span class="step tag tag-hook">PostToolUse</span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">SHA-256 去重<br><small>5min DedupMap</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">隐私过滤<br><small>stripPrivateData</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">存储 RawObservation</span>
+    </div>
+    <div class="arrow" style="margin:4px 0;">&darr;</div>
+    <div class="flow">
+      <span class="step">LLM 压缩<br><small>mem::compress</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">XML 解析<br><small>parseCompressionXml</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">质量评分<br><small>scoreCompression</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">存储 CompressedObservation</span>
+    </div>
+    <div class="arrow" style="margin:4px 0;">&darr;</div>
+    <div class="flow">
+      <span class="step">BM25 索引<br><small>SearchIndex.add</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">向量嵌入<br><small>VectorIndex.add</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">Stream 推送<br><small>Viewer</small></span>
+      <span class="arrow">&rarr;</span>
+      <span class="step">持久化快照<br><small>IndexPersistence</small></span>
+    </div>
+  </div>
+
+  <details>
+    <summary><strong>压缩阶段详解</strong></summary>
+    <div class="inner">
+      <p><code>mem::compress</code> 使用 LLM 将原始观测压缩为 XML 结构化格式：</p>
+      <pre>&lt;compression&gt;
+  &lt;type&gt;file_read|command_run|...&lt;/type&gt;
+  &lt;title&gt;简洁标题&lt;/title&gt;
+  &lt;subtitle&gt;副标题&lt;/subtitle&gt;
+  &lt;facts&gt;&lt;fact&gt;关键事实&lt;/fact&gt;&lt;/facts&gt;
+  &lt;narrative&gt;2-4 句叙述&lt;/narrative&gt;
+  &lt;concepts&gt;&lt;concept&gt;概念标签&lt;/concept&gt;&lt;/concepts&gt;
+  &lt;files&gt;&lt;file&gt;路径&lt;/file&gt;&lt;/files&gt;
+  &lt;importance&gt;1-10&lt;/importance&gt;
+&lt;/compression&gt;</pre>
+      <p><strong>合成压缩（默认，AGENTMEMORY_AUTO_COMPRESS=false）：</strong>零 LLM 调用，从原始数据直接提取结构化字段，用于索引。</p>
+    </div>
+  </details>
+
+  <h3>会话摘要</h3>
+  <p>Stop / SessionEnd 触发时：</p>
+  <ul>
+    <li><code>mem::summarize</code> — LLM 生成标题 + 叙述 + 关键决策</li>
+    <li>可选：知识图谱提取 (GRAPH_EXTRACTION_ENABLED)</li>
+    <li>可选：Slot 反思 (AGENTMEMORY_REFLECT)</li>
+  </ul>
+</div>
+</section>
+
+<section id="consolidation">
+<div class="container">
+  <h2><span class="icon">&#129514;</span> 四层记忆固化</h2>
+  <p>模仿人类大脑记忆处理方式：</p>
+  <table>
+    <tr><th>层级</th><th>类比</th><th>存储形式</th></tr>
+    <tr><td><strong>Working</strong> (工作记忆)</td><td>短期记忆</td><td>RawObservation</td></tr>
+    <tr><td><strong>Episodic</strong> (情景)</td><td>"发生了什么"</td><td>CompressedObservation + Summary</td></tr>
+    <tr><td><strong>Semantic</strong> (语义)</td><td>"我知道什么"</td><td>Memory + Lesson + GraphNode</td></tr>
+    <tr><td><strong>Procedural</strong> (程序)</td><td>"如何做"</td><td>Scripts + Workflow patterns</td></tr>
+  </table>
+
+  <h3>固化流程 (mem::consolidate)</h3>
+  <div class="flow">
+    <span class="step">收集重要观测<br>importance &ge; 5</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">按 concept 分组<br>每组 &ge; 3 条</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">LLM 合成记忆<br>取 top 8</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">版本进化<br>查重 + 版本链</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">级联更新<br>mem::cascade</span>
+  </div>
+
+  <div class="highlight"><strong>版本进化：</strong>Jaccard &gt; 0.7 时不覆盖。旧版标记 <code>isLatest: false</code>，创建新版链接 <code>supersedes</code> 链，触发级联更新标记图节点为 stale。</div>
+
+  <h3>经验教训系统 (mem::lesson-*)</h3>
+  <ul>
+    <li><strong>指纹去重</strong> — SHA-256 截断 fingerprintId</li>
+    <li><strong>强化</strong> — confidence += 0.1 * (1 - confidence)</li>
+    <li><strong>衰减</strong> — 每周 -decayRate (0.05)，Ebbinghaus 曲线</li>
+    <li><strong>软删除</strong> — confidence &lt; 0.1 且从未强化</li>
+    <li><strong>检索</strong> — score = confidence * relevance * recencyBoost</li>
+  </ul>
+</div>
+</section>
+
+<section id="storage">
+<div class="container">
+  <h2><span class="icon">&#128190;</span> 存储层</h2>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">StateKV</div>
+      <p>对 iii engine KV 的封装，提供 get / set / delete / list 方法。全部持久化在 iii engine 中。</p>
+    </div>
+    <div class="card">
+      <div class="card-title">BM25 SearchIndex</div>
+      <p>纯内存 BM25 全文搜索引擎：词干提取 | 同义词扩展 | 前缀匹配 (0.5 权重) | CJK 分词 | JSON 序列化</p>
+    </div>
+    <div class="card">
+      <div class="card-title">VectorIndex</div>
+      <p>内存向量索引（余弦相似度）：6 种嵌入提供方 | Base64 序列化 | 维度校验 | Top-K 搜索</p>
+    </div>
+    <div class="card">
+      <div class="card-title">IndexPersistence</div>
+      <p>索引持久化：启动加载 | debounce 保存 (5s) | 删除同步刷新 | 崩溃恢复保护</p>
+    </div>
+  </div>
+
+  <h3>SearchIndex 内部结构</h3>
+  <pre>entries: Map&lt;obsId, { obsId, sessionId, termCount }&gt;    // 文档列表
+invertedIndex: Map&lt;term, Set&lt;obsId&gt;&gt;                   // 倒排索引
+docTermCounts: Map&lt;obsId, Map&lt;term, freq&gt;&gt;            // 词频表
+totalDocLength: number                                   // 平均文档长度
+BM25: k1=1.2, b=0.75</pre>
+
+  <h3>去重机制 (DedupMap)</h3>
+  <pre>SHA-256(sessionId + toolName + toolInput)
+5 分钟时间窗口内自动跳过重复观测</pre>
+</div>
+</section>
+
+<section id="search">
+<div class="container">
+  <h2><span class="icon">&#128270;</span> 检索系统</h2>
+  <p>三流混合检索 (HybridSearch)，RRF 融合：</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">BM25 关键词</div>
+      <p>词干提取 + 同义词扩展 + 前缀模糊匹配 + CJK 分词</p>
+    </div>
+    <div class="card">
+      <div class="card-title">向量语义</div>
+      <p>余弦相似度，默认 all-MiniLM-L6-v2，支持 OpenAI/Gemini/Voyage/Cohere</p>
+    </div>
+    <div class="card">
+      <div class="card-title">知识图谱</div>
+      <p>BFS 实体匹配 + 关系遍历 + 级联 stale 标记</p>
+    </div>
+  </div>
+
+  <h3>RRF 融合公式</h3>
+  <pre>score = BM25_rank^-1 + VECTOR_rank^-1 + GRAPH_rank^-1   (k=60)
+session_diversify: 同 session 最多 3 条结果
+BM25_WEIGHT=0.4 | VECTOR_WEIGHT=0.6 | GRAPH_WEIGHT=0.3</pre>
+
+  <h3>mem::smart-search (智能搜索入口)</h3>
+  <ul>
+    <li>project / cwd 过滤</li>
+    <li>三种格式：full / compact / narrative</li>
+    <li>Token 预算控制</li>
+    <li>自动重建空索引</li>
+    <li>访问日志记录（LRU 淘汰依据）</li>
+  </ul>
+
+  <h3>查询扩展 + 滑动窗口</h3>
+  <p>LLM 将用户查询扩展为多个变体提高召回率；长会话按时间窗口分段压缩索引。</p>
+</div>
+</section>
+
+<section id="hooks">
+<div class="container">
+  <h2><span class="icon">&#128268;</span> 钩子系统 (12 个)</h2>
+  <table>
+    <tr><th>Hook</th><th>触发时机</th><th>捕获内容</th></tr>
+    <tr><td><span class="tag tag-hook">SessionStart</span></td><td>会话开始</td><td>项目路径、session ID、注入记忆上下文</td></tr>
+    <tr><td><span class="tag tag-hook">UserPromptSubmit</span></td><td>用户发送消息</td><td>提示词（隐私过滤）</td></tr>
+    <tr><td><span class="tag tag-hook">PreToolUse</span></td><td>工具调用前</td><td>文件访问模式 + 富化注入</td></tr>
+    <tr><td><span class="tag tag-hook">PostToolUse</span></td><td>工具调用后</td><td>工具名 / 输入 / 输出（核心捕获点）</td></tr>
+    <tr><td><span class="tag tag-hook">PostToolUseFailure</span></td><td>工具失败</td><td>错误上下文</td></tr>
+    <tr><td><span class="tag tag-hook">PreCompact</span></td><td>上下文压缩前</td><td>重新注入记忆</td></tr>
+    <tr><td><span class="tag tag-hook">SubagentStart</span></td><td>子代理启动</td><td>子代理生命周期</td></tr>
+    <tr><td><span class="tag tag-hook">SubagentStop</span></td><td>子代理停止</td><td>子代理结果</td></tr>
+    <tr><td><span class="tag tag-hook">Notification</span></td><td>系统通知</td><td>通知内容</td></tr>
+    <tr><td><span class="tag tag-hook">TaskCompleted</span></td><td>任务完成</td><td>任务结果</td></tr>
+    <tr><td><span class="tag tag-hook">Stop</span></td><td>会话停止</td><td>摘要 + 图谱 + Slot 反思</td></tr>
+    <tr><td><span class="tag tag-hook">SessionEnd</span></td><td>会话结束</td><td>结束标记</td></tr>
+  </table>
+
+  <h3>Hook 到 Function 映射</h3>
+  <pre>session_start   &rarr; mem::observe + 可选 mem::enrich
+prompt_submit   &rarr; mem::observe
+post_tool_use   &rarr; mem::observe + mem::compress + 可选 enrich
+stop            &rarr; mem::summarize + mem::graph-extract + mem::slot-reflect</pre>
+</div>
+</section>
+
+<section id="tools">
+<div class="container">
+  <h2><span class="icon">&#128736;</span> MCP 工具集 (53 个)</h2>
+
+  <details>
+    <summary><strong>&#129504; 核心记忆工具</strong>（始终可用）</summary>
+    <div class="inner">
+      <table>
+        <tr><th>工具</th><th>功能</th></tr>
+        <tr><td>memory_recall</td><td>搜索历史观测</td></tr>
+        <tr><td>memory_save</td><td>保存一条洞察/决策/模式</td></tr>
+        <tr><td>memory_forget</td><td>删除观测或记忆</td></tr>
+        <tr><td>memory_smart_search</td><td>混合语义 + 关键词搜索</td></tr>
+        <tr><td>memory_sessions</td><td>列出所有会话</td></tr>
+        <tr><td>memory_file_history</td><td>查看特定文件的历史</td></tr>
+        <tr><td>memory_patterns</td><td>检测重复模式</td></tr>
+        <tr><td>memory_compress_file</td><td>压缩 markdown 文件</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><strong>&#128202; 项目管理 &amp; &#129309; 团队协作</strong></summary>
+    <div class="inner">
+      <table>
+        <tr><th>类别</th><th>工具</th></tr>
+        <tr><td>项目</td><td>memory_project_profile, memory_enrich, memory_profile</td></tr>
+        <tr><td>团队</td><td>team_share, team_query, team_profile</td></tr>
+        <tr><td>治理</td><td>governance_list, governance_delete</td></tr>
+        <tr><td>审计</td><td>audit</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><strong>&#128640; 高级编排与分析</strong></summary>
+    <div class="inner">
+      <table>
+        <tr><th>类别</th><th>工具</th></tr>
+        <tr><td>教训</td><td>memory_lessons (save/recall/list/strengthen)</td></tr>
+        <tr><td>图谱</td><td>memory_graph (query/nodes/edges)</td></tr>
+        <tr><td>时间轴</td><td>memory_timeline</td></tr>
+        <tr><td>编排</td><td>memory_actions, frontier, leases, routines, signals, checkpoints</td></tr>
+        <tr><td>分析</td><td>memory_facets, diagnostics, verify</td></tr>
+        <tr><td>导出</td><td>memory_export, import, obsidian_export</td></tr>
+        <tr><td>系统</td><td>memory_health, migrate, mesh, branch_aware, flow_compress</td></tr>
+        <tr><td>草稿</td><td>memory_sketches, crystals, sentinels</td></tr>
+      </table>
+    </div>
+  </details>
+</div>
+</section>
+
+<section id="lessons">
+<div class="container">
+  <h2><span class="icon">&#128214;</span> 经验教训系统详解</h2>
+  <p>Lessons 系统与主 Memory 互补，专用于高频次、低延迟的"教训"存储和检索。</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">&#128260; 生命周期</div>
+      <div class="flow" style="border:none; padding:12px; background:var(--surface-2);">
+        <span class="step">创建<br>fingerprint</span>
+        <span class="arrow">&rarr;</span>
+        <span class="step">强化<br>confidence +0.1</span>
+        <span class="arrow">&rarr;</span>
+        <span class="step">衰减<br>每周 -0.05</span>
+        <span class="arrow">&rarr;</span>
+        <span class="step">软删除<br>conf &lt; 0.1</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128202; 核心公式</div>
+      <pre style="margin:0;">强化:  conf += 0.1 * (1 - conf)
+衰减:  conf -= decayRate * weeks
+检索:  score = conf * relevance * 1/(1+days*0.01)</pre>
+    </div>
+  </div>
+
+  <h3>API 方法</h3>
+  <table>
+    <tr><th>函数</th><th>功能</th></tr>
+    <tr><td>mem::lesson-save</td><td>保存 / 强化教训</td></tr>
+    <tr><td>mem::lesson-recall</td><td>按查询召回（关键词 + 置信度 + 时效排序）</td></tr>
+    <tr><td>mem::lesson-list</td><td>列表（支持 project/source 过滤）</td></tr>
+    <tr><td>mem::lesson-strengthen</td><td>手动强化</td></tr>
+    <tr><td>mem::lesson-decay-sweep</td><td>全局衰减扫描（定时清理）</td></tr>
+  </table>
+</div>
+</section>
+
+<section id="advanced">
+<div class="container">
+  <h2><span class="icon">&#9889;</span> 高级特性</h2>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">&#128274; 隐私保护</div>
+      <pre>stripPrivateData():
+- 移除 API Key (sk-, sk-ant- 等)
+- 移除 &lt;private&gt; 标签
+- 移除 JWT, SSH 密钥, Base64 大块</pre>
+    </div>
+    <div class="card">
+      <div class="card-title">&#9201; 自动遗忘</div>
+      <p>TTL 过期 / 重要性淘汰 / 矛盾检测 / LRU 访问频率 / 图片引用计数 GC</p>
+    </div>
+    <div class="card">
+      <div class="card-title">&#127973; 健康监控</div>
+      <p>Circuit Breaker (熔断器) / Provider fallback 链 / 心跳 / 磁盘用量</p>
+    </div>
+    <div class="card">
+      <div class="card-title">&#128260; Claude Bridge</div>
+      <p>双向同步 MEMORY.md：导出 + 导入 + 文件监听</p>
+    </div>
+    <div class="card">
+      <div class="card-title">&#128247; Git 快照</div>
+      <p>定时快照记忆状态到 Git：可配置间隔、版本回滚、diff</p>
+    </div>
+    <div class="card">
+      <div class="card-title">&#127760; Mesh 多实例同步</div>
+      <p>增量同步 / 冲突解决 / 跨主机部署 / 共享 AGENTMEMORY_SECRET</p>
+    </div>
+    <div class="card">
+      <div class="card-title">&#128101; 多代理 (AGENT_ID)</div>
+      <pre>shared: 交叉引用带审计
+isolated: 严格隔离
+所有数据打 agentId 标签</pre>
+    </div>
+    <div class="card">
+      <div class="card-title">&#127919; 评估系统 (Eval)</div>
+      <p>zod Schema 校验 / 质量评分 / 自愈重试 / Metrics store / 95.2% R@5</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="config">
+<div class="container">
+  <h2><span class="icon">&#128295;</span> 配置参考</h2>
+
+  <details open>
+    <summary><strong>环境变量</strong></summary>
+    <div class="inner">
+      <table>
+        <tr><th>变量</th><th>默认</th><th>说明</th></tr>
+        <tr><td>ANTHROPIC_API_KEY</td><td>—</td><td>LLM Provider</td></tr>
+        <tr><td>GEMINI_API_KEY</td><td>—</td><td>LLM Provider（替代）</td></tr>
+        <tr><td>OPENAI_API_KEY</td><td>—</td><td>LLM + Embedding 共享 key</td></tr>
+        <tr><td>EMBEDDING_PROVIDER</td><td>auto</td><td>local/openai/gemini/voyage/cohere/openrouter</td></tr>
+        <tr><td>BM25_WEIGHT</td><td>0.4</td><td>BM25 检索权重</td></tr>
+        <tr><td>VECTOR_WEIGHT</td><td>0.6</td><td>向量检索权重</td></tr>
+        <tr><td>TOKEN_BUDGET</td><td>2000</td><td>上下文注入 token 预算</td></tr>
+        <tr><td>AGENTMEMORY_AUTO_COMPRESS</td><td>false</td><td>启用 LLM 压缩（消耗 token）</td></tr>
+        <tr><td>AGENTMEMORY_INJECT_CONTEXT</td><td>false</td><td>启用上下文注入</td></tr>
+        <tr><td>GRAPH_EXTRACTION_ENABLED</td><td>false</td><td>知识图谱提取</td></tr>
+        <tr><td>CONSOLIDATION_ENABLED</td><td>auto</td><td>有 LLM provider 时自动开启</td></tr>
+        <tr><td>AGENT_ID</td><td>—</td><td>当前代理标识</td></tr>
+        <tr><td>TEAM_ID / USER_ID</td><td>—</td><td>团队配置</td></tr>
+        <tr><td>III_REST_PORT</td><td>3111</td><td>REST API + MCP HTTP</td></tr>
+        <tr><td>AGENTMEMORY_VIEWER_PORT</td><td>3113</td><td>实时 Viewer</td></tr>
+        <tr><td>AGENTMEMORY_SECRET</td><td>—</td><td>API 认证密钥</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details open>
+    <summary><strong>端口分配</strong></summary>
+    <div class="inner">
+      <table>
+        <tr><th>端口</th><th>进程</th><th>用途</th></tr>
+        <tr><td>3111</td><td>agentmemory</td><td>REST API + MCP + Health</td></tr>
+        <tr><td>3112</td><td>iii-engine</td><td>内部流处理</td></tr>
+        <tr><td>3113</td><td>agentmemory</td><td>实时 Viewer</td></tr>
+        <tr><td>49134</td><td>iii-engine</td><td>Worker 注册 + OTel</td></tr>
+      </table>
+    </div>
+  </details>
+</div>
+</section>
+
+<footer>
+  <p>基于 <a href="https://github.com/rohitg00/agentmemory" target="_blank">rohitg00/agentmemory</a> 源码分析整理</p>
+  <p>Powered by iii engine &middot; Apache-2.0 &middot; 950+ tests &middot; 0 external DBs</p>
+</footer>
+
+</body>
+</html>

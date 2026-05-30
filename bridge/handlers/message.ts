@@ -2,6 +2,7 @@ import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
 import { getPiSession, updateSessionMeta, getSessionMeta, createPiSession } from '../pi-session'
 import { getDB } from '../db'
+import { isMainSession } from './session'
 
 function extractTextContent(content: unknown): string {
   if (typeof content === 'string') return content
@@ -310,9 +311,12 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
           updateSessionMeta(msg.sessionId, { roundCount: newRoundCount })
         }
 
-        // 首轮完成后 AI 自动命名
-        const shouldName = newRoundCount === 1
+        // 首轮完成后 AI 自动命名（跳过主会话澪）
+        const isMain = isMainSession(msg.sessionId)
+        const shouldName = newRoundCount === 1 && !isMain
+        console.log('[auto-name] shouldName:', shouldName, 'newRoundCount:', newRoundCount, 'isMain:', isMain, 'session:', msg.sessionId.slice(0, 8))
         if (shouldName) {
+          console.log('[auto-name] triggering generateSessionTitle for', msg.sessionId.slice(0, 8))
           generateSessionTitle(msg.sessionId).then((title) => {
             if (title) {
               const db = getDB()
