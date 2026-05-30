@@ -136,6 +136,7 @@ export async function handleSessionSwitch(msg: ClientMessage, ws: WebSocket): Pr
       model: meta?.modelName ?? 'deepseek-v3',
       thinkingLevel: meta?.thinkingLevel ?? 'medium',
       contextUsed: contextUsage?.tokens ?? 0,
+        contextMax: contextUsage?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
       roundCount: meta?.roundCount ?? 0,
     },
   }))

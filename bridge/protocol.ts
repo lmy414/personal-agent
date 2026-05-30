@@ -35,7 +35,7 @@ export type ServerMessage =
   // 会话层
   | ServerMsg<'session.created', { sessionId: string; model: string; thinkingLevel: string; createdAt: number }>
   | ServerMsg<'session.list', { sessions: SessionInfo[] }>
-  | ServerMsg<'session.state', { model: string; thinkingLevel: string; contextUsed: number; roundCount: number }>
+  | ServerMsg<'session.state', { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number }>
   // 对话层
   | ServerMsg<'turn.start', { turnIndex: number }>
   | ServerMsg<'message.start', { messageId: string; role: 'user' | 'assistant' }>

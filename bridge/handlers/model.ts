@@ -47,6 +47,7 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
       model: session.model?.id ?? payload.modelId,
       thinkingLevel: meta?.thinkingLevel ?? 'medium',
       contextUsed: ctx?.tokens ?? 0,
+        contextMax: ctx?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
       roundCount: meta?.roundCount ?? 0,
     },
   }))
@@ -55,12 +56,23 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
 export function handleModelList(msg: ClientMessage, ws: WebSocket): void {
   const session = getPiSession(msg.sessionId)
   const models = getAvailableModels(session?.modelRegistry)
+  const ctx = session?.getContextUsage()
+  const meta = getSessionMeta(msg.sessionId)
+  const stats = session?.getSessionStats()
 
   ws.send(JSON.stringify({
     type: 'status.update',
     id: `srv-${Date.now()}`,
     sessionId: msg.sessionId,
     ts: Date.now(),
-    payload: { availableModels: models },
+    payload: {
+      tokens: stats?.tokens?.total ?? 0,
+      cost: stats?.cost ?? 0,
+      contextUsed: ctx?.tokens ?? 0,
+      contextMax: ctx?.contextWindow ?? (session as any)?.model?.contextWindow ?? 0,
+      roundCount: meta?.roundCount ?? 0,
+      model: session?.model?.id,
+      availableModels: models,
+    },
   }))
 }

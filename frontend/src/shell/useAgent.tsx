@@ -297,11 +297,18 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         break
 
       case 'session.state': {
-        const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; roundCount: number }
+        const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number }
         setStatus('contextUsed', p.contextUsed)
+        if (p.contextMax > 0) setStatus('contextMax', p.contextMax)
         setStatus('roundCount', p.roundCount)
         if (p.model) setStatus('model', p.model)
-        sessionStatus.set(msgSid, { ...status, contextUsed: p.contextUsed, roundCount: p.roundCount, model: p.model })
+        sessionStatus.set(msgSid, {
+          ...(sessionStatus.get(msgSid) ?? status),
+          contextUsed: p.contextUsed,
+          contextMax: p.contextMax > 0 ? p.contextMax : (sessionStatus.get(msgSid)?.contextMax ?? status.contextMax),
+          roundCount: p.roundCount,
+          model: p.model,
+        })
         setSessions((prev) => prev.map((s) =>
           s.id === msgSid ? { ...s, roundCount: p.roundCount } : s
         ))
