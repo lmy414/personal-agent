@@ -1,49 +1,126 @@
-import { createSignal, For, Show } from 'solid-js'
+import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import type { FileEntry, ServerMessage } from '@bridge/protocol'
 
 interface TreeNode {
   name: string
   type: 'file' | 'directory'
+  path: string
   children?: TreeNode[]
+  loaded: boolean
+}
+
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'])
+
+function fileIcon(name: string, type: 'file' | 'directory'): string {
+  if (type === 'directory') return '📁'
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'md' || ext === 'mdx') return '📝'
+  if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') return '🟦'
+  if (ext === 'json') return '{}'
+  if (ext === 'css') return '🎨'
+  if (ext === 'html') return '🌐'
+  if (ext === 'py' || ext === 'rs' || ext === 'go') return '⚙️'
+  if (IMAGE_EXTS.has(ext)) return '🖼️'
+  return '📄'
 }
 
 export function FileTree() {
-  const { send } = useAgent()
-  const [tree] = createSignal<TreeNode[]>([
-    {
-      name: 'personal-agent', type: 'directory', children: [
-        { name: 'extensions', type: 'directory', children: [
-          { name: 'pa-mio', type: 'directory' },
-          { name: 'pa-sqlite', type: 'directory' },
-        ]},
-        { name: '.gitignore', type: 'file' },
-        { name: 'package.json', type: 'file' },
-        { name: 'CLAUDE.md', type: 'file' },
-      ],
-    },
-    { name: 'frontend-sketch', type: 'directory', children: [
-      { name: 'layout-mockup-v2.html', type: 'file' },
-    ]},
-    { name: 'mio-harness', type: 'directory', children: [
-      { name: 'character', type: 'directory', children: [
-        { name: 'soul.md', type: 'file' },
-        { name: 'boundaries.md', type: 'file' },
-      ]},
-    ]},
-  ])
+  const agent = useAgent()
+  const [tree, setTree] = createSignal<TreeNode[]>([])
+  const [loading, setLoading] = createSignal(true)
+  const [error, setError] = createSignal<string | null>(null)
 
-  const handleClick = (node: TreeNode, e: MouseEvent) => {
+  // store expanded children per directory path
+  const [dirChildren, setDirChildren] = createSignal<Record<string, TreeNode[]>>({})
+  const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set())
+
+  onMount(() => {
+    const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
+      const payload = msg.payload as { path: string; entries: FileEntry[] }
+      const entries: TreeNode[] = payload.entries
+        .filter((e) => !e.name.startsWith('.') || e.name === '.gitignore')
+        .map((e) => ({
+          name: e.name,
+          type: e.type,
+          path: payload.path ? `${payload.path}/${e.name}`.replace(/\/\//g, '/') : e.name,
+          loaded: false,
+        }))
+
+      if (tree().length === 0 || payload.path === '.' || payload.path.endsWith('\\')) {
+        // root level
+        setTree(entries)
+      } else {
+        // subdirectory — store children
+        setDirChildren((prev) => ({ ...prev, [payload.path]: entries }))
+      }
+      setLoading(false)
+    })
+
+    let errorTid: ReturnType<typeof setTimeout> | undefined
+
+    const unsubError = agent.subscribe('error', (msg: ServerMessage) => {
+      const payload = msg.payload as { code: string; message: string }
+      if (payload.code === 'FILE_ERROR') {
+        setError(payload.message)
+        errorTid = setTimeout(() => setError(null), 3000)
+      }
+    })
+
+    onCleanup(() => {
+      unsub()
+      unsubError()
+      if (errorTid !== undefined) clearTimeout(errorTid)
+    })
+
+    agent.send('file.list', { path: '.' })
+  })
+
+  const handleToggleDir = (node: TreeNode, e: MouseEvent) => {
     e.stopPropagation()
-    if (node.type === 'file') {
-      send('file.read', { path: node.name })
+    const path = node.path
+    const expanded = expandedDirs()
+    const isOpen = expanded.has(path)
+
+    if (!isOpen && !(path in dirChildren())) {
+      // not loaded yet — fetch
+      agent.send('file.list', { path })
+    }
+
+    if (isOpen) {
+      const next = new Set(expanded)
+      next.delete(path)
+      setExpandedDirs(next)
+    } else {
+      const next = new Set(expanded)
+      next.add(path)
+      setExpandedDirs(next)
     }
   }
 
+  const handleFileClick = (node: TreeNode, e: MouseEvent) => {
+    e.stopPropagation()
+    const ext = node.name.split('.').pop()?.toLowerCase() ?? ''
+    const isImage = IMAGE_EXTS.has(ext)
+    agent.send('file.read', { path: node.path, encoding: isImage ? 'base64' : 'utf8' })
+  }
+
+  const handleDragStart = (node: TreeNode, e: DragEvent) => {
+    e.dataTransfer?.setData('text/plain', node.path)
+    e.dataTransfer?.setData('application/x-file-path', node.path)
+    e.dataTransfer?.setData('application/x-file-name', node.name)
+    e.dataTransfer!.effectAllowed = 'copy'
+  }
+
+  const getChildren = (node: TreeNode): TreeNode[] | undefined => {
+    const expanded = expandedDirs()
+    if (!expanded.has(node.path)) return undefined
+    return dirChildren()[node.path]
+  }
+
   const RenderNode = (props: { node: TreeNode; depth: number }) => {
-    const [expanded, setExpanded] = createSignal(false)
-    const icon = props.node.type === 'directory'
-      ? (expanded() ? '📂' : '📁')
-      : (props.node.name.endsWith('.md') ? '📝' : props.node.name.endsWith('.html') ? '🌐' : '📄')
+    const children = () => getChildren(props.node)
+    const isExpanded = () => children() !== undefined
 
     return (
       <>
@@ -51,21 +128,36 @@ export function FileTree() {
           class="file-tree-item"
           classList={{ dir: props.node.type === 'directory' }}
           style={{ 'padding-left': `${props.depth * 16 + 4}px` }}
+          draggable={props.node.type === 'file'}
+          onDragStart={(e) => handleDragStart(props.node, e)}
           onClick={(e) => {
             if (props.node.type === 'directory') {
-              setExpanded(!expanded())
+              handleToggleDir(props.node, e)
             } else {
-              handleClick(props.node, e)
+              handleFileClick(props.node, e)
             }
           }}
         >
-          <span class="ft-icon">{icon}</span>
+          <span class="ft-icon">
+            {props.node.type === 'directory'
+              ? (isExpanded() ? '📂' : '📁')
+              : fileIcon(props.node.name, 'file')}
+          </span>
           <span class="ft-name">{props.node.name}</span>
         </div>
-        <Show when={props.node.type === 'directory' && expanded() && props.node.children}>
-          <For each={props.node.children!}>
-            {(child) => <RenderNode node={child} depth={props.depth + 1} />}
-          </For>
+        <Show when={props.node.type === 'directory' && isExpanded()}>
+          <Show
+            when={children()!.length > 0}
+            fallback={
+              <div class="file-tree-empty" style={{ 'padding-left': `${(props.depth + 1) * 16 + 4}px` }}>
+                空目录
+              </div>
+            }
+          >
+            <For each={children()!}>
+              {(child) => <RenderNode node={child} depth={props.depth + 1} />}
+            </For>
+          </Show>
         </Show>
       </>
     )
@@ -73,9 +165,21 @@ export function FileTree() {
 
   return (
     <div class="file-tree">
-      <For each={tree()}>
-        {(node) => <RenderNode node={node} depth={0} />}
-      </For>
+      <Show when={!loading()} fallback={
+        <div class="file-tree-loading">加载中...</div>
+      }>
+        <Show when={!error()} fallback={
+          <div class="file-tree-error">{error()}</div>
+        }>
+          <Show when={tree().length > 0} fallback={
+            <div class="file-tree-empty">空目录</div>
+          }>
+            <For each={tree()}>
+              {(node) => <RenderNode node={node} depth={0} />}
+            </For>
+          </Show>
+        </Show>
+      </Show>
     </div>
   )
 }
