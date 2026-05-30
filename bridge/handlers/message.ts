@@ -305,11 +305,10 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
         }))
 
         const meta = getSessionMeta(msg.sessionId)
-        if (meta) {
-          updateSessionMeta(msg.sessionId, { roundCount: meta.roundCount + 1 })
-        }
-
         const newRoundCount = (meta?.roundCount ?? 0) + 1
+        if (meta) {
+          updateSessionMeta(msg.sessionId, { roundCount: newRoundCount })
+        }
 
         // 首轮完成后 AI 自动命名
         const shouldName = newRoundCount === 1
