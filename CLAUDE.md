@@ -37,7 +37,7 @@ personal-agent/
 │   └── vite.config.ts
 ├── extensions/              ← Pi 后端扩展（pa-mio, pa-sqlite, ...）
 ├── mio-data/                ← 澪号角色数据 + 设计文档
-├── mio-harness/character/   ← 角色文件（soul, boundaries, knowledge）
+├── mio-harness/              ← 角色文件（soul, boundaries, knowledge）
 ├── frontend-sketch/         ← UI 原型（layout-mockup-v2.html）
 ├── docs/superpowers/specs/  ← 设计 spec
 └── vendor/pi/               ← Pi 框架（不修改）
@@ -143,14 +143,14 @@ registry.register({
 `bridge/handlers/<domain>.ts`，导出同名函数：
 
 ```ts
-import type { WSEvent } from '../protocol'
+import type { ClientMessage } from '../protocol'
 
-export async function handleMessageSend(msg: WSEvent<'message.send'>, ws: WebSocket) {
+export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Promise<void> {
   // 处理逻辑
 }
 ```
 
-然后在 `handlers/index.ts` 路由表注册一行。
+然后在 `dispatcher.ts` 路由表注册一行。
 
 ---
 
