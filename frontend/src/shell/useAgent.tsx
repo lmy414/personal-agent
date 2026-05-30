@@ -32,7 +32,7 @@ export interface AgentState {
 interface AgentActions {
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string) => void
+  sendMessage: (content: string, displayContent?: string) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
@@ -47,7 +47,7 @@ export interface AgentContextValue {
   status: StatusPayload
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string) => void
+  sendMessage: (content: string, displayContent?: string) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
@@ -382,11 +382,11 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const createSession = (model?: string) => send('session.create', { model })
-  const sendMessage = (content: string) => {
+  const sendMessage = (content: string, displayContent?: string) => {
     const userMsg: MessageEntry = {
       messageId: `msg-${crypto.randomUUID()}`,
       role: 'user',
-      content,
+      content: displayContent ?? content,
       partial: false,
     }
     setMessages((prev) => {
