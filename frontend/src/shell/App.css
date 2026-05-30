@@ -7,7 +7,7 @@
   --text-secondary: rgba(255, 255, 255, 0.50);
   --text-muted: rgba(255, 255, 255, 0.25);
   --accent: #8b9cf0;
-  --gap: 10px;
+  --gap: 6px;
   --margin: 12px;
   --left-col: 400px;
 }
@@ -151,9 +151,9 @@ html, body, #root {
   margin: 0 16px;
 }
 .session-panel.expanded .sub-sessions {
-  max-height: 30vh;
+  max-height: 25vh;
   opacity: 1;
-  margin: 10px 16px 12px;
+  margin: 8px 16px 10px;
   display: flex; flex-direction: column;
   overflow-y: auto;
 }
