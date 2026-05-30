@@ -308,6 +308,20 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         break
       }
 
+      case 'session.compacted': {
+        const p = msg.payload as { tokensBefore: number; tokensAfter: number; contextWindow: number }
+        setStatus('contextUsed', p.tokensAfter)
+        if (p.contextWindow > 0) setStatus('contextMax', p.contextWindow)
+        // 同步到 session 缓存
+        const prev = sessionStatus.get(msgSid)
+        sessionStatus.set(msgSid, {
+          ...(prev ?? status),
+          contextUsed: p.tokensAfter,
+          contextMax: p.contextWindow > 0 ? p.contextWindow : (prev?.contextMax ?? status.contextMax),
+        })
+        break
+      }
+
       case 'status.update':
         sessionStatus.set(msgSid, msg.payload)
         if (isCurrent) setStatus(msg.payload)
