@@ -641,3 +641,48 @@ html, body, #root {
   to { opacity: 1; transform: translateY(0); }
 }
 .message-enter { animation: msgIn 0.3s ease; }
+
+/* ====== 文件树状态 ====== */
+.file-tree-empty {
+  font-size: 11px; color: var(--text-muted);
+  padding: 6px 4px; font-style: italic;
+}
+.file-tree-loading {
+  font-size: 11px; color: var(--text-muted);
+  padding: 6px 4px;
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+.file-tree-error {
+  font-size: 11px; color: #f87171;
+  padding: 6px 4px;
+}
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ====== 附件徽章 ====== */
+.chat-attachments {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 6px 12px 0; flex-shrink: 0;
+}
+.chat-attachment-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--accent);
+  background: rgba(139,156,240,0.10);
+  border: 1px solid rgba(139,156,240,0.15);
+  border-radius: 6px; padding: 2px 6px 2px 8px;
+}
+.chat-attachment-remove {
+  border: none; background: none;
+  color: var(--text-muted); cursor: pointer;
+  font-size: 14px; line-height: 1;
+  padding: 0 2px;
+}
+.chat-attachment-remove:hover { color: #f87171; }
+
+/* ====== 拖放高亮 ====== */
+.chat-input-area.drop-target .chat-input {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(139,156,240,0.2);
+}

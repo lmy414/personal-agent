@@ -32,7 +32,7 @@ export interface AgentState {
 interface AgentActions {
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string) => void
+  sendMessage: (content: string, displayContent?: string) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
@@ -47,10 +47,11 @@ export interface AgentContextValue {
   status: StatusPayload
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string) => void
+  sendMessage: (content: string, displayContent?: string) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
+  subscribe: (type: ServerMessage['type'], handler: (msg: ServerMessage) => void) => (() => void)
 }
 
 // ========== Context ==========
@@ -359,6 +360,14 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         console.error('[bridge error]', msg.payload?.code, msg.payload?.message)
         break
     }
+
+    // dispatch to extension subscribers
+    const subs = msgListeners.get(msg.type)
+    if (subs) {
+      subs.forEach((fn) => {
+        try { fn(msg) } catch (e) { console.error('[subscribe] handler error:', e) }
+      })
+    }
   }
 
   const send = (type: string, payload: unknown) => {
@@ -373,11 +382,11 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const createSession = (model?: string) => send('session.create', { model })
-  const sendMessage = (content: string) => {
+  const sendMessage = (content: string, displayContent?: string) => {
     const userMsg: MessageEntry = {
       messageId: `msg-${crypto.randomUUID()}`,
       role: 'user',
-      content,
+      content: displayContent ?? content,
       partial: false,
     }
     setMessages((prev) => {
@@ -432,6 +441,23 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
   const switchModel = (modelId: string) => send('model.switch', { modelId })
 
+  // ========== 扩展消息订阅 ==========
+
+  const msgListeners = new Map<ServerMessage['type'], Set<(msg: ServerMessage) => void>>()
+
+  const subscribe = (type: ServerMessage['type'], handler: (msg: ServerMessage) => void): (() => void) => {
+    let set = msgListeners.get(type)
+    if (!set) {
+      set = new Set()
+      msgListeners.set(type, set)
+    }
+    set.add(handler)
+    return () => {
+      set?.delete(handler)
+      if (set?.size === 0) msgListeners.delete(type)
+    }
+  }
+
   connect()
 
   onCleanup(() => {
@@ -453,6 +479,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     cancelMessage,
     switchSession,
     switchModel,
+    subscribe,
   }
 
   return (

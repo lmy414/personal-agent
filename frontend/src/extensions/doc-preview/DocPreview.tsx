@@ -1,39 +1,151 @@
-import { createSignal } from 'solid-js'
+import { createSignal, Show, onMount, onCleanup } from 'solid-js'
+import { useAgent } from '@/shell/useAgent'
+import { marked } from 'marked'
+import type { ServerMessage } from '@bridge/protocol'
+
+marked.setOptions({ breaks: true, gfm: true })
+
+const MARKDOWN_EXTS = new Set(['md', 'mdx'])
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'])
+
+type PreviewMode = 'rendered' | 'source'
+
+function safeMarkdown(text: string): string {
+  try {
+    return marked.parse(text) as string
+  } catch {
+    return `<pre>${text}</pre>`
+  }
+}
 
 export function DocPreview() {
-  const [viewMode, setViewMode] = createSignal<'rendered' | 'source'>('rendered')
-  const [content] = createSignal('')
-  const [filePath] = createSignal('')
+  const agent = useAgent()
+  const [viewMode, setViewMode] = createSignal<PreviewMode>('source')
+  const [content, setContent] = createSignal('')
+  const [filePath, setFilePath] = createSignal('')
+  const [language, setLanguage] = createSignal('')
+  const [imageSrc, setImageSrc] = createSignal('')
+  const [loading, setLoading] = createSignal(false)
+  const [isMarkdown, setIsMarkdown] = createSignal(false)
+
+  onMount(() => {
+    const unsub = agent.subscribe('file.content', (msg: ServerMessage) => {
+      setLoading(true)
+      const payload = msg.payload as {
+        path: string
+        content: string
+        language: string
+        encoding?: 'utf8' | 'base64'
+      }
+      setFilePath(payload.path)
+      setLanguage(payload.language)
+
+      const ext = payload.language.toLowerCase()
+      if (payload.encoding === 'base64' || IMAGE_EXTS.has(ext)) {
+        const mimeMap: Record<string, string> = {
+          png: 'image/png',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          gif: 'image/gif',
+          svg: 'image/svg+xml',
+          webp: 'image/webp',
+          ico: 'image/x-icon',
+        }
+        const mime = mimeMap[ext] ?? 'image/png'
+        setImageSrc(`data:${mime};base64,${payload.content}`)
+        setContent('')
+        setIsMarkdown(false)
+      } else {
+        setContent(payload.content)
+        setImageSrc('')
+        if (MARKDOWN_EXTS.has(ext)) {
+          setIsMarkdown(true)
+          setViewMode('rendered')
+        } else {
+          setIsMarkdown(false)
+          setViewMode('source')
+        }
+      }
+      setLoading(false)
+    })
+
+    onCleanup(() => {
+      unsub()
+    })
+  })
+
+  const fileName = () => {
+    if (!filePath()) return ''
+    return filePath().split(/[\\/]/).pop() ?? filePath()
+  }
 
   return (
     <>
-      <div class="view-toggle">
-        <button
-          class="view-toggle-btn"
-          classList={{ active: viewMode() === 'rendered' }}
-          onClick={() => setViewMode('rendered')}
+      <Show when={filePath()}>
+        <div
+          style={{
+            'font-size': '11px',
+            color: 'var(--text-muted)',
+            'margin-bottom': '8px',
+            'white-space': 'nowrap',
+            overflow: 'hidden',
+            'text-overflow': 'ellipsis',
+          }}
         >
-          预览
-        </button>
-        <button
-          class="view-toggle-btn"
-          classList={{ active: viewMode() === 'source' }}
-          onClick={() => setViewMode('source')}
-        >
-          源码
-        </button>
-      </div>
-      {content() ? (
-        viewMode() === 'rendered' ? (
-          <div class="preview-rendered" innerHTML={content()} />
-        ) : (
-          <div class="preview-source">{content()}</div>
-        )
-      ) : (
-        <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:32px;">
-          {filePath() ? `加载中...` : '点击左侧文件树中的文件查看内容'}
+          {fileName()}
         </div>
-      )}
+      </Show>
+
+      <Show when={isMarkdown()}>
+        <div class="view-toggle">
+          <button
+            class="view-toggle-btn"
+            classList={{ active: viewMode() === 'rendered' }}
+            onClick={() => setViewMode('rendered')}
+          >
+            预览
+          </button>
+          <button
+            class="view-toggle-btn"
+            classList={{ active: viewMode() === 'source' }}
+            onClick={() => setViewMode('source')}
+          >
+            源码
+          </button>
+        </div>
+      </Show>
+
+      <Show
+        when={filePath()}
+        fallback={
+          <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:32px;">
+            点击左侧文件树中的文件查看内容
+          </div>
+        }
+      >
+        <Show
+          when={!loading()}
+          fallback={
+            <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:16px;">
+              加载中...
+            </div>
+          }
+        >
+          <Show when={imageSrc()}>
+            <img
+              src={imageSrc()}
+              alt={fileName()}
+              style="max-width:100%;border-radius:6px;"
+            />
+          </Show>
+          <Show when={!imageSrc() && viewMode() === 'rendered'}>
+            <div class="preview-rendered" innerHTML={safeMarkdown(content())} />
+          </Show>
+          <Show when={!imageSrc() && viewMode() === 'source'}>
+            <pre class="preview-source">{content()}</pre>
+          </Show>
+        </Show>
+      </Show>
     </>
   )
 }

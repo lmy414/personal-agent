@@ -20,7 +20,7 @@ export type ClientMessage =
   | ClientMsg<'model.switch', { modelId: string }>
   | ClientMsg<'model.list', {}>
   | ClientMsg<'file.list', { path?: string }>
-  | ClientMsg<'file.read', { path: string }>
+  | ClientMsg<'file.read', { path: string; encoding?: 'utf8' | 'base64' }>
   | ClientMsg<'memory.search', { query: string }>
   | ClientMsg<'memory.list', { limit?: number; offset?: number }>
   | ClientMsg<'session.history', { sessionId: string }>
@@ -49,7 +49,7 @@ export type ServerMessage =
   | ServerMsg<'status.update', StatusPayload>
   // 文件 & 记忆
   | ServerMsg<'file.list', { path: string; entries: FileEntry[] }>
-  | ServerMsg<'file.content', { path: string; content: string; language?: string }>
+  | ServerMsg<'file.content', { path: string; content: string; language?: string; encoding?: 'utf8' | 'base64' }>
   | ServerMsg<'memory.results', { query: string; entries: MemoryEntry[] }>
   | ServerMsg<'memory.list', { entries: MemoryEntry[]; total: number }>
   // 会话历史 & 重命名
