@@ -22,6 +22,9 @@ interface SessionEntry {
 
 const sessions = new Map<string, SessionEntry>()
 
+// 全局缓存 model registry（首次创建 Pi session 时写入，供 model.list 等无 session 场景使用）
+let cachedRegistry: ModelRegistry | null = null
+
 // ========== 模型名映射（仅作参考，主逻辑从 registry 动态获取）==========
 
 // 旧版硬编码映射，已废弃。保留为文档说明，不再参与任何运行时逻辑。
@@ -45,8 +48,9 @@ function resolveModelFromRegistry(registry: ModelRegistry, modelName: string): M
 }
 
 export function getAvailableModels(registry?: ModelRegistry): { id: string; name: string; contextWindow: number }[] {
-  if (!registry) return []
-  return registry.getAll().map((m) => ({
+  const r = registry ?? cachedRegistry
+  if (!r) return []
+  return r.getAll().map((m) => ({
     id: m.id ?? m.name,
     name: m.name,
     contextWindow: (m as any).contextWindow ?? 0,
@@ -90,6 +94,11 @@ export async function createPiSession(options: {
   }
 
   sessions.set(sessionId, { session, meta })
+
+  // 缓存首个 model registry，供 model.list 等无 session 请求使用
+  if (!cachedRegistry) {
+    cachedRegistry = session.modelRegistry
+  }
 
   console.log(`[pi-session] created session ${sessionId} with model ${meta.modelName}`)
 

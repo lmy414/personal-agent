@@ -146,10 +146,11 @@ html, body, #root {
   margin: 0 16px;
 }
 .session-panel.expanded .sub-sessions {
-  max-height: 240px; opacity: 1;
+  max-height: 320px; opacity: 1;
   margin: 10px 16px 12px;
   display: flex; flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .sub-search {

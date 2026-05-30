@@ -1,7 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { dispatch } from './dispatcher'
 import { initDB, getDB } from './db'
-import { createPiSession } from './pi-session'
 
 const PORT = 9229
 
@@ -17,11 +16,7 @@ if (!mainSid) {
   db.prepare("INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, '澪')").run(mainSid)
   console.log('[bridge] 主会话「澪」已创建:', mainSid)
 }
-
-// 启动时为澪创建 Pi session，确保 model.list 等请求立即可用
-createPiSession({ sessionId: mainSid }).catch((err) => {
-  console.warn('[bridge] 主会话 Pi 初始化失败（可延迟创建）:', err instanceof Error ? err.message : err)
-})
+// Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
 
 const wss = new WebSocketServer({ port: PORT })
 

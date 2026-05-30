@@ -221,9 +221,9 @@ export function ChatRenderer() {
                   }
                 >
                   {msg.role === 'user' && msg.attachments?.length ? (
-                    // P1-01: 附件消息不展开内容，仅显示徽章
+                    // 附件消息不展开内容，仅显示徽章；裁剪旧消息中嵌入的文件内容
                     <div>
-                      <span>{msg.content || '请帮我分析这些文件'}</span>
+                      <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
                       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
                         <For each={msg.attachments}>
                           {(att) => (
