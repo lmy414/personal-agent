@@ -1,4 +1,4 @@
-import { createSignal, Switch, Match } from 'solid-js'
+import { createSignal, Switch, Match, onMount, onCleanup } from 'solid-js'
 import { FileTree } from '@/extensions/file-tree/FileTree'
 import { DocPreview } from '@/extensions/doc-preview/DocPreview'
 import { MemoryView } from '@/extensions/memory-view/MemoryView'
@@ -13,6 +13,15 @@ const TABS: { id: TabId; label: string }[] = [
 
 export function RightPanelTabs() {
   const [activeTab, setActiveTab] = createSignal<TabId>('files')
+
+  onMount(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail as TabId
+      if (TABS.some((t) => t.id === tab)) setActiveTab(tab)
+    }
+    window.addEventListener('switch-right-tab', handler)
+    onCleanup(() => window.removeEventListener('switch-right-tab', handler))
+  })
 
   return (
     <>

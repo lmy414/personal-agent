@@ -103,6 +103,7 @@ export function FileTree() {
     const ext = node.name.split('.').pop()?.toLowerCase() ?? ''
     const isImage = IMAGE_EXTS.has(ext)
     agent.send('file.read', { path: node.path, encoding: isImage ? 'base64' : 'utf8' })
+    window.dispatchEvent(new CustomEvent('switch-right-tab', { detail: 'preview' }))
   }
 
   const handleDragStart = (node: TreeNode, e: DragEvent) => {
