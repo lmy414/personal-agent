@@ -81,7 +81,7 @@ html, body, #root {
 .overlay > * { pointer-events: auto; }
 
 /* 网格区域分配 */
-.overlay-left-top    { grid-column: 1; grid-row: 1; }
+.overlay-left-top    { grid-column: 1; grid-row: 1; max-height: 40vh; }
 .overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; }
 .overlay-left-status { grid-column: 1; grid-row: 3; }
 .overlay-center-main { grid-column: 2; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
@@ -98,8 +98,14 @@ html, body, #root {
 }
 
 /* ====== 会话面板 ====== */
-.session-panel { display: flex; flex-direction: column; }
-.session-panel.expanded { /* 展开时 Grid 自动扩展 */ }
+.session-panel {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+/* 折叠状态不占多余空间；展开时 session-panel 由 header + toolbar + 列表填满 */
+.session-panel:not(.expanded) {
+  flex-shrink: 0;
+}
 
 .session-header {
   display: flex; align-items: center; gap: 12px;
@@ -142,14 +148,15 @@ html, body, #root {
 .sub-sessions {
   overflow: hidden;
   max-height: 0; opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
   margin: 0 16px;
 }
 .session-panel.expanded .sub-sessions {
-  max-height: 320px; opacity: 1;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  opacity: 1;
   margin: 10px 16px 12px;
   display: flex; flex-direction: column;
-  min-height: 0;
   overflow-y: auto;
 }
 
