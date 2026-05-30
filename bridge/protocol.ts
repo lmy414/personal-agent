@@ -23,6 +23,8 @@ export type ClientMessage =
   | ClientMsg<'file.read', { path: string }>
   | ClientMsg<'memory.search', { query: string }>
   | ClientMsg<'memory.list', { limit?: number; offset?: number }>
+  | ClientMsg<'session.history', { sessionId: string }>
+  | ClientMsg<'session.rename', { sessionId: string; title: string }>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -50,6 +52,10 @@ export type ServerMessage =
   | ServerMsg<'file.content', { path: string; content: string; language?: string }>
   | ServerMsg<'memory.results', { query: string; entries: MemoryEntry[] }>
   | ServerMsg<'memory.list', { entries: MemoryEntry[]; total: number }>
+  // 会话历史 & 重命名
+  | ServerMsg<'session.history', { sessionId: string; messages: { messageId: string; role: 'user' | 'assistant'; content: string; partial: boolean }[]; toolCalls: { toolCallId: string; toolName: string; input: Record<string, unknown>; output: string; duration: number; status: 'running' | 'success' | 'error' }[] }>
+  | ServerMsg<'session.renamed', { sessionId: string; title: string }>
+  | ServerMsg<'session.deleted', { sessionId: string }>
   // 系统
   | ServerMsg<'compaction', { beforeTokens: number; afterTokens: number }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>

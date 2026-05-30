@@ -1,7 +1,21 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { dispatch } from './dispatcher'
+import { initDB, getDB } from './db'
 
 const PORT = 9229
+
+// 初始化数据库
+const db = initDB()
+console.log('[bridge] SQLite initialized at ~/.personal-agent/agent.db')
+
+// 确保主会话「澪」存在
+let mainSid = (db.prepare("SELECT value FROM settings WHERE key = 'main_session_id'").get() as { value: string } | undefined)?.value
+if (!mainSid) {
+  mainSid = crypto.randomUUID()
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('main_session_id', ?)").run(mainSid)
+  db.prepare("INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, '澪')").run(mainSid)
+  console.log('[bridge] 主会话「澪」已创建:', mainSid)
+}
 
 const wss = new WebSocketServer({ port: PORT })
 

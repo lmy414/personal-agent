@@ -7,69 +7,75 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+const ICON_MAP: Record<string, string> = {
+  read: '📖',
+  write: '✏',
+  edit: '✏',
+  grep: '🔍',
+  bash: '⚙',
+  find: '🔍',
+  ls: '📂',
+}
+
 function ToolEntry(props: { tool: ToolCallEntry }) {
   const [expanded, setExpanded] = createSignal(false)
 
-  const statusIcon = () => {
-    if (props.tool.status === 'running') return '◉'
-    if (props.tool.status === 'error') return '✕'
-    return '✓'
+  const statusClass = () => {
+    if (props.tool.status === 'running') return 'running'
+    if (props.tool.status === 'error') return 'error'
+    return 'ok'
   }
 
-  const statusColor = () => {
-    if (props.tool.status === 'running') return 'text-yellow-400'
-    if (props.tool.status === 'error') return 'text-red-400'
-    return 'text-green-400'
+  const statusText = () => {
+    if (props.tool.status === 'running') return '执行中'
+    if (props.tool.status === 'error') return '失败'
+    return `✓ ${formatDuration(props.tool.duration)}`
   }
 
   return (
-    <div class="glass rounded-lg mb-1.5 overflow-hidden">
-      <div
-        class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
-        classList={{ 'animate-pulse': props.tool.status === 'running' }}
-        onClick={() => setExpanded(!expanded())}
-      >
-        <span class={statusColor() + ' text-xs'}>{statusIcon()}</span>
-        <span class="text-xs font-medium flex-1">{props.tool.toolName}</span>
-        <span class="text-xs text-[var(--text-secondary)]">
-          {props.tool.status === 'running' ? '...' : formatDuration(props.tool.duration)}
-        </span>
+    <div
+      class="tool-entry"
+      classList={{
+        running: props.tool.status === 'running',
+        expanded: expanded(),
+      }}
+      onClick={() => setExpanded(!expanded())}
+    >
+      <div class="tool-icon">{ICON_MAP[props.tool.toolName] ?? '🔧'}</div>
+      <div class="tool-info">
+        <div class="tool-name">{props.tool.toolName}</div>
+        <div class="tool-detail">{props.tool.input ? JSON.stringify(props.tool.input).slice(0, 60) : '...'}</div>
       </div>
-      <Show when={expanded()}>
-        <div class="px-3 pb-3">
-          <pre class="text-xs text-[var(--text-secondary)] font-mono bg-black/30 rounded p-2 max-h-48 overflow-auto whitespace-pre-wrap">
-            {props.tool.output || '(等待输出...)'}
-          </pre>
-        </div>
-      </Show>
+      <span class={`tool-status ${statusClass()}`}>{statusText()}</span>
+      <div class="tool-detail-body">
+        <span class="detail-label">→ 输出:</span>
+        {props.tool.output || (props.tool.status === 'running' ? '执行中...' : '(无输出)')}
+      </div>
     </div>
   )
 }
 
 export function ToolPanel() {
   const { toolCalls } = useAgent()
+  const hasRunning = () => toolCalls().some((t: ToolCallEntry) => t.status === 'running')
 
   return (
-    <div class="flex flex-col h-full">
-      <div class="flex items-center justify-between px-3 py-2 border-b border-white/5 flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-green-400" />
-          <span class="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-            工具执行
-          </span>
-        </div>
-        <span class="text-xs text-[var(--text-secondary)]">{toolCalls.length}</span>
+    <div class="glass-panel tool-panel" style="height:100%">
+      <div class="tool-panel-header">
+        <span class="indicator" classList={{ idle: !hasRunning() }} />
+        工具执行
+        <span class="tool-count">{toolCalls().length} 条记录</span>
       </div>
-      <div class="flex-1 overflow-y-auto p-2">
+      <div class="tool-list">
         <Show
-          when={toolCalls.length > 0}
+          when={toolCalls().length > 0}
           fallback={
-            <div class="text-xs text-[var(--text-secondary)] text-center mt-8">
+            <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:24px;">
               暂无工具调用
             </div>
           }
         >
-          <For each={toolCalls}>
+          <For each={toolCalls()}>
             {(tool) => <ToolEntry tool={tool} />}
           </For>
         </Show>

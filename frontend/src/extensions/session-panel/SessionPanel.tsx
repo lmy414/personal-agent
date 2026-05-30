@@ -2,75 +2,207 @@ import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
 export function SessionPanel() {
-  const { sessions, switchSession, sessionId, createSession } = useAgent()
-  const [expanded, setExpanded] = createSignal(false)
+  const agent = useAgent()
+  const [expanded, setExpanded] = createSignal(true)
   const [searchQuery, setSearchQuery] = createSignal('')
+  const [deleteTarget, setDeleteTarget] = createSignal<string | null>(null)
 
-  const filtered = () => {
+  const mainSession = () => agent.sessions().find((s) => s.title === '澪')
+  const subSessions = () => {
     const q = searchQuery().toLowerCase()
-    if (!q) return sessions
-    return sessions.filter((s) => s.title.toLowerCase().includes(q) || s.id.includes(q))
+    return agent.sessions().filter((s) => {
+      if (s.title === '澪') return false
+      if (!q) return true
+      return s.title.toLowerCase().includes(q) || s.id.includes(q)
+    })
   }
 
-  const visible = () => filtered().slice(0, 3)
-  const currentSession = () => sessions.find((s) => s.id === sessionId)
+  const handleDelete = (sid: string) => {
+    if (deleteTarget() === sid) {
+      agent.send('session.delete', { sessionId: sid })
+      setDeleteTarget(null)
+    } else {
+      setDeleteTarget(sid)
+    }
+  }
 
   return (
-    <div class="p-3">
-      {/* Header — always visible */}
+    <div class="glass-panel session-panel" classList={{ expanded: expanded() }}>
+      {/* 主会话头部 — 始终可见，点击进入澪 */}
       <div
-        class="flex items-center justify-between cursor-pointer"
-        onClick={() => setExpanded(!expanded())}
+        class="session-header"
+        onClick={() => {
+          const m = mainSession()
+          if (m) agent.switchSession(m.id)
+        }}
+        style={{ cursor: 'pointer' }}
       >
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-[var(--text-secondary)]">💬</span>
-          <span class="text-sm font-medium">{currentSession()?.title ?? '会话'}</span>
-          <span class="text-xs text-[var(--text-secondary)]">
-            {currentSession()?.roundCount ?? 0} 轮
-          </span>
-        </div>
-        <div class="flex items-center gap-1">
-          <button
-            class="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-5 h-5 flex items-center justify-center rounded"
-            onClick={(e) => { e.stopPropagation(); createSession() }}
-          >
-            +
-          </button>
-          <span class="text-xs text-[var(--text-secondary)] transform transition-transform"
-            classList={{ 'rotate-90': expanded() }}
-          >
-            ▶
-          </span>
+        <div class="avatar">🎐</div>
+        <div class="meta">
+          <div class="title">澪</div>
+          <div class="time">
+            最后活跃{' '}
+            {new Date(mainSession()?.lastActive ?? 0).toLocaleTimeString('zh-CN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}{' '}
+            · {mainSession()?.roundCount ?? 0} 轮
+          </div>
         </div>
       </div>
 
-      {/* Expanded sub-session list */}
+      {/* 操作栏：新建 + 搜索 + 折叠箭头 */}
+      <div
+        class="sub-toolbar"
+        style={{
+          display: 'flex',
+          'align-items': 'center',
+          gap: '8px',
+          padding: '0 16px',
+          'flex-shrink': '0',
+        }}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            agent.createSession()
+          }}
+          style={{
+            background: 'rgba(139,156,240,0.12)',
+            border: 'none',
+            color: 'var(--accent)',
+            cursor: 'pointer',
+            'border-radius': '6px',
+            padding: '4px 8px',
+            'font-size': '13px',
+          }}
+          title="新建会话"
+        >
+          +
+        </button>
+        <input
+          class="sub-search"
+          type="text"
+          placeholder="搜索会话..."
+          value={searchQuery()}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
+          style={{ flex: '1' }}
+        />
+        <span
+          class="expand-arrow"
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(!expanded())
+          }}
+          style={{
+            cursor: 'pointer',
+            'font-size': '10px',
+            color: 'var(--text-secondary)',
+            'flex-shrink': '0',
+          }}
+        >
+          {expanded() ? '▼' : '▶'}
+        </span>
+      </div>
+
+      {/* 子会话列表 — 可折叠 */}
       <Show when={expanded()}>
-        <div class="mt-3">
-          <input
-            type="text"
-            placeholder="搜索会话..."
-            class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] outline-none mb-2"
-            value={searchQuery()}
-            onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          />
-          <div class="max-h-40 overflow-y-auto space-y-1">
-            <For each={visible()}>
+        <div class="sub-sessions">
+          <div class="sub-list">
+            <For each={subSessions()}>
               {(s) => (
                 <div
-                  class="flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors"
-                  classList={{
-                    'bg-[var(--accent)]/15 text-[var(--accent)]': s.id === sessionId,
-                    'text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]': s.id !== sessionId,
+                  class="sub-item"
+                  classList={{ active: s.id === agent.sessionId() }}
+                  onClick={() => agent.switchSession(s.id)}
+                  onMouseEnter={(e) => {
+                    if (deleteTarget() !== s.id) {
+                      const el = e.currentTarget.querySelector('.del-btn') as HTMLElement | null
+                      if (el) el.style.opacity = '1'
+                    }
                   }}
-                  onClick={() => switchSession(s.id)}
+                  onMouseLeave={(e) => {
+                    if (deleteTarget() !== s.id) {
+                      const el = e.currentTarget.querySelector('.del-btn') as HTMLElement | null
+                      if (el) el.style.opacity = '0'
+                    }
+                  }}
                 >
-                  <span>💬</span>
-                  <span class="truncate flex-1">{s.title}</span>
-                  <span class="text-[var(--text-secondary)]">{s.roundCount}轮</span>
+                  <Show
+                    when={deleteTarget() === s.id}
+                    fallback={
+                      <>
+                        <span class="dot" />
+                        <span class="sub-title">{s.title}</span>
+                        <span class="sub-time">{s.roundCount}轮</span>
+                        <span
+                          class="del-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(s.id)
+                          }}
+                          style={{
+                            'margin-left': 'auto',
+                            cursor: 'pointer',
+                            opacity: '0',
+                            transition: 'opacity 0.15s',
+                            color: 'var(--text-muted)',
+                            'font-size': '14px',
+                            'flex-shrink': '0',
+                          }}
+                        >
+                          ×
+                        </span>
+                      </>
+                    }
+                  >
+                    <span class="dot" style={{ color: '#f87171' }}>!</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteTarget(null)
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        'font-size': '12px',
+                        color: 'var(--text-secondary)',
+                        padding: '2px 8px',
+                        'border-radius': '4px',
+                        background: 'rgba(255,255,255,0.06)',
+                        'flex-shrink': '0',
+                      }}
+                    >
+                      取消
+                    </span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(s.id)
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        'font-size': '12px',
+                        color: '#f87171',
+                        padding: '2px 10px',
+                        'border-radius': '4px',
+                        background: 'rgba(248,113,113,0.15)',
+                        'font-weight': '500',
+                        'flex-shrink': '0',
+                      }}
+                    >
+                      确认删除
+                    </span>
+                  </Show>
                 </div>
               )}
             </For>
+            <Show when={subSessions().length === 0}>
+              <div class="sub-item" style={{ color: 'var(--text-muted)', cursor: 'default' }}>
+                <span class="sub-title" style="color:var(--text-muted)">
+                  无匹配会话
+                </span>
+              </div>
+            </Show>
           </div>
         </div>
       </Show>

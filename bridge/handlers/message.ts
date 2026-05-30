@@ -1,104 +1,388 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
+import { getPiSession, updateSessionMeta, getSessionMeta, createPiSession } from '../pi-session'
+import { getDB } from '../db'
 
-export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Promise<void> {
-  const payload = msg.payload as { content: string }
-  const turnIndex = Date.now()
-  const messageId = `msg-${turnIndex}`
+function extractTextContent(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('')
+  }
+  return JSON.stringify(content)
+}
 
-  ws.send(JSON.stringify({
-    type: 'turn.start',
-    id: `srv-${Date.now()}`,
-    sessionId: msg.sessionId,
-    ts: Date.now(),
-    payload: { turnIndex },
-  }))
+async function generateSessionTitle(sessionId: string): Promise<string | null> {
+  try {
+    const db = getDB()
+    const msgs = db.prepare(`
+      SELECT m.role, m.content
+      FROM messages m JOIN conversations c ON m.conversation_id = c.id
+      WHERE c.session_id = ?
+      ORDER BY m.id ASC
+    `).all(sessionId) as { role: string; content: string }[]
 
-  ws.send(JSON.stringify({
-    type: 'message.start',
-    id: `srv-${Date.now()}`,
-    sessionId: msg.sessionId,
-    ts: Date.now(),
-    payload: { messageId, role: 'assistant' },
-  }))
-
-  // Simulate streaming response
-  const response = `收到你的消息：「${payload.content}」\n\n这是桥接服务器的模拟回复。后续将接入 Pi SDK 实现真正的 AI 对话。`
-  let pos = 0
-  const chunkSize = 3
-
-  const interval = setInterval(() => {
-    if (pos >= response.length) {
-      clearInterval(interval)
-
-      ws.send(JSON.stringify({
-        type: 'message.end',
-        id: `srv-${Date.now()}`,
-        sessionId: msg.sessionId,
-        ts: Date.now(),
-        payload: { messageId, content: response, usage: { input: 50, output: response.length, total: 50 + response.length } },
-      }))
-
-      ws.send(JSON.stringify({
-        type: 'turn.end',
-        id: `srv-${Date.now()}`,
-        sessionId: msg.sessionId,
-        ts: Date.now(),
-        payload: { turnIndex, usage: { input: 50, output: response.length, total: 50 + response.length }, cost: 0.001 },
-      }))
-
-      ws.send(JSON.stringify({
-        type: 'status.update',
-        id: `srv-${Date.now()}`,
-        sessionId: msg.sessionId,
-        ts: Date.now(),
-        payload: { tokens: 300 + response.length, cost: 0.004, contextUsed: 1200, contextMax: 128000, roundCount: 3 },
-      }))
-
-      return
+    if (msgs.length < 2) {
+      console.log('[auto-name] not enough messages:', msgs.length, 'for', sessionId.slice(0, 8))
+      return null
     }
 
-    const delta = response.slice(pos, pos + chunkSize)
-    pos += chunkSize
+    const userMsg = msgs.find((m) => m.role === 'user')?.content?.slice(0, 200) ?? ''
+    const aiMsg = msgs.find((m) => m.role === 'assistant')?.content?.slice(0, 200) ?? ''
+    if (!userMsg || !aiMsg) {
+      console.log('[auto-name] missing user/assistant message for', sessionId.slice(0, 8))
+      return null
+    }
 
+    const apiKey = process.env.DEEPSEEK_API_KEY
+    if (!apiKey) {
+      console.log('[auto-name] DEEPSEEK_API_KEY not set')
+      return null
+    }
+
+    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '用3-5个汉字总结这段对话的主题。只输出主题本身，不要解释，不要标点。' },
+          { role: 'user', content: `用户: ${userMsg}\n\n助手: ${aiMsg}\n\n用3-5个汉字总结主题:` },
+        ],
+        max_tokens: 15,
+        temperature: 0.3,
+      }),
+    })
+
+    const data = await resp.json() as any
+    const title = data.choices?.[0]?.message?.content?.trim()
+    if (title) {
+      console.log('[auto-name] generated title:', title, 'for', sessionId.slice(0, 8))
+    } else {
+      console.log('[auto-name] DeepSeek returned no title:', JSON.stringify(data).slice(0, 200))
+    }
+    return title?.slice(0, 20) ?? null
+  } catch (err) {
+    console.error('[auto-name] failed:', err)
+    return null
+  }
+}
+
+export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Promise<void> {
+  let session = getPiSession(msg.sessionId)
+
+  // 懒加载：主会话澪等首次发消息时创建 Pi session
+  if (!session) {
+    try {
+      await createPiSession({ sessionId: msg.sessionId })
+      session = getPiSession(msg.sessionId)
+    } catch (err) {
+      console.error('[message] failed to lazily create Pi session:', err)
+    }
+  }
+
+  if (!session) {
     ws.send(JSON.stringify({
-      type: 'message.delta',
+      type: 'error',
       id: `srv-${Date.now()}`,
       sessionId: msg.sessionId,
       ts: Date.now(),
-      payload: { messageId, delta },
+      payload: { code: 'SESSION_NOT_FOUND', message: `Session not found: ${msg.sessionId}`, recoverable: true },
     }))
+    return
+  }
 
-    // Simulate tool call mid-stream
-    if (pos === 30) {
-      const toolId = `tool-${Date.now()}`
-      ws.send(JSON.stringify({
-        type: 'tool.start',
-        id: `srv-${Date.now()}`,
-        sessionId: msg.sessionId,
-        ts: Date.now(),
-        payload: { toolCallId: toolId, toolName: 'read', input: { path: 'CLAUDE.md' } },
-      }))
+  if (session.isStreaming) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { code: 'ALREADY_STREAMING', message: 'A turn is already in progress', recoverable: true },
+    }))
+    return
+  }
 
-      setTimeout(() => {
+  const payload = msg.payload as { content: string }
+
+  // 持久化用户消息到 SQLite
+  try {
+    const db = getDB()
+    const conv = db.prepare('SELECT id FROM conversations WHERE session_id = ?').get(msg.sessionId) as { id: number } | undefined
+    if (conv) {
+      db.prepare(
+        'INSERT INTO messages (conversation_id, message_id, role, content) VALUES (?, ?, ?, ?)',
+      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.content)
+    }
+  } catch (e) {
+    console.warn('[message] failed to persist user message:', e)
+  }
+
+  let turnIndex = 0
+  let messageId = ''
+  let lastUsage: { input: number; output: number; total: number; cost: number } | undefined
+
+  const unsubscribe = session.subscribe((event: any) => {
+    switch (event.type) {
+      case 'turn_start': {
+        turnIndex = Date.now()
+        ws.send(JSON.stringify({
+          type: 'turn.start',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: { turnIndex },
+        }))
+        break
+      }
+
+      case 'message_start': {
+        if (event.message?.role === 'assistant') {
+          messageId = `msg-${Date.now()}`
+          ws.send(JSON.stringify({
+            type: 'message.start',
+            id: `srv-${Date.now()}`,
+            sessionId: msg.sessionId,
+            ts: Date.now(),
+            payload: { messageId, role: 'assistant' },
+          }))
+        }
+        break
+      }
+
+      case 'message_update': {
+        const ame = event.assistantMessageEvent
+        if (!ame) break
+        if (ame.type === 'text_delta' || ame.type === 'thinking_delta') {
+          ws.send(JSON.stringify({
+            type: 'message.delta',
+            id: `srv-${Date.now()}`,
+            sessionId: msg.sessionId,
+            ts: Date.now(),
+            payload: { messageId, delta: ame.delta },
+          }))
+        }
+        break
+      }
+
+      case 'message_end': {
+        const message = event.message
+        if (message?.role === 'assistant') {
+          const usage = message.usage
+          if (usage) {
+            lastUsage = {
+              input: usage.input,
+              output: usage.output,
+              total: usage.totalTokens,
+              cost: usage.cost?.total ?? 0,
+            }
+          }
+          ws.send(JSON.stringify({
+            type: 'message.end',
+            id: `srv-${Date.now()}`,
+            sessionId: msg.sessionId,
+            ts: Date.now(),
+            payload: {
+              messageId,
+              content: extractTextContent(message.content),
+              usage: usage
+                ? { input: usage.input, output: usage.output, total: usage.totalTokens }
+                : { input: 0, output: 0, total: 0 },
+            },
+          }))
+
+          // 持久化 assistant 消息到 SQLite
+          try {
+            const db = getDB()
+            const conv = db.prepare('SELECT id FROM conversations WHERE session_id = ?').get(msg.sessionId) as { id: number } | undefined
+            if (conv) {
+              db.prepare(
+                'INSERT INTO messages (conversation_id, message_id, role, content, tokens_input, tokens_output) VALUES (?, ?, ?, ?, ?, ?)',
+              ).run(conv.id, messageId, 'assistant', extractTextContent(message.content), usage?.input ?? 0, usage?.output ?? 0)
+            }
+          } catch (e) {
+            console.warn('[message] failed to persist assistant message:', e)
+          }
+        }
+        break
+      }
+
+      case 'tool_execution_start': {
+        ws.send(JSON.stringify({
+          type: 'tool.start',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            input: event.args ?? {},
+          },
+        }))
+
+        // 持久化 tool_call start
+        try {
+          const db = getDB()
+          db.prepare(
+            'INSERT INTO tool_calls (session_id, tool_call_id, tool_name, input, status) VALUES (?, ?, ?, ?, ?)',
+          ).run(msg.sessionId, event.toolCallId, event.toolName, JSON.stringify(event.args ?? {}), 'running')
+        } catch (e) {
+          console.warn('[message] failed to persist tool start:', e)
+        }
+        break
+      }
+
+      case 'tool_execution_update': {
+        ws.send(JSON.stringify({
+          type: 'tool.progress',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: {
+            toolCallId: event.toolCallId,
+            output: typeof event.partialResult === 'string'
+              ? event.partialResult
+              : JSON.stringify(event.partialResult),
+          },
+        }))
+        break
+      }
+
+      case 'tool_execution_end': {
         ws.send(JSON.stringify({
           type: 'tool.end',
           id: `srv-${Date.now()}`,
           sessionId: msg.sessionId,
           ts: Date.now(),
-          payload: { toolCallId: toolId, toolName: 'read', output: '# 澪号 Personal Agent\n...', duration: 142, status: 'success' },
+          payload: {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            output: typeof event.result === 'string' ? event.result : JSON.stringify(event.result),
+            duration: 0,
+            status: event.isError ? 'error' : 'success',
+          },
         }))
-      }, 500)
+
+        // 更新 tool_call end
+        try {
+          const db = getDB()
+          db.prepare(
+            'UPDATE tool_calls SET output = ?, status = ?, duration = ? WHERE tool_call_id = ?',
+          ).run(
+            typeof event.result === 'string' ? event.result : JSON.stringify(event.result),
+            event.isError ? 'error' : 'success',
+            0,
+            event.toolCallId,
+          )
+        } catch (e) {
+          console.warn('[message] failed to persist tool end:', e)
+        }
+        break
+      }
+
+      case 'agent_end': {
+        unsubscribe()
+        ws.send(JSON.stringify({
+          type: 'turn.end',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: {
+            turnIndex,
+            usage: lastUsage
+              ? { input: lastUsage.input, output: lastUsage.output, total: lastUsage.total }
+              : { input: 0, output: 0, total: 0 },
+            cost: lastUsage?.cost ?? 0,
+          },
+        }))
+
+        const meta = getSessionMeta(msg.sessionId)
+        if (meta) {
+          updateSessionMeta(msg.sessionId, { roundCount: meta.roundCount + 1 })
+        }
+
+        const newRoundCount = (meta?.roundCount ?? 0) + 1
+
+        // 首轮完成后 AI 自动命名（roundCount 到 2，或标题仍是"新会话"且有对话内容）
+        const shouldName = newRoundCount === 2
+        if (shouldName) {
+          generateSessionTitle(msg.sessionId).then((title) => {
+            if (title) {
+              const db = getDB()
+              const dateStr = new Date().toLocaleDateString('zh-CN')
+              const fullTitle = `${title} ${dateStr}`
+              db.prepare('UPDATE conversations SET title = ?, updated_at = datetime(?) WHERE session_id = ?').run(
+                fullTitle, new Date().toISOString(), msg.sessionId,
+              )
+              updateSessionMeta(msg.sessionId, { title: fullTitle })
+              ws.send(JSON.stringify({
+                type: 'session.renamed',
+                id: `srv-${Date.now()}`,
+                sessionId: msg.sessionId,
+                ts: Date.now(),
+                payload: { sessionId: msg.sessionId, title: fullTitle },
+              }))
+            }
+          })
+        }
+
+        // Update conversation updated_at
+        try {
+          const db = getDB()
+          db.prepare('UPDATE conversations SET updated_at = datetime(?) WHERE session_id = ?').run(
+            new Date().toISOString(), msg.sessionId,
+          )
+        } catch (e) {
+          console.warn('[message] failed to update conversation timestamp:', e)
+        }
+
+        try {
+          const stats = session.getSessionStats()
+          const ctx = session.getContextUsage()
+          ws.send(JSON.stringify({
+            type: 'status.update',
+            id: `srv-${Date.now()}`,
+            sessionId: msg.sessionId,
+            ts: Date.now(),
+            payload: {
+              tokens: stats.tokens.total,
+              cost: stats.cost,
+              contextUsed: ctx?.tokens ?? 0,
+              contextMax: ctx?.contextWindow ?? 128000,
+              roundCount: newRoundCount,
+            },
+          }))
+        } catch {
+          // getSessionStats may throw if no session file is configured
+        }
+        break
+      }
     }
-  }, 50)
+  })
+
+  try {
+    await session.prompt(payload.content)
+  } catch (err) {
+    unsubscribe()
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: {
+        code: 'PROMPT_FAILED',
+        message: err instanceof Error ? err.message : 'Failed to send message',
+        recoverable: true,
+      },
+    }))
+  }
 }
 
-export function handleMessageCancel(_msg: ClientMessage, ws: WebSocket): void {
-  ws.send(JSON.stringify({
-    type: 'error',
-    id: `srv-${Date.now()}`,
-    sessionId: _msg.sessionId,
-    ts: Date.now(),
-    payload: { code: 'CANCEL_NOT_IMPLEMENTED', message: 'Cancel not yet supported', recoverable: true },
-  }))
+export function handleMessageCancel(msg: ClientMessage, _ws: WebSocket): void {
+  const session = getPiSession(msg.sessionId)
+  if (session) {
+    session.abort()
+  }
 }

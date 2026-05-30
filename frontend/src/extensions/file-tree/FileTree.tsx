@@ -10,44 +10,61 @@ interface TreeNode {
 export function FileTree() {
   const { send } = useAgent()
   const [tree] = createSignal<TreeNode[]>([
-    { name: 'project', type: 'directory', children: [
-      { name: 'main.ts', type: 'file' },
-      { name: 'config.json', type: 'file' },
+    {
+      name: 'personal-agent', type: 'directory', children: [
+        { name: 'extensions', type: 'directory', children: [
+          { name: 'pa-mio', type: 'directory' },
+          { name: 'pa-sqlite', type: 'directory' },
+        ]},
+        { name: '.gitignore', type: 'file' },
+        { name: 'package.json', type: 'file' },
+        { name: 'CLAUDE.md', type: 'file' },
+      ],
+    },
+    { name: 'frontend-sketch', type: 'directory', children: [
+      { name: 'layout-mockup-v2.html', type: 'file' },
     ]},
-    { name: 'docs', type: 'directory', children: [
-      { name: 'readme.md', type: 'file' },
+    { name: 'mio-harness', type: 'directory', children: [
+      { name: 'character', type: 'directory', children: [
+        { name: 'soul.md', type: 'file' },
+        { name: 'boundaries.md', type: 'file' },
+      ]},
     ]},
   ])
 
-  const handleClick = (node: TreeNode) => {
+  const handleClick = (node: TreeNode, e: MouseEvent) => {
+    e.stopPropagation()
     if (node.type === 'file') {
       send('file.read', { path: node.name })
     }
   }
 
-  const renderNode = (node: TreeNode, depth: number) => {
+  const RenderNode = (props: { node: TreeNode; depth: number }) => {
     const [expanded, setExpanded] = createSignal(false)
-    const icon = node.type === 'directory' ? (expanded() ? '📂' : '📁') : '📄'
+    const icon = props.node.type === 'directory'
+      ? (expanded() ? '📂' : '📁')
+      : (props.node.name.endsWith('.md') ? '📝' : props.node.name.endsWith('.html') ? '🌐' : '📄')
 
     return (
       <>
         <div
-          class="flex items-center gap-1.5 py-1 px-1.5 rounded cursor-pointer hover:bg-white/5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          style={{ 'padding-left': `${depth * 14 + 6}px` }}
-          onClick={() => {
-            if (node.type === 'directory') {
+          class="file-tree-item"
+          classList={{ dir: props.node.type === 'directory' }}
+          style={{ 'padding-left': `${props.depth * 16 + 4}px` }}
+          onClick={(e) => {
+            if (props.node.type === 'directory') {
               setExpanded(!expanded())
             } else {
-              handleClick(node)
+              handleClick(props.node, e)
             }
           }}
         >
-          <span class="text-xs">{icon}</span>
-          <span class="truncate">{node.name}</span>
+          <span class="ft-icon">{icon}</span>
+          <span class="ft-name">{props.node.name}</span>
         </div>
-        <Show when={node.type === 'directory' && expanded() && node.children}>
-          <For each={node.children!}>
-            {(child) => renderNode(child, depth + 1)}
+        <Show when={props.node.type === 'directory' && expanded() && props.node.children}>
+          <For each={props.node.children!}>
+            {(child) => <RenderNode node={child} depth={props.depth + 1} />}
           </For>
         </Show>
       </>
@@ -55,9 +72,9 @@ export function FileTree() {
   }
 
   return (
-    <div class="p-2">
+    <div class="file-tree">
       <For each={tree()}>
-        {(node) => renderNode(node, 0)}
+        {(node) => <RenderNode node={node} depth={0} />}
       </For>
     </div>
   )

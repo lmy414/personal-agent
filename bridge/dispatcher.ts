@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from './protocol'
-import { handleSessionCreate, handleSessionList, handleSessionSwitch, handleSessionDelete } from './handlers/session'
+import { handleSessionCreate, handleSessionList, handleSessionSwitch, handleSessionDelete, handleSessionHistory, handleSessionRename } from './handlers/session'
 import { handleMessageSend, handleMessageCancel } from './handlers/message'
 import { handleModelSwitch, handleModelList } from './handlers/model'
 import { handleFileList, handleFileRead } from './handlers/file'
@@ -21,6 +21,8 @@ const routes: Record<string, Handler> = {
   'file.read': handleFileRead,
   'memory.search': handleMemorySearch,
   'memory.list': handleMemoryList,
+  'session.history': handleSessionHistory,
+  'session.rename': handleSessionRename,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {

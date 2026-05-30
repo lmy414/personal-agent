@@ -8,12 +8,8 @@ function formatTime(date: Date): string {
   return `${h}:${m}:${s}`
 }
 
-function formatCost(tokens: number): string {
-  return `¥${((tokens / 1000) * 0.001).toFixed(4)}`
-}
-
 export function StatusBar() {
-  const { status } = useAgent()
+  const { status, switchModel } = useAgent()
   const [time, setTime] = createSignal(new Date())
 
   const timer = setInterval(() => setTime(new Date()), 1000)
@@ -26,39 +22,57 @@ export function StatusBar() {
 
   const barColor = () => {
     const p = contextPercent()
-    if (p > 80) return 'bg-red-500'
-    if (p > 60) return 'bg-yellow-500'
-    return 'bg-blue-500'
+    if (p > 80) return 'danger'
+    if (p > 60) return 'warn'
+    return ''
+  }
+
+  const contextText = () => {
+    const used = status.contextUsed
+    const max = status.contextMax
+    if (used >= 1000) return `${(used / 1000).toFixed(1)}k / ${(max / 1000).toFixed(0)}k`
+    return `${used} / ${(max / 1000).toFixed(0)}k`
   }
 
   return (
-    <div class="p-3 space-y-2 text-xs">
-      {/* Row 1: Clock + model select */}
-      <div class="flex items-center justify-between">
-        <span class="font-mono text-base text-[var(--text-primary)] tabular-nums tracking-wider">
-          {formatTime(time())}
-        </span>
-        <select class="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-xs text-[var(--text-primary)] outline-none">
-          <option>deepseek-v3</option>
-          <option>deepseek-r1</option>
+    <div class="glass-panel status-bar">
+      <div class="status-row">
+        <span class="status-label">⏱</span>
+        <span class="status-value mono">{formatTime(time())}</span>
+        <span class="status-spacer" />
+        <span class="status-label">模型</span>
+        <select
+          class="model-select"
+          onChange={(e) => switchModel(e.currentTarget.value)}
+        >
+          <option value="deepseek-v3">DeepSeek V3</option>
+          <option value="deepseek-r1">DeepSeek R1</option>
+          <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
         </select>
       </div>
-
-      {/* Row 2: Token + cost */}
-      <div class="flex items-center justify-between text-[var(--text-secondary)]">
-        <span>Token: {status.tokens.toLocaleString()}</span>
-        <span>{formatCost(status.tokens)}</span>
+      <div class="status-row">
+        <span class="status-label">本次消耗</span>
+        <span class="status-value mono">{status.tokens.toLocaleString()}</span>
+        <span class="status-label">token</span>
+        <span class="status-spacer" />
+        <span class="status-label">≈ ¥</span>
+        <span class="status-value">{status.cost.toFixed(4)}</span>
       </div>
-
-      {/* Row 3: Context bar */}
-      <div class="space-y-1">
-        <div class="flex items-center justify-between text-[var(--text-secondary)]">
-          <span>上下文 {contextPercent()}%</span>
-          <span>第 {status.roundCount} 轮</span>
+      <div class="status-row">
+        <span class="status-label">上下文</span>
+        <span class="status-value mono">{contextText()}</span>
+        <span class="status-spacer" />
+        <span class="status-label">轮次</span>
+        <span class="status-value">{status.roundCount}</span>
+      </div>
+      <div class="ctx-bar-wrap">
+        <div class="ctx-bar-label">
+          <span>上下文用量</span>
+          <span>{contextPercent()}%</span>
         </div>
-        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div class="ctx-bar">
           <div
-            class={`h-full rounded-full transition-all duration-500 ${barColor()}`}
+            class={`ctx-bar-fill ${barColor()}`}
             style={{ width: `${contextPercent()}%` }}
           />
         </div>

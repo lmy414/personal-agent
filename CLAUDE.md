@@ -6,7 +6,7 @@
 
 ```bash
 # 终端 1 — 桥接服务器
-cd bridge && npx tsx index.ts
+cd bridge && npx tsx --env-file ../.env index.ts
 
 # 终端 2 — 前端 dev
 cd frontend && npm run dev

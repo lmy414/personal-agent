@@ -4,13 +4,20 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "paths": {
-      "@pi/*": ["../vendor/pi/packages/*/src"]
+      "@pi/*": ["../vendor/pi/packages/*/src"],
+      "@earendil-works/pi-coding-agent": ["../vendor/pi/packages/coding-agent/src"],
+      "@earendil-works/pi-agent-core": ["../vendor/pi/packages/agent/src"],
+      "@earendil-works/pi-ai": ["../vendor/pi/packages/ai/src"],
+      "@earendil-works/pi-ai/oauth": ["../vendor/pi/packages/ai/src/oauth"],
+      "@earendil-works/pi-tui": ["../vendor/pi/packages/tui/src"]
     }
   },
   "include": ["./**/*.ts"]

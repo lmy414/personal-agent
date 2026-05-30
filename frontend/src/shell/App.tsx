@@ -53,39 +53,47 @@ export function App() {
           'grid-template-columns': `var(--left-col) 1fr ${effectiveWidth()}px`,
         }}
       >
-        <div class="glass slot-left-top rounded-lg overflow-hidden">
+        {/* 左上：会话面板 */}
+        <div class="overlay-left-top">
           <For each={registry.getBySlot('left-top')}>{renderExtension}</For>
         </div>
-        <div class="glass slot-left-middle rounded-lg overflow-hidden flex flex-col">
+
+        {/* 左下：工具面板 */}
+        <div class="overlay-left-bottom">
           <For each={registry.getBySlot('left-middle')}>{renderExtension}</For>
         </div>
-        <div class="glass slot-left-bottom rounded-lg overflow-hidden">
+
+        {/* 左下底：状态栏 */}
+        <div class="overlay-left-status">
           <For each={registry.getBySlot('left-bottom')}>{renderExtension}</For>
         </div>
 
-        <div class="glass slot-center rounded-lg overflow-hidden flex flex-col">
+        {/* 中间：对话面板 */}
+        <div class="overlay-center-main">
           <For each={registry.getBySlot('center')}>{renderExtension}</For>
         </div>
 
-        <div class="glass slot-right rounded-lg right-panel" style={{ overflow: 'visible' }}>
-          <div
-            class="drag-handle"
-            classList={{ active: false }}
-            onMouseDown={handleDragStart}
-            onDblClick={() => {
-              setRightPanelW(0)
-              setPanelVisible(false)
-            }}
-          />
-          <div
-            class="expand-tab"
-            classList={{ hidden: panelVisible() }}
-            onClick={handleExpandClick}
-          >
-            展开面板
-          </div>
-          <div class="right-panel-body">
-            <For each={registry.getBySlot('right')}>{renderExtension}</For>
+        {/* 右侧面板 */}
+        <div class="overlay-right-panel">
+          <div class="glass-panel right-panel">
+            <div
+              class="panel-drag-handle"
+              onMouseDown={handleDragStart}
+              onDblClick={() => {
+                setRightPanelW(0)
+                setPanelVisible(false)
+              }}
+            />
+            <div
+              class="expand-tab"
+              classList={{ hidden: panelVisible() }}
+              onClick={handleExpandClick}
+            >
+              记 忆 检 索
+            </div>
+            <div class="right-panel-body">
+              <For each={registry.getBySlot('right')}>{renderExtension}</For>
+            </div>
           </div>
         </div>
       </div>

@@ -1,58 +1,96 @@
-import { For, createEffect } from 'solid-js'
+import { For, createEffect, createSignal } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { marked } from 'marked'
+
+// 配置 marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+})
+
+function renderMarkdown(text: string): string {
+  return marked.parse(text) as string
+}
 
 export function ChatRenderer() {
-  const { messages } = useAgent()
+  const agent = useAgent()
+  const [content, setContent] = createSignal('')
   let scrollRef!: HTMLDivElement
+  let textareaRef!: HTMLTextAreaElement
 
   createEffect(() => {
-    void (messages.length)
+    void agent.messages().length
+    void agent.sessionId()
     if (scrollRef) {
       scrollRef.scrollTop = scrollRef.scrollHeight
     }
   })
 
+  const handleSend = () => {
+    const text = content().trim()
+    if (!text) return
+    agent.sendMessage(text)
+    setContent('')
+    if (textareaRef) {
+      textareaRef.style.height = 'auto'
+    }
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  const handleInput = () => {
+    const el = textareaRef
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }
+
   return (
-    <div class="flex-1 overflow-y-auto px-5 py-4" ref={scrollRef}>
-      <For each={messages}>
-        {(msg) => (
-          <div
-            class="flex gap-3 mb-5 message-enter"
-            classList={{ 'flex-row-reverse': msg.role === 'user' }}
-          >
-            <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/10">
+    <div class="glass-panel chat-panel" style="flex:1">
+      <div class="chat-header">
+        <span>澪号</span>
+        <span class="chat-subtitle">· {agent.connected() ? '在线' : '离线'}</span>
+        <span class="chat-header-right">
+          <span class="energy-dot" style={{background: agent.connected() ? 'rgba(139,156,240,0.6)' : 'rgba(255,80,80,0.6)'}} />
+          {agent.connected() ? '就绪' : '断连'}
+        </span>
+      </div>
+      <div class="chat-messages" ref={scrollRef}>
+        <For each={agent.messages().filter((m) => m.content || m.partial)}>
+          {(msg) => (
+            <div class={`msg ${msg.role} message-enter`}>
               <div
-                class="w-full h-full flex items-center justify-center text-xs"
-                classList={{
-                  'bg-[var(--accent)]': msg.role === 'assistant',
-                  'bg-white/20': msg.role === 'user',
-                }}
+                class="msg-bubble"
+                innerHTML={
+                  msg.role === 'assistant' && msg.content
+                    ? renderMarkdown(msg.content)
+                    : undefined
+                }
               >
-                {msg.role === 'assistant' ? 'M' : '你'}
+                {msg.role === 'assistant' && msg.content
+                  ? null
+                  : msg.content || (msg.partial ? '...' : '')}
               </div>
             </div>
-            <div
-              class="max-w-[80%]"
-              classList={{
-                'flex flex-col items-end': msg.role === 'user',
-              }}
-            >
-              <div class="text-xs text-[var(--text-secondary)] mb-1">
-                {msg.role === 'assistant' ? 'Mio' : '你'}
-              </div>
-              <div
-                class="px-3 py-2.5 rounded-2xl text-sm leading-relaxed"
-                classList={{
-                  'bg-[var(--accent)]/15 border border-[var(--accent)]/20': msg.role === 'user',
-                  'bg-black/35 border border-white/5': msg.role === 'assistant',
-                }}
-              >
-                {msg.content || (msg.partial ? '...' : '')}
-              </div>
-            </div>
-          </div>
-        )}
-      </For>
+          )}
+        </For>
+      </div>
+      <div class="chat-input-area">
+        <textarea
+          ref={textareaRef}
+          class="chat-input"
+          placeholder="输入消息..."
+          rows="1"
+          value={content()}
+          onInput={(e) => { setContent(e.currentTarget.value); handleInput() }}
+          onKeyDown={handleKeyDown}
+        />
+        <button class="send-btn" onClick={handleSend}>↑</button>
+      </div>
     </div>
   )
 }
