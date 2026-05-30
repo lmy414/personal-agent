@@ -29,8 +29,8 @@ async function generateSessionTitle(sessionId: string): Promise<string | null> {
       return null
     }
 
-    const userMsg = msgs.find((m) => m.role === 'user')?.content?.slice(0, 200) ?? ''
-    const aiMsg = msgs.find((m) => m.role === 'assistant')?.content?.slice(0, 200) ?? ''
+    const userMsg = msgs.find((m) => m.role === 'user' && m.content)?.content?.slice(0, 200) ?? ''
+    const aiMsg = msgs.find((m) => m.role === 'assistant' && m.content)?.content?.slice(0, 200) ?? ''
     if (!userMsg || !aiMsg) {
       console.log('[auto-name] missing user/assistant message for', sessionId.slice(0, 8))
       return null
