@@ -10,7 +10,8 @@ const PROJECT_ROOT = resolve(join(__dirname, '..', '..'))
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'])
 
 function resolveSafe(targetPath: string): string {
-  const resolved = resolve(normalize(targetPath))
+  // 相对路径基于 PROJECT_ROOT 解析，而非 CWD
+  const resolved = resolve(PROJECT_ROOT, normalize(targetPath))
   const rel = relative(PROJECT_ROOT, resolved)
   if (rel.startsWith('..')) {
     throw new Error(`Path out of bounds: ${targetPath}`)

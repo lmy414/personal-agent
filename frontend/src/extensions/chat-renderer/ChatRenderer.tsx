@@ -5,8 +5,15 @@ import type { ServerMessage } from '@bridge/protocol'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-function renderMarkdown(text: string): string {
-  return marked.parse(text) as string
+// 缓存 markdown 渲染结果，避免已完成的静态消息被重复解析 → 消除闪烁
+const mdCache = new Map<string, string>()
+function renderMarkdownStable(msgId: string, text: string): string {
+  const cached = mdCache.get(msgId)
+  if (cached === text) return mdCache.get(`rendered:${msgId}`) ?? ''
+  mdCache.set(msgId, text)
+  const rendered = marked.parse(text) as string
+  mdCache.set(`rendered:${msgId}`, rendered)
+  return rendered
 }
 
 interface Attachment {
@@ -40,12 +47,15 @@ export function ChatRenderer() {
     if (unsubFile) unsubFile()
     unsubFile = agent.subscribe('file.content', (msg: ServerMessage) => {
       const payload = msg.payload as { path: string; content: string; language?: string; encoding?: string }
-      if (!pendingPaths.has(payload.path)) return
+      // 路径归一化：bridge 返回 \ (Windows) 但 pendingPaths 用 / (FileTree)
+      const normPath = payload.path.replace(/\\/g, '/')
+      if (!pendingPaths.has(normPath) && !pendingPaths.has(payload.path)) return
       const name = payload.path.split(/[\\/]/).pop() ?? payload.path
       setAttachments((prev) => {
-        if (prev.some((a) => a.path === payload.path)) return prev
+        if (prev.some((a) => a.path.replace(/\\/g, '/') === normPath)) return prev
         return [...prev, { path: payload.path, name, content: payload.content }]
       })
+      pendingPaths.delete(normPath)
       pendingPaths.delete(payload.path)
       textareaRef?.focus()
     })
@@ -198,13 +208,15 @@ export function ChatRenderer() {
           }
         >
           <For each={agent.messages().filter((m) => m.content || m.partial)}>
-            {(msg) => (
-              <div class={`msg ${msg.role} message-enter`}>
+            {(msg, idx) => {
+              const isLast = () => idx() === agent.messages().filter((m) => m.content || m.partial).length - 1
+              return (
+              <div class={`msg ${msg.role}`} classList={{ 'message-enter': isLast() && msg.partial }}>
                 <div
                   class="msg-bubble"
                   innerHTML={
                     msg.role === 'assistant' && msg.content && !msg.attachments?.length
-                      ? renderMarkdown(msg.content)
+                      ? renderMarkdownStable(msg.messageId, msg.content)
                       : undefined
                   }
                 >
@@ -226,7 +238,7 @@ export function ChatRenderer() {
                     : msg.content || (msg.partial ? '...' : '')}
                 </div>
               </div>
-            )}
+            )}}
           </For>
         </Show>
       </div>

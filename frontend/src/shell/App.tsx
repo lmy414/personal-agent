@@ -7,15 +7,38 @@ function renderExtension(ext: Extension) {
   return <ext.component />
 }
 
+const STORAGE_KEY_W = 'mio:right-panel-w'
+const STORAGE_KEY_V = 'mio:right-panel-visible'
+
+function loadPanelState(): { w: number; visible: boolean } {
+  try {
+    const w = localStorage.getItem(STORAGE_KEY_W)
+    const v = localStorage.getItem(STORAGE_KEY_V)
+    return {
+      w: w ? parseInt(w) : 320,
+      visible: v !== null ? v === '1' : true,
+    }
+  } catch { return { w: 320, visible: true } }
+}
+
+function savePanelState(w: number, visible: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_W, String(w))
+    localStorage.setItem(STORAGE_KEY_V, visible ? '1' : '0')
+  } catch { /* localStorage not available */ }
+}
+
 export function App() {
-  const [rightPanelW, setRightPanelW] = createSignal(320)
-  const [panelVisible, setPanelVisible] = createSignal(true)
+  const saved = loadPanelState()
+  const [rightPanelW, setRightPanelW] = createSignal(saved.w)
+  const [panelVisible, setPanelVisible] = createSignal(saved.visible)
 
   // P0-04: 监听右侧面板关闭事件
   onMount(() => {
     const handleClose = () => {
       setRightPanelW(0)
       setPanelVisible(false)
+      savePanelState(0, false)
     }
     window.addEventListener('close-right-panel', handleClose)
     onCleanup(() => window.removeEventListener('close-right-panel', handleClose))
@@ -48,6 +71,7 @@ export function App() {
       document.body.style.cursor = ''
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      savePanelState(rightPanelW(), panelVisible())
     }
 
     document.addEventListener('mousemove', onMove)
@@ -57,6 +81,7 @@ export function App() {
   const handleExpandClick = () => {
     setRightPanelW(320)
     setPanelVisible(true)
+    savePanelState(320, true)
   }
 
   const effectiveWidth = () => panelVisible() ? rightPanelW() : 0
