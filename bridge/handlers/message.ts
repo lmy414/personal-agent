@@ -78,6 +78,11 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
     try {
       await createPiSession({ sessionId: msg.sessionId })
       session = getPiSession(msg.sessionId)
+      // 确保 conversations 行存在
+      const db = getDB()
+      db.prepare('INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, ?)').run(
+        msg.sessionId, `会话 ${new Date().toLocaleDateString('zh-CN')}`,
+      )
     } catch (err) {
       console.error('[message] failed to lazily create Pi session:', err)
     }
@@ -306,8 +311,8 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
 
         const newRoundCount = (meta?.roundCount ?? 0) + 1
 
-        // 首轮完成后 AI 自动命名（roundCount 到 2，或标题仍是"新会话"且有对话内容）
-        const shouldName = newRoundCount === 2
+        // 首轮完成后 AI 自动命名
+        const shouldName = newRoundCount === 1
         if (shouldName) {
           generateSessionTitle(msg.sessionId).then((title) => {
             if (title) {

@@ -114,6 +114,11 @@ export async function handleSessionSwitch(msg: ClientMessage, ws: WebSocket): Pr
     try {
       await createPiSession({ sessionId: payload.sessionId })
       meta = getSessionMeta(payload.sessionId)
+      // 确保 conversations 行存在（懒创建的 session 可能缺行）
+      const db = getDB()
+      db.prepare('INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, ?)').run(
+        payload.sessionId, `会话 ${new Date().toLocaleDateString('zh-CN')}`,
+      )
     } catch (err) {
       console.error('[session] failed to lazily create Pi session:', err)
     }
