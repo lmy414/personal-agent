@@ -1,6 +1,6 @@
 # 澪号 Personal Agent
 
-基于 [Pi SDK](https://github.com/earendilworks/pi)（Earendil Works）构建的个人 AI 助手。SolidJS 前端 + Node.js 桥接层 + DeepSeek API。
+基于 Pi SDK 构建的个人 AI 助手。SolidJS 前端 + Node.js 桥接层 + DeepSeek API。
 
 ## 架构
 
