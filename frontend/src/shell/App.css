@@ -82,7 +82,7 @@ html, body, #root {
 
 /* 网格区域分配 */
 .overlay-left-top    { grid-column: 1; grid-row: 1; min-height: 0; overflow: hidden; }
-.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; }
 .overlay-left-status { grid-column: 1; grid-row: 3; }
 .overlay-center-main { grid-column: 2; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
                        margin-left: 8px; }
@@ -201,7 +201,7 @@ html, body, #root {
 }
 
 /* ====== 工具面板 ====== */
-.tool-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.tool-panel { display: flex; flex-direction: column; min-height: 0; }
 
 .tool-panel-header {
   padding: 10px 16px;

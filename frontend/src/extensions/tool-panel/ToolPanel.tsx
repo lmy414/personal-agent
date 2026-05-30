@@ -73,7 +73,7 @@ export function ToolPanel() {
   const hasRunning = () => toolCalls().some((t: ToolCallEntry) => t.status === 'running')
 
   return (
-    <div class="glass-panel tool-panel">
+    <div class="glass-panel tool-panel" style="height:100%">
       <div class="tool-panel-header">
         <span class="indicator" classList={{ idle: !hasRunning() }} />
         工具执行
