@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js'
 
-export type SlotId = 'left-top' | 'left-middle' | 'left-bottom' | 'center' | 'right'
+export type SlotId = 'left-top' | 'left-middle' | 'left-bottom' | 'center' | 'right' | 'right-tab'
 
 export interface Extension {
   id: string

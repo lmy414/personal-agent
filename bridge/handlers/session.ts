@@ -124,22 +124,11 @@ export async function handleSessionSwitch(msg: ClientMessage, ws: WebSocket): Pr
     }
   }
 
-  const session = getPiSession(payload.sessionId)
-  const contextUsage = session?.getContextUsage()
+  sendSessionState(payload.sessionId, ws)
+}
 
-  ws.send(JSON.stringify({
-    type: 'session.state',
-    id: `srv-${Date.now()}`,
-    sessionId: payload.sessionId,
-    ts: Date.now(),
-    payload: {
-      model: meta?.modelName ?? 'deepseek-v3',
-      thinkingLevel: meta?.thinkingLevel ?? 'medium',
-      contextUsed: contextUsage?.tokens ?? 0,
-        contextMax: contextUsage?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
-      roundCount: meta?.roundCount ?? 0,
-    },
-  }))
+export function handleSessionState(msg: ClientMessage, ws: WebSocket): void {
+  sendSessionState(msg.sessionId, ws)
 }
 
 // ── session.history（新增：加载历史消息 + 工具调用）─────────────
@@ -246,6 +235,31 @@ export function handleSessionDelete(msg: ClientMessage, ws: WebSocket): void {
     sessionId: payload.sessionId,
     ts: Date.now(),
     payload: { sessionId: payload.sessionId },
+  }))
+}
+
+// ── session.state（前端主动查询当前会话状态）────────────────────
+
+function sendSessionState(sessionId: string, ws: WebSocket): void {
+  const meta = getSessionMeta(sessionId)
+  const session = getPiSession(sessionId)
+  const contextUsage = session?.getContextUsage()
+  const stats = (session as any)?.getSessionStats?.()
+
+  ws.send(JSON.stringify({
+    type: 'session.state',
+    id: `srv-${Date.now()}`,
+    sessionId,
+    ts: Date.now(),
+    payload: {
+      model: meta?.modelName ?? 'deepseek-v3',
+      thinkingLevel: meta?.thinkingLevel ?? 'medium',
+      contextUsed: contextUsage?.tokens ?? 0,
+      contextMax: contextUsage?.contextWindow ?? (session as any)?.model?.contextWindow ?? 0,
+      roundCount: meta?.roundCount ?? 0,
+      tokens: stats?.tokens?.total ?? 0,
+      cost: stats?.cost ?? 0,
+    },
   }))
 }
 

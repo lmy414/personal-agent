@@ -297,17 +297,21 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         break
 
       case 'session.state': {
-        const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number }
+        const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number; tokens?: number; cost?: number }
         setStatus('contextUsed', p.contextUsed)
         if (p.contextMax > 0) setStatus('contextMax', p.contextMax)
         setStatus('roundCount', p.roundCount)
         if (p.model) setStatus('model', p.model)
+        if (p.tokens !== undefined) setStatus('tokens', p.tokens)
+        if (p.cost !== undefined) setStatus('cost', p.cost)
         sessionStatus.set(msgSid, {
           ...(sessionStatus.get(msgSid) ?? status),
           contextUsed: p.contextUsed,
           contextMax: p.contextMax > 0 ? p.contextMax : (sessionStatus.get(msgSid)?.contextMax ?? status.contextMax),
           roundCount: p.roundCount,
           model: p.model,
+          tokens: p.tokens ?? (sessionStatus.get(msgSid)?.tokens ?? 0),
+          cost: p.cost ?? (sessionStatus.get(msgSid)?.cost ?? 0),
         })
         setSessions((prev) => prev.map((s) =>
           s.id === msgSid ? { ...s, roundCount: p.roundCount } : s
@@ -369,6 +373,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         setSessions(list)
         if (list.length > 0 && !list.some((s) => s.id === currentSessionId())) {
           switchSession(list[0].id)
+        } else if (currentSessionId()) {
+          // 热重载/重连：当前 session 仍存在，主动拉取状态恢复用量/消耗
+          send('session.state', {})
         }
         break
       }

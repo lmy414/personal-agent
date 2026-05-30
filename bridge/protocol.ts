@@ -26,6 +26,7 @@ export type ClientMessage =
   | ClientMsg<'session.history', { sessionId: string }>
   | ClientMsg<'session.rename', { sessionId: string; title: string }>
   | ClientMsg<'session.compact', {}>
+  | ClientMsg<'session.state', {}>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 

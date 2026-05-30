@@ -1,23 +1,14 @@
-import { createSignal, onMount, onCleanup, Show } from 'solid-js'
-import { FileTree } from '@/extensions/file-tree/FileTree'
-import { DocPreview } from '@/extensions/doc-preview/DocPreview'
-import { MemoryView } from '@/extensions/memory-view/MemoryView'
-
-type TabId = 'files' | 'preview' | 'memory'
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'files', label: '文件' },
-  { id: 'preview', label: '预览' },
-  { id: 'memory', label: '记忆' },
-]
+import { createSignal, onMount, onCleanup, For } from 'solid-js'
+import { registry } from '@/registry'
 
 export function RightPanelTabs() {
-  const [activeTab, setActiveTab] = createSignal<TabId>('files')
+  const tabs = () => registry.getBySlot('right-tab')
+  const [activeTab, setActiveTab] = createSignal<string>(tabs()[0]?.id ?? '')
 
   onMount(() => {
     const handler = (e: Event) => {
-      const tab = (e as CustomEvent).detail as TabId
-      if (TABS.some((t) => t.id === tab)) setActiveTab(tab)
+      const tabId = (e as CustomEvent).detail as string
+      if (tabs().some((t) => t.id === tabId)) setActiveTab(tabId)
     }
     window.addEventListener('switch-right-tab', handler)
     onCleanup(() => window.removeEventListener('switch-right-tab', handler))
@@ -26,29 +17,29 @@ export function RightPanelTabs() {
   return (
     <>
       <div class="right-panel-header">
-        {TABS.map((tab) => (
-          <span
-            class="right-panel-tab"
-            classList={{ active: activeTab() === tab.id }}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </span>
-        ))}
+        <For each={tabs()}>
+          {(tab) => (
+            <span
+              class="right-panel-tab"
+              classList={{ active: activeTab() === tab.id }}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </span>
+          )}
+        </For>
         <button class="right-panel-close" onClick={() => {
           window.dispatchEvent(new CustomEvent('close-right-panel'))
         }}>×</button>
       </div>
       <div class="tab-content-persist" style={{ position: 'relative', flex: '1', 'min-height': '0', overflow: 'hidden' }}>
-        <div style={{ display: activeTab() === 'files' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
-          <FileTree />
-        </div>
-        <div style={{ display: activeTab() === 'preview' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
-          <DocPreview />
-        </div>
-        <div style={{ display: activeTab() === 'memory' ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
-          <MemoryView />
-        </div>
+        <For each={tabs()}>
+          {(tab) => (
+            <div style={{ display: activeTab() === tab.id ? 'block' : 'none', height: '100%', overflow: 'auto' }}>
+              <tab.component />
+            </div>
+          )}
+        </For>
       </div>
     </>
   )

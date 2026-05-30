@@ -8,6 +8,9 @@ import './extensions/tool-panel'
 import './extensions/chat-renderer'
 // chat-input now merged into chat-renderer (ChatRenderer includes ChatInput)
 import './extensions/status-bar'
+import './extensions/file-tree'
+import './extensions/doc-preview'
+import './extensions/memory-view'
 import './extensions/right-panel'
 
 render(() => (

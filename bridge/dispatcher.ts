@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from './protocol'
-import { handleSessionCreate, handleSessionList, handleSessionSwitch, handleSessionDelete, handleSessionHistory, handleSessionRename, handleSessionCompact } from './handlers/session'
+import { handleSessionCreate, handleSessionList, handleSessionSwitch, handleSessionDelete, handleSessionHistory, handleSessionRename, handleSessionState, handleSessionCompact } from './handlers/session'
 import { handleMessageSend, handleMessageCancel } from './handlers/message'
 import { handleModelSwitch, handleModelList } from './handlers/model'
 import { handleFileList, handleFileRead } from './handlers/file'
@@ -23,6 +23,7 @@ const routes: Record<string, Handler> = {
   'memory.list': handleMemoryList,
   'session.history': handleSessionHistory,
   'session.rename': handleSessionRename,
+  'session.state': handleSessionState,
   'session.compact': handleSessionCompact,
 }
 
