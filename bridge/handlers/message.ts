@@ -105,16 +105,17 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
     return
   }
 
-  const payload = msg.payload as { content: string }
+  const payload = msg.payload as { content: string; attachments?: { path: string; name: string; isImage: boolean }[] }
 
-  // 持久化用户消息到 SQLite
+  // 持久化用户消息到 SQLite（含附件元数据）
   try {
     const db = getDB()
     const conv = db.prepare('SELECT id FROM conversations WHERE session_id = ?').get(msg.sessionId) as { id: number } | undefined
     if (conv) {
+      const attsJson = payload.attachments?.length ? JSON.stringify(payload.attachments) : ''
       db.prepare(
-        'INSERT INTO messages (conversation_id, message_id, role, content) VALUES (?, ?, ?, ?)',
-      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.content)
+        'INSERT INTO messages (conversation_id, message_id, role, content, attachments) VALUES (?, ?, ?, ?, ?)',
+      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.content, attsJson)
     }
   } catch (e) {
     console.warn('[message] failed to persist user message:', e)

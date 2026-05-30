@@ -15,7 +15,7 @@ export type ClientMessage =
   | ClientMsg<'session.list', {}>
   | ClientMsg<'session.switch', { sessionId: string }>
   | ClientMsg<'session.delete', { sessionId: string }>
-  | ClientMsg<'message.send', { content: string }>
+  | ClientMsg<'message.send', { content: string; attachments?: AttachmentMeta[] }>
   | ClientMsg<'message.cancel', {}>
   | ClientMsg<'model.switch', { modelId: string }>
   | ClientMsg<'model.list', {}>
@@ -53,7 +53,7 @@ export type ServerMessage =
   | ServerMsg<'memory.results', { query: string; entries: MemoryEntry[] }>
   | ServerMsg<'memory.list', { entries: MemoryEntry[]; total: number }>
   // 会话历史 & 重命名
-  | ServerMsg<'session.history', { sessionId: string; messages: { messageId: string; role: 'user' | 'assistant'; content: string; partial: boolean }[]; toolCalls: { toolCallId: string; toolName: string; input: Record<string, unknown>; output: string; duration: number; status: 'running' | 'success' | 'error' }[] }>
+  | ServerMsg<'session.history', { sessionId: string; messages: { messageId: string; role: 'user' | 'assistant'; content: string; partial: boolean; attachments?: AttachmentMeta[] }[]; toolCalls: { toolCallId: string; toolName: string; input: Record<string, unknown>; output: string; duration: number; status: 'running' | 'success' | 'error' }[] }>
   | ServerMsg<'session.renamed', { sessionId: string; title: string }>
   | ServerMsg<'session.deleted', { sessionId: string }>
   // 系统
@@ -89,6 +89,12 @@ export interface FileEntry {
   name: string
   type: 'file' | 'directory'
   size?: number
+}
+
+export interface AttachmentMeta {
+  path: string
+  name: string
+  isImage: boolean
 }
 
 export interface MemoryEntry {

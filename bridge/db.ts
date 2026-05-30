@@ -63,6 +63,8 @@ export function initDB(): Database.Database {
 
   // 迁移：pa-sqlite 可能已创建 messages 表但缺少 message_id 列
   try { db.exec("ALTER TABLE messages ADD COLUMN message_id TEXT DEFAULT ''") } catch { /* 列已存在 */ }
+  // 迁移：附件元数据持久化
+  try { db.exec("ALTER TABLE messages ADD COLUMN attachments TEXT DEFAULT ''") } catch { /* 列已存在 */ }
 
   return db
 }

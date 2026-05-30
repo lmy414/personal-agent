@@ -224,10 +224,11 @@ refactor: protocol.ts 拆分为独立文件
 
 ```
 1. 读本文件（CLAUDE.md）
-2. 读 docs/superpowers/specs/ 下最新 spec
-3. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
-4. git log --oneline -20 了解最近改动
-5. npm run check 确认项目当前状态
+2. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务
+3. 读 docs/superpowers/specs/ 下最新 spec
+4. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
+5. git log --oneline -20 了解最近改动
+6. npm run check 确认项目当前状态
 ```
 
 **修改代码前**：

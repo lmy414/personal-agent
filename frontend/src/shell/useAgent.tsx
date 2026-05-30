@@ -18,6 +18,7 @@ export interface MessageEntry {
   role: 'user' | 'assistant'
   content: string
   partial: boolean
+  attachments?: { path: string; name: string; isImage: boolean }[]
 }
 
 export interface AgentState {
@@ -32,7 +33,7 @@ export interface AgentState {
 interface AgentActions {
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string, displayContent?: string) => void
+  sendMessage: (content: string, displayContent?: string, attachments?: { path: string; name: string; isImage: boolean }[]) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
@@ -47,7 +48,7 @@ export interface AgentContextValue {
   status: StatusPayload
   send: (type: string, payload: unknown) => void
   createSession: (model?: string) => void
-  sendMessage: (content: string, displayContent?: string) => void
+  sendMessage: (content: string, displayContent?: string, attachments?: { path: string; name: string; isImage: boolean }[]) => void
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
@@ -331,7 +332,13 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
       case 'session.history': {
         const sid = msg.payload.sessionId
-        const msgs = msg.payload.messages as MessageEntry[]
+        const msgs = (msg.payload.messages as any[]).map((m) => ({
+          messageId: m.messageId,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          partial: m.partial ?? false,
+          attachments: m.attachments ?? undefined,
+        })) as MessageEntry[]
         const tcs = (msg.payload.toolCalls ?? []) as ToolCallEntry[]
         sessionMessages.set(sid, msgs)
         sessionToolCalls.set(sid, tcs)
@@ -382,19 +389,20 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const createSession = (model?: string) => send('session.create', { model })
-  const sendMessage = (content: string, displayContent?: string) => {
+  const sendMessage = (content: string, displayContent?: string, attachments?: { path: string; name: string; isImage: boolean }[]) => {
     const userMsg: MessageEntry = {
       messageId: `msg-${crypto.randomUUID()}`,
       role: 'user',
       content: displayContent ?? content,
       partial: false,
+      attachments,
     }
     setMessages((prev) => {
       const next = [...prev, userMsg]
       sessionMessages.set(currentSessionId(), next)
       return next
     })
-    send('message.send', { content })
+    send('message.send', { content, attachments })
   }
   const cancelMessage = () => send('message.cancel', {})
   const loadHistory = (sid: string) => {

@@ -76,7 +76,11 @@ export function ChatRenderer() {
         ? `${text}\n\n[Attached files:]\n${fileBlocks}`
         : `请帮我分析这些文件:\n${fileBlocks}`
 
-      agent.sendMessage(fullText, displayText + ' ' + badges)
+      const attsMeta = atts.map((a) => {
+        const ext = a.name.split('.').pop()?.toLowerCase() ?? ''
+        return { path: a.path, name: a.name, isImage: IMAGE_EXTS.has(ext) }
+      })
+      agent.sendMessage(fullText, displayText + ' ' + badges, attsMeta)
       setAttachments([])
     } else {
       agent.sendMessage(text)

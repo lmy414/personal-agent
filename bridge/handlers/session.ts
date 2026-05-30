@@ -143,12 +143,12 @@ export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
   const db = getDB()
 
   const messages = db.prepare(`
-    SELECT m.message_id, m.role, m.content
+    SELECT m.message_id, m.role, m.content, m.attachments
     FROM messages m
     JOIN conversations c ON m.conversation_id = c.id
     WHERE c.session_id = ?
     ORDER BY m.id ASC
-  `).all(payload.sessionId) as { message_id: string; role: string; content: string }[]
+  `).all(payload.sessionId) as { message_id: string; role: string; content: string; attachments: string }[]
 
   const toolCalls = db.prepare(`
     SELECT tool_call_id, tool_name, input, output, status, duration
@@ -171,6 +171,7 @@ export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
         role: m.role as 'user' | 'assistant',
         content: m.content,
         partial: false,
+        attachments: m.attachments ? JSON.parse(m.attachments) : undefined,
       })),
       toolCalls: toolCalls.map((t) => ({
         toolCallId: t.tool_call_id,
