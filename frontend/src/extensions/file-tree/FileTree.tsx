@@ -52,12 +52,14 @@ export function FileTree() {
           }
         })
 
-      if (tree().length === 0 || payload.path === '.' || payload.path.endsWith('\\')) {
+      // 路径归一化：bridge 返回 \ 但 tree node.path 用 /，统一 key
+      const normPath = payload.path.replace(/\\/g, '/')
+      if (tree().length === 0 || normPath === '.' || normPath.endsWith('/')) {
         // root level
         setTree(entries)
       } else {
-        // subdirectory — store children
-        setDirChildren((prev) => ({ ...prev, [payload.path]: entries }))
+        // subdirectory — store children keyed by normalized path
+        setDirChildren((prev) => ({ ...prev, [normPath]: entries }))
       }
       setLoading(false)
     })
