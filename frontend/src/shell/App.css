@@ -73,7 +73,7 @@ html, body, #root {
   display: grid;
   --right-panel-w: 0px;
   grid-template-columns: var(--left-col) 1fr var(--right-panel-w);
-  grid-template-rows: minmax(auto, 40vh) 1fr auto;
+  grid-template-rows: auto 1fr auto;
   gap: var(--gap);
   padding: var(--margin);
   pointer-events: none;
@@ -82,7 +82,8 @@ html, body, #root {
 
 /* 网格区域分配 */
 .overlay-left-top    { grid-column: 1; grid-row: 1; min-height: 0; overflow: hidden; }
-.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; }
+.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+.overlay-left-bottom > .glass-panel { flex: 1; min-height: 0; }
 .overlay-left-status { grid-column: 1; grid-row: 3; }
 .overlay-center-main { grid-column: 2; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
                        margin-left: 8px; }
