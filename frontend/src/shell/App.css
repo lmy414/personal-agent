@@ -220,6 +220,24 @@ html, body, #root {
 }
 .tool-panel-header .indicator.idle { background: rgba(255,255,255,0.15); }
 .tool-count { font-size: 10px; color: var(--text-muted); margin-left: auto; }
+.cancel-btn {
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.2);
+  color: #f87171; cursor: pointer;
+  font-size: 12px; padding: 2px 6px; border-radius: 4px;
+  line-height: 1; flex-shrink: 0;
+}
+.cancel-btn:hover { background: rgba(248,113,113,0.22); }
+.cancel-toast {
+  font-size: 10px; color: #f87171;
+  animation: cancel-fade 2s ease-out forwards;
+  flex-shrink: 0;
+}
+@keyframes cancel-fade {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
 
 .tool-list {
   flex: 1; overflow-y: auto; padding: 6px;
@@ -663,6 +681,19 @@ html, body, #root {
   font-size: 11px; color: #f87171;
   padding: 6px 4px;
 }
+.file-tree-toolbar {
+  display: flex; justify-content: flex-end;
+  padding: 2px 4px; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+}
+.file-tree-refresh-btn {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  line-height: 1;
+}
+.file-tree-refresh-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.08);
+}
 @keyframes pulse-text {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
@@ -692,4 +723,48 @@ html, body, #root {
 .chat-input-area.drop-target .chat-input {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(139,156,240,0.2);
+}
+
+/* ====== 少女祈祷中 ====== */
+@keyframes praying-breathe {
+  0%, 100% {
+    background: rgba(248,113,113,0.7);
+    box-shadow: 0 0 4px rgba(248,113,113,0.5);
+    transform: scale(0.85);
+  }
+  50% {
+    background: rgba(74,222,128,0.9);
+    box-shadow: 0 0 8px rgba(74,222,128,0.6);
+    transform: scale(1.15);
+  }
+}
+.praying-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.praying-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: praying-breathe 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.praying-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  user-select: none;
+}
+.praying-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  flex-shrink: 0;
+}
+.praying-bar .praying-text {
+  font-size: 13px;
 }

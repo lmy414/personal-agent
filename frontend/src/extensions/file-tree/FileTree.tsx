@@ -34,6 +34,7 @@ export function FileTree() {
   // store expanded children per directory path
   const [dirChildren, setDirChildren] = createSignal<Record<string, TreeNode[]>>({})
   const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set())
+  let rootPath = ''
 
   onMount(() => {
     const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
@@ -54,14 +55,26 @@ export function FileTree() {
 
       // 路径归一化：bridge 返回 \ 但 tree node.path 用 /，统一 key
       const normPath = payload.path.replace(/\\/g, '/')
-      if (tree().length === 0 || normPath === '.' || normPath.endsWith('/')) {
+      if (tree().length === 0 || normPath === rootPath) {
         // root level
+        if (!rootPath) rootPath = normPath
         setTree(entries)
       } else {
         // subdirectory — store children keyed by normalized path
         setDirChildren((prev) => ({ ...prev, [normPath]: entries }))
       }
       setLoading(false)
+    })
+
+    // 自动刷新：bridge 推送 file.changed 时重新加载可见目录
+    const unsubChange = agent.subscribe('file.changed', (msg: ServerMessage) => {
+      const changedPath = (msg.payload as { path: string }).path
+      // 根目录总是刷新
+      agent.send('file.list', { path: '.' })
+      // 如果变化的目录正好是已展开的子目录，也刷新它
+      if (expandedDirs().has(changedPath)) {
+        agent.send('file.list', { path: changedPath })
+      }
     })
 
     let errorTid: ReturnType<typeof setTimeout> | undefined
@@ -76,6 +89,7 @@ export function FileTree() {
 
     onCleanup(() => {
       unsub()
+      unsubChange()
       unsubError()
       if (errorTid !== undefined) clearTimeout(errorTid)
     })
@@ -173,6 +187,22 @@ export function FileTree() {
 
   return (
     <div class="file-tree">
+      <div class="file-tree-toolbar">
+        <button
+          class="file-tree-refresh-btn"
+          title="刷新文件列表"
+          onClick={() => {
+            // 清空子目录缓存后，展开的目录会显示为空；立即重新请求
+            agent.send('file.list', { path: '.' })
+            const expanded = expandedDirs()
+            for (const path of expanded) {
+              agent.send('file.list', { path })
+            }
+          }}
+        >
+          ↻
+        </button>
+      </div>
       <Show when={!loading()} fallback={
         <div class="file-tree-loading">加载中...</div>
       }>

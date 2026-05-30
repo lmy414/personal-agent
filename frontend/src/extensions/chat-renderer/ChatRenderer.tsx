@@ -34,6 +34,10 @@ export function ChatRenderer() {
   const pendingPaths = new Set<string>()
   let unsubFile: (() => void) | null = null
 
+  const isMainSession = () => {
+    return agent.sessions().find((s) => s.title === '澪')?.id === agent.sessionId()
+  }
+
   createEffect(() => {
     void agent.messages().length
     void agent.sessionId()
@@ -192,7 +196,17 @@ export function ChatRenderer() {
     <div class="glass-panel chat-panel" style="flex:1">
       <div class="chat-header">
         <span>澪号</span>
-        <span class="chat-subtitle">· {agent.connected() ? '在线' : '离线'}</span>
+        <span class="chat-subtitle">
+          ·{' '}
+          {agent.isStreaming() && !isMainSession() ? (
+            <span class="praying-indicator">
+              <span class="praying-dot" />
+              <span class="praying-text">少女祈祷中</span>
+            </span>
+          ) : (
+            agent.connected() ? '在线' : '离线'
+          )}
+        </span>
         <span class="chat-header-right">
           <span class="energy-dot" style={{background: agent.connected() ? 'rgba(139,156,240,0.6)' : 'rgba(255,80,80,0.6)'}} />
           {agent.connected() ? '就绪' : '断连'}

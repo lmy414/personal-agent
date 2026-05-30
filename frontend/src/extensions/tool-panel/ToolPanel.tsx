@@ -69,8 +69,16 @@ function ToolEntry(props: { tool: ToolCallEntry }) {
 }
 
 export function ToolPanel() {
-  const { toolCalls } = useAgent()
+  const { toolCalls, isStreaming, cancelMessage } = useAgent()
+  const [cancelled, setCancelled] = createSignal(false)
   const hasRunning = () => toolCalls().some((t: ToolCallEntry) => t.status === 'running')
+  const canCancel = () => isStreaming() || hasRunning()
+
+  const handleCancel = () => {
+    cancelMessage()
+    setCancelled(true)
+    setTimeout(() => setCancelled(false), 2100)
+  }
 
   return (
     <div class="glass-panel tool-panel">
@@ -78,6 +86,14 @@ export function ToolPanel() {
         <span class="indicator" classList={{ idle: !hasRunning() }} />
         工具执行
         <span class="tool-count">{toolCalls().length} 条记录</span>
+        <Show when={canCancel()}>
+          <button class="cancel-btn" onClick={handleCancel} title="中断当前操作">
+            ⏹
+          </button>
+        </Show>
+        <Show when={cancelled()}>
+          <span class="cancel-toast">已中断</span>
+        </Show>
       </div>
       <div class="tool-list">
         <Show

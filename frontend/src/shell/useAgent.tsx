@@ -465,11 +465,6 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const switchSession = (sid: string) => {
-    // P1-07: 切换前中止当前会话的流式输出
-    if (isStreaming()) {
-      send('message.cancel', {})
-      setIsStreaming(false)
-    }
     // 先存当前 session 状态
     syncSignalToCache()
     // 保存当前状态到 sessionStatus

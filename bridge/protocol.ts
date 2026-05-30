@@ -60,6 +60,7 @@ export type ServerMessage =
   // 系统
   | ServerMsg<'compaction', { beforeTokens: number; afterTokens: number }>
   | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; contextWindow: number }>
+  | ServerMsg<'file.changed', { path: string }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>

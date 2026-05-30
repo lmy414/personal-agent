@@ -48,6 +48,12 @@ export function SessionPanel() {
             })}
           </div>
         </div>
+        <Show when={agent.isStreaming() && mainSession()?.id === agent.sessionId()}>
+          <div class="praying-indicator" onClick={(e) => e.stopPropagation()}>
+            <span class="praying-dot" />
+            <span class="praying-text">少女祈祷中</span>
+          </div>
+        </Show>
       </div>
 
       {/* 操作栏：新建 + 搜索 + 折叠箭头 */}

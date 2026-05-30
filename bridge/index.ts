@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { dispatch } from './dispatcher'
 import { initDB, getDB } from './db'
+import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
 
 const PORT = 9229
 
@@ -22,8 +23,11 @@ const wss = new WebSocketServer({ port: PORT })
 
 console.log(`[bridge] WebSocket server listening on ws://localhost:${PORT}`)
 
+startWatcher()
+
 wss.on('connection', (ws: WebSocket) => {
   console.log('[bridge] client connected')
+  addClient(ws)
 
   ws.on('message', (raw) => {
     try {
@@ -43,9 +47,13 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     console.log('[bridge] client disconnected')
+    removeClient(ws)
   })
 
   ws.on('error', (err) => {
     console.error('[bridge] ws error:', err)
   })
 })
+
+process.on('SIGINT', () => { stopWatcher(); process.exit() })
+process.on('SIGTERM', () => { stopWatcher(); process.exit() })
