@@ -45,8 +45,7 @@ export function SessionPanel() {
             {new Date(mainSession()?.lastActive ?? 0).toLocaleTimeString('zh-CN', {
               hour: '2-digit',
               minute: '2-digit',
-            })}{' '}
-            · {mainSession()?.roundCount ?? 0} 轮
+            })}
           </div>
         </div>
       </div>

@@ -79,9 +79,6 @@ export function StatusBar() {
       <div class="status-row">
         <span class="status-label">上下文</span>
         <span class="status-value mono">{contextText()}</span>
-        <span class="status-spacer" />
-        <span class="status-label">轮次</span>
-        <span class="status-value">{status.roundCount}</span>
       </div>
       <div class="ctx-bar-wrap">
         <div class="ctx-bar-label">
