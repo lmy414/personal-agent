@@ -33,10 +33,15 @@ function broadcast(path: string) {
   }
 }
 
+let lastRestart = 0
 function handleExtensionChange(absPath: string) {
   // 扩展/角色文件变化 → 退出进程，由 tsx watch 自动重启
+  // 冷却 10 秒，避免重启循环
   const norm = normalize(absPath)
   if (norm.includes('/extensions/') || norm.includes('/mio-harness/')) {
+    const now = Date.now()
+    if (now - lastRestart < 10_000) return
+    lastRestart = now
     console.log('[watcher] extension/harness file changed, restarting...')
     setTimeout(() => process.exit(0), 200)
   }
