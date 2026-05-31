@@ -54,6 +54,11 @@ export interface AgentContextValue {
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
   subscribe: (type: ServerMessage['type'], handler: (msg: ServerMessage) => void) => (() => void)
+  isSettingsOpen: () => boolean
+  setIsSettingsOpen: (v: boolean) => void
+  settings: () => { key: string; value: string }[]
+  getSettings: () => void
+  setSetting: (key: string, value: string) => void
 }
 
 // ========== Context ==========
@@ -69,6 +74,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [toolCalls, setToolCalls] = createSignal<ToolCallEntry[]>([])
   const [sessions, setSessions] = createSignal<SessionInfo[]>([])
   const [currentSessionId, setCurrentSessionId] = createSignal(props.sessionId)
+  const [isSettingsOpen, setIsSettingsOpen] = createSignal(false)
+  const [settings, setSettings] = createSignal<{ key: string; value: string }[]>([])
   const [status, setStatus] = createStore<StatusPayload>({
     tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0,
   })
@@ -420,6 +427,10 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         sessionStatus.delete(msg.payload.sessionId)
         break
 
+      case 'settings.state':
+        setSettings((msg.payload as { entries: { key: string; value: string }[] }).entries)
+        break
+
       case 'error':
         console.error('[bridge error]', msg.payload?.code, msg.payload?.message)
         setIsStreaming(false)
@@ -536,6 +547,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     }
   }
   const switchModel = (modelId: string) => send('model.switch', { modelId })
+  const getSettings = () => send('settings.get', {})
+  const setSetting = (key: string, value: string) => send('settings.set', { key, value })
 
   // ========== 扩展消息订阅 ==========
 
@@ -577,6 +590,11 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     switchSession,
     switchModel,
     subscribe,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    settings,
+    getSettings,
+    setSetting,
   }
 
   return (
