@@ -91,11 +91,18 @@ export function Live2DView() {
       model.y = app.screen.height / 2 - 30
       model.scale.set(0.35)
 
-      window.addEventListener('resize', () => {
-        if (!model || !app) return
+      window.addEventListener('resize', reposition)
+      // 标签切换时 display:none → block 导致 canvas 0 尺寸，强制重绘
+      new ResizeObserver(() => {
+        if (!app || !model) return
+        app.renderer.resize(container.clientWidth, container.clientHeight)
+        reposition()
+      }).observe(container)
+
+      function reposition() {
         model.x = app.screen.width / 2
         model.y = app.screen.height / 2 - 30
-      })
+      }
 
       // 每帧应用表情参数
       model.internalModel.on('beforeModelUpdate', () => {
