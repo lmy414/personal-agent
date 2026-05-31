@@ -334,11 +334,10 @@ html, body, #root {
 
 .msg { display: flex; max-width: 85%; }
 .msg.user { align-self: flex-end; }
-.msg.assistant { align-self: flex-start; }
+.msg.assistant { align-self: flex-start; flex-direction: column; }
 
 /* ── 思考过程块 ─────────────────────────────────── */
 .thinking-block {
-  max-width: 85%;
   margin-bottom: 6px;
 }
 .thinking-toggle {
