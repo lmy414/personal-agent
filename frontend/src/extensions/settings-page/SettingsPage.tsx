@@ -46,15 +46,16 @@ export function SettingsPage() {
   const compactThreshold = () => getSetting(entries(), 'compact_threshold') || '80'
   const historyRetention = () => getSetting(entries(), 'history_retention') || '100'
 
+  const [modelSearch, setModelSearch] = createSignal('')
+
   const modelList = () => {
     const provRaw = getSetting(entries(), 'providers')
+    const models: { id: string; name: string; provider: string; contextWindow: number; enabled: boolean }[] = []
     if (provRaw) {
       try {
         const providers = JSON.parse(provRaw) as {
-          id: string; name: string
-          models?: { id: string; name: string; contextWindow: number }[]
+          id: string; name: string; models?: { id: string; name: string; contextWindow: number }[]
         }[]
-        const models: { id: string; name: string; provider: string; contextWindow: number; enabled: boolean }[] = []
         for (const p of providers) {
           if (p.models) {
             for (const m of p.models) {
@@ -62,17 +63,21 @@ export function SettingsPage() {
             }
           }
         }
-        if (models.length > 0) return models
       } catch { /* fall through */ }
     }
-    return (agent.status.availableModels ?? []).map((m) => ({
-      id: m.id,
-      name: m.name,
-      provider: 'DeepSeek',
-      contextWindow: m.contextWindow,
-      enabled: true,
-    }))
+    // 过滤搜索
+    const q = modelSearch().toLowerCase()
+    if (q) {
+      return models.filter((m) =>
+        m.id.toLowerCase().includes(q) ||
+        m.name.toLowerCase().includes(q) ||
+        m.provider.toLowerCase().includes(q)
+      )
+    }
+    return models
   }
+
+  const modelCount = () => modelList().length
 
   return (
     <div class="settings-page" classList={{ open: isSettingsOpen() }}>
@@ -109,60 +114,74 @@ export function SettingsPage() {
           </div>
 
           <div class="settings-section">
-            <div class="settings-section-title">📋 已接入模型</div>
+            <div class="settings-section-title">
+              📋 已接入模型
+              <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">
+                共 {modelCount()} 个
+              </span>
+            </div>
             <div class="settings-section-desc">点击行展开独立参数，★ 设为默认。</div>
-            <table class="model-table">
-              <thead>
-                <tr><th>默认</th><th>模型</th><th>厂商</th><th>上下文</th><th>状态</th></tr>
-              </thead>
-              <tbody>
-                <For each={modelList()}>
-                  {(m) => {
-                    const isDefault = m.id === defaultModel()
-                    const isExpanded = expandedModelId() === m.id
-                    return (
-                      <>
-                        <tr classList={{ expanded: isExpanded }} onClick={() => setExpandedModelId(isExpanded ? null : m.id)}>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <span
-                              class={`model-default-star${isDefault ? '' : ' inactive'}`}
-                              onClick={() => agent.setSetting('default_model', m.id)}
-                              title={isDefault ? '当前默认' : '设为默认'}
-                            >★</span>
-                          </td>
-                          <td class="model-name">{m.name}</td>
-                          <td class="model-provider">{m.provider}</td>
-                          <td class="model-cw">{formatCw(m.contextWindow)}</td>
-                          <td style={{ 'font-size': '11px', color: m.enabled ? '#4ade80' : 'var(--text-muted)' }}>
-                            {m.enabled ? '可用' : '已禁用'}
-                          </td>
-                        </tr>
-                        <tr class={`model-config-row${isExpanded ? ' open' : ''}`}>
-                          <td colspan="5">
-                            <div class="model-params">
-                              <div class="model-param">
-                                <span class="model-param-label">思考强度</span>
-                                <span class="model-param-value">
-                                  <select value={thinkingLevel()} onChange={(e) => agent.setSetting('thinking_level', e.currentTarget.value)}>
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                  </select>
-                                </span>
+            <input
+              class="settings-model-search"
+              type="text"
+              placeholder="搜索模型..."
+              value={modelSearch()}
+              onInput={(e) => setModelSearch(e.currentTarget.value)}
+            />
+            <div class="model-table-wrap">
+              <table class="model-table">
+                <thead>
+                  <tr><th>默认</th><th>模型</th><th>厂商</th><th>上下文</th><th>状态</th></tr>
+                </thead>
+                <tbody>
+                  <For each={modelList()}>
+                    {(m) => {
+                      const isDefault = m.id === defaultModel()
+                      const isExpanded = expandedModelId() === m.id
+                      return (
+                        <>
+                          <tr classList={{ expanded: isExpanded }} onClick={() => setExpandedModelId(isExpanded ? null : m.id)}>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <span
+                                class={`model-default-star${isDefault ? '' : ' inactive'}`}
+                                onClick={() => agent.setSetting('default_model', m.id)}
+                                title={isDefault ? '当前默认' : '设为默认'}
+                              >★</span>
+                            </td>
+                            <td class="model-name">{m.name}</td>
+                            <td class="model-provider">{m.provider}</td>
+                            <td class="model-cw">{formatCw(m.contextWindow)}</td>
+                            <td style={{ 'font-size': '11px', color: m.enabled ? '#4ade80' : 'var(--text-muted)' }}>
+                              {m.enabled ? '可用' : '已禁用'}
+                            </td>
+                          </tr>
+                          <tr class={`model-config-row${isExpanded ? ' open' : ''}`}>
+                            <td colspan="5">
+                              <div class="model-params">
+                                <div class="model-param">
+                                  <span class="model-param-label">思考强度</span>
+                                  <span class="model-param-value">
+                                    <select value={thinkingLevel()} onChange={(e) => agent.setSetting('thinking_level', e.currentTarget.value)}>
+                                      <option value="low">Low</option>
+                                      <option value="medium">Medium</option>
+                                      <option value="high">High</option>
+                                    </select>
+                                  </span>
+                                </div>
+                                <div class="model-param">
+                                  <span class="model-param-label">启用</span>
+                                  <button class={`model-toggle${m.enabled ? ' on' : ''}`} onClick={(e) => { e.stopPropagation() }} />
+                                </div>
                               </div>
-                              <div class="model-param">
-                                <span class="model-param-label">启用</span>
-                                <button class={`model-toggle${m.enabled ? ' on' : ''}`} onClick={(e) => { e.stopPropagation() }} />
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      </>
-                    )
-                  }}
-                </For>
-              </tbody>
-            </table>
+                            </td>
+                          </tr>
+                        </>
+                      )
+                    }}
+                  </For>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="settings-section">

@@ -1049,3 +1049,23 @@ html, body, #root {
 }
 .settings-input:focus { border-color: rgba(139,156,240,0.35); }
 .settings-input-unit { font-size: 11px; color: var(--text-muted); min-width: 20px; }
+
+/* 模型搜索 + 滚动容器 */
+.settings-model-search {
+  width: 100%; padding: 8px 12px; margin-bottom: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: var(--text-primary); font-size: 12px;
+  outline: none; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.settings-model-search:focus { border-color: rgba(139,156,240,0.35); }
+.settings-model-search::placeholder { color: rgba(255,255,255,0.20); }
+
+.model-table-wrap {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
