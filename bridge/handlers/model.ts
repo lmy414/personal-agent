@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
-import { getPiSession, resolveModel, getAvailableModels, getSessionMeta } from '../pi-session'
+import { getPiSession, resolveModel, getAvailableModels, getSessionMeta, updateSessionMeta, getSafeContextWindow } from '../pi-session'
 
 export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Promise<void> {
   const payload = msg.payload as { modelId: string }
@@ -31,6 +31,11 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
   try {
     const model = resolveModel(msg.sessionId, payload.modelId)
     await session.setModel(model)
+    // 更新 meta 中的 contextWindow
+    const newCw = (model as any).contextWindow ?? 0
+    if (newCw > 0) {
+      updateSessionMeta(msg.sessionId, { contextWindow: newCw, modelName: payload.modelId })
+    }
   } catch (err) {
     console.warn(`[model] failed to switch model:`, err)
   }
@@ -47,7 +52,7 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
       model: session.model?.id ?? payload.modelId,
       thinkingLevel: meta?.thinkingLevel ?? 'medium',
       contextUsed: ctx?.tokens ?? 0,
-        contextMax: ctx?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
+      contextMax: getSafeContextWindow(msg.sessionId),
       roundCount: meta?.roundCount ?? 0,
     },
   }))
@@ -69,7 +74,7 @@ export function handleModelList(msg: ClientMessage, ws: WebSocket): void {
       tokens: stats?.tokens?.total ?? 0,
       cost: stats?.cost ?? 0,
       contextUsed: ctx?.tokens ?? 0,
-      contextMax: ctx?.contextWindow ?? (session as any)?.model?.contextWindow ?? 0,
+      contextMax: getSafeContextWindow(msg.sessionId),
       roundCount: meta?.roundCount ?? 0,
       model: session?.model?.id,
       availableModels: models,

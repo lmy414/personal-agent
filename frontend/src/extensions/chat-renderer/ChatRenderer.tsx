@@ -224,33 +224,37 @@ export function ChatRenderer() {
           <For each={agent.messages().filter((m) => m.content || m.partial)}>
             {(msg, idx) => {
               const isLast = () => idx() === agent.messages().filter((m) => m.content || m.partial).length - 1
+              const isAssistant = msg.role === 'assistant'
+              const hasAttachments = msg.attachments?.length
+
               return (
               <div class={`msg ${msg.role}`} classList={{ 'message-enter': isLast() && msg.partial }}>
-                <div
-                  class="msg-bubble"
-                  innerHTML={
-                    msg.role === 'assistant' && msg.content && !msg.attachments?.length
-                      ? renderMarkdownStable(msg.messageId, msg.content)
-                      : undefined
-                  }
-                >
-                  {msg.role === 'user' && msg.attachments?.length ? (
-                    // 附件消息不展开内容，仅显示徽章；裁剪旧消息中嵌入的文件内容
-                    <div>
-                      <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
-                      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
-                        <For each={msg.attachments}>
-                          {(att) => (
-                            <span class="chat-attachment-badge">
-                              {att.isImage ? '🖼️' : '📎'} {att.name}
-                            </span>
-                          )}
-                        </For>
-                      </div>
+                {/* 用户消息 + 附件：展开附件徽章 */}
+                {msg.role === 'user' && hasAttachments ? (
+                  <div class="msg-bubble">
+                    <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                      <For each={msg.attachments}>
+                        {(att) => (
+                          <span class="chat-attachment-badge">
+                            {att.isImage ? '🖼️' : '📎'} {att.name}
+                          </span>
+                        )}
+                      </For>
                     </div>
-                  ) : msg.role === 'assistant' && msg.content ? null
-                    : msg.content || (msg.partial ? '...' : '')}
-                </div>
+                  </div>
+                ) : isAssistant && msg.content && !msg.partial && !hasAttachments ? (
+                  /* 已完成的 assistant 消息 → 渲染 markdown（仅一次） */
+                  <div
+                    class="msg-bubble"
+                    innerHTML={renderMarkdownStable(msg.messageId, msg.content)}
+                  />
+                ) : (
+                  /* 流式中的消息 / 纯文本 → textContent，不触发 markdown 解析 */
+                  <div class="msg-bubble">
+                    {msg.content || (msg.partial ? '...' : '')}
+                  </div>
+                )}
               </div>
             )}}
           </For>

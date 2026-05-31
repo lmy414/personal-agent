@@ -8,16 +8,54 @@ function formatTime(date: Date): string {
   return `${h}:${m}:${s}`
 }
 
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
 export function StatusBar() {
-  const { status, switchModel, isStreaming, send } = useAgent()
+  const { status, switchModel, isStreaming, send, subscribe } = useAgent()
   const [time, setTime] = createSignal(new Date())
+  const [compactFeedback, setCompactFeedback] = createSignal<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  let feedbackTimer: ReturnType<typeof setTimeout> | null = null
+
+  const showFeedback = (type: 'success' | 'error', message: string) => {
+    if (feedbackTimer) clearTimeout(feedbackTimer)
+    setCompactFeedback({ type, message })
+    feedbackTimer = setTimeout(() => setCompactFeedback(null), 4000)
+  }
+
+  // 订阅 compaction 结果
+  subscribe('session.compacted', (msg) => {
+    const p = msg.payload as { tokensBefore: number; tokensAfter: number; tokensSaved: number }
+    const saved = p.tokensSaved ?? (p.tokensBefore - p.tokensAfter)
+    if (saved > 0) {
+      showFeedback('success', `已压缩，释放 ${formatTokens(saved)} tokens`)
+    } else {
+      showFeedback('success', '压缩完成，当前上下文已是最简')
+    }
+  })
+
+  subscribe('error', (msg) => {
+    const p = msg.payload as { code: string; message: string }
+    if (p.code === 'COMPACTION_FAILED' || p.code === 'COMPACTION_NOT_SUPPORTED' || p.code === 'BUSY') {
+      showFeedback('error', p.message)
+    }
+  })
 
   const timer = setInterval(() => setTime(new Date()), 1000)
-  onCleanup(() => clearInterval(timer))
+  onCleanup(() => {
+    clearInterval(timer)
+    if (feedbackTimer) clearTimeout(feedbackTimer)
+  })
 
   const contextPercent = () => {
-    if (status.contextMax === 0) return 0
-    return Math.round((status.contextUsed / status.contextMax) * 100)
+    const max = status.contextMax
+    if (!Number.isFinite(max) || max <= 0) return 0
+    const used = status.contextUsed
+    if (!Number.isFinite(used)) return 0
+    return Math.round((used / max) * 100)
   }
 
   const barColor = () => {
@@ -30,9 +68,9 @@ export function StatusBar() {
   const contextText = () => {
     const used = status.contextUsed
     const max = status.contextMax
-    if (max === 0) return `${used} / --`
-    if (used >= 1000) return `${(used / 1000).toFixed(1)}k / ${(max / 1000).toFixed(0)}k`
-    return `${used} / ${(max / 1000).toFixed(0)}k`
+    if (!Number.isFinite(max) || max <= 0) return `${Number.isFinite(used) ? used : '--'} / --`
+    const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+    return `${Number.isFinite(used) ? fmt(used) : '--'} / ${fmt(max)}`
   }
 
   const models = () => status.availableModels ?? []
@@ -100,6 +138,13 @@ export function StatusBar() {
             </button>
           </span>
         </div>
+        {compactFeedback() && (
+          <div
+            class={`compact-feedback compact-feedback--${compactFeedback()!.type}`}
+          >
+            {compactFeedback()!.message}
+          </div>
+        )}
         <div class="ctx-bar">
           <div
             class={`ctx-bar-fill ${barColor()}`}

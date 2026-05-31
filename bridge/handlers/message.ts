@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
-import { getPiSession, updateSessionMeta, getSessionMeta, createPiSession } from '../pi-session'
+import { getPiSession, updateSessionMeta, getSessionMeta, createPiSession, getSafeContextWindow } from '../pi-session'
 import { getDB } from '../db'
 import { isMainSession } from './session'
 
@@ -351,9 +351,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
           const stats = session.getSessionStats()
           const ctx = session.getContextUsage()
           // P1-05: contextMax 从 model.contextWindow 动态获取
-          const contextMax = ctx?.contextWindow
-            ?? (session as any).model?.contextWindow
-            ?? 0
+          const contextMax = getSafeContextWindow(msg.sessionId)
           ws.send(JSON.stringify({
             type: 'status.update',
             id: `srv-${Date.now()}`,

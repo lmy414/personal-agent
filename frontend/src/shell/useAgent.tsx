@@ -85,7 +85,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let pumpRafId: number | null = null
   let reconnectAttempts = 0
-  const CHARS_PER_FRAME = 2
+  const CHARS_PER_FRAME = 15
   const pendingSends: string[] = []
 
   const getPendingChars = (sid: string): Map<string, string> => {
@@ -212,14 +212,15 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       }
 
       case 'message.end': {
-        // 先清空该 session 的 pending chars
+        // 先排空该消息的 pending chars，追加到当前 content，再标记完成
         const pending = sessionPendingChars.get(msgSid)
+        const remaining = pending?.get(msg.payload.messageId) ?? ''
         if (pending) pending.delete(msg.payload.messageId)
 
         const finalize = (prev: MessageEntry[]) =>
           prev.map((m) =>
             m.messageId === msg.payload.messageId
-              ? { ...m, content: msg.payload.content, partial: false }
+              ? { ...m, content: m.content + remaining, partial: false }
               : m
           )
 
@@ -299,15 +300,17 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       case 'session.state': {
         const p = msg.payload as { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number; tokens?: number; cost?: number }
         setStatus('contextUsed', p.contextUsed)
-        if (p.contextMax > 0) setStatus('contextMax', p.contextMax)
+        // 允许覆盖当前为 0 的值（首次初始化），但不允许 0 覆盖已有有效值
+        if (p.contextMax > 0 || status.contextMax === 0) setStatus('contextMax', p.contextMax)
         setStatus('roundCount', p.roundCount)
         if (p.model) setStatus('model', p.model)
         if (p.tokens !== undefined) setStatus('tokens', p.tokens)
         if (p.cost !== undefined) setStatus('cost', p.cost)
+        const curCtxMax = sessionStatus.get(msgSid)?.contextMax ?? status.contextMax
         sessionStatus.set(msgSid, {
           ...(sessionStatus.get(msgSid) ?? status),
           contextUsed: p.contextUsed,
-          contextMax: p.contextMax > 0 ? p.contextMax : (sessionStatus.get(msgSid)?.contextMax ?? status.contextMax),
+          contextMax: p.contextMax > 0 || curCtxMax === 0 ? p.contextMax : curCtxMax,
           roundCount: p.roundCount,
           model: p.model,
           tokens: p.tokens ?? (sessionStatus.get(msgSid)?.tokens ?? 0),
@@ -320,16 +323,20 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       }
 
       case 'session.compacted': {
-        const p = msg.payload as { tokensBefore: number; tokensAfter: number; contextWindow: number }
-        setStatus('contextUsed', p.tokensAfter)
-        if (p.contextWindow > 0) setStatus('contextMax', p.contextWindow)
-        // 同步到 session 缓存
+        const p = msg.payload as { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }
+        // 更新该 session 的缓存状态
         const prev = sessionStatus.get(msgSid)
-        sessionStatus.set(msgSid, {
-          ...(prev ?? status),
+        const updatedStatus: StatusPayload = {
+          ...(prev ?? { tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0 }),
           contextUsed: p.tokensAfter,
-          contextMax: p.contextWindow > 0 ? p.contextWindow : (prev?.contextMax ?? status.contextMax),
-        })
+          contextMax: p.contextWindow > 0 ? p.contextWindow : (prev?.contextMax ?? 0),
+        }
+        sessionStatus.set(msgSid, updatedStatus)
+        // 仅当前会话更新 UI
+        if (isCurrent) {
+          setStatus('contextUsed', p.tokensAfter)
+          if (p.contextWindow > 0) setStatus('contextMax', p.contextWindow)
+        }
         break
       }
 

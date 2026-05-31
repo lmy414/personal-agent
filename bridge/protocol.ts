@@ -60,7 +60,7 @@ export type ServerMessage =
   | ServerMsg<'session.deleted', { sessionId: string }>
   // 系统
   | ServerMsg<'compaction', { beforeTokens: number; afterTokens: number }>
-  | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; contextWindow: number }>
+  | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }>
   | ServerMsg<'file.changed', { path: string }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
 

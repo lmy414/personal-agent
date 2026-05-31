@@ -13,6 +13,7 @@ export interface PiSessionMeta {
   title: string
   createdAt: number
   roundCount: number
+  contextWindow: number
 }
 
 interface SessionEntry {
@@ -84,6 +85,8 @@ export async function createPiSession(options: {
     }
   }
 
+  const contextWindow = (session.model as any)?.contextWindow ?? 0
+
   const meta: PiSessionMeta = {
     id: sessionId,
     modelName: session.model?.id ?? modelName,
@@ -91,6 +94,7 @@ export async function createPiSession(options: {
     title: `会话 ${new Date().toLocaleDateString('zh-CN')}`,
     createdAt: Date.now(),
     roundCount: 0,
+    contextWindow,
   }
 
   sessions.set(sessionId, { session, meta })
@@ -141,6 +145,19 @@ export function updateSessionMeta(sessionId: string, updates: Partial<PiSessionM
   if (entry) {
     Object.assign(entry.meta, updates)
   }
+}
+
+// ========== 上下文工具 ==========
+
+/** 安全获取 contextWindow — 多层 fallback，最终确保返回有效数字 */
+export function getSafeContextWindow(sessionId: string): number {
+  const entry = sessions.get(sessionId)
+  const session = entry?.session
+  const meta = entry?.meta
+  const ctx = (session as any)?.getContextUsage?.() as { contextWindow?: number } | undefined
+  const modelCw = (session as any)?.model?.contextWindow
+  const raw = ctx?.contextWindow ?? modelCw ?? meta?.contextWindow ?? 0
+  return Number.isFinite(raw) && raw > 0 ? raw : 0
 }
 
 // ========== 模型工具 ==========

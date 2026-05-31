@@ -508,6 +508,19 @@ html, body, #root {
 .ctx-bar-fill.warn { background: #f4a236; }
 .ctx-bar-fill.danger { background: #f87171; }
 
+/* 压缩反馈提示 */
+.compact-feedback {
+  font-size: 11px; text-align: center;
+  padding: 3px 0;
+  animation: compact-feedback-in 0.25s ease;
+}
+.compact-feedback--success { color: #4ade80; }
+.compact-feedback--error   { color: #f87171; }
+@keyframes compact-feedback-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ====== 右侧展开面板 ====== */
 .right-panel {
   display: flex; flex-direction: column;
