@@ -347,16 +347,27 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         break
       }
 
-      case 'status.update':
-        sessionStatus.set(msgSid, msg.payload)
-        if (isCurrent) setStatus(msg.payload)
+      case 'status.update': {
+        const p = msg.payload as StatusPayload
+        sessionStatus.set(msgSid, p)
+        if (isCurrent) {
+          // 防止 0 覆盖已有有效值（热重载/reconnect 时的竞态）
+          if (p.contextUsed > 0 || status.contextUsed === 0) setStatus('contextUsed', p.contextUsed)
+          if (p.contextMax > 0 || status.contextMax === 0) setStatus('contextMax', p.contextMax)
+          if (p.tokens !== undefined) setStatus('tokens', p.tokens)
+          if (p.cost !== undefined) setStatus('cost', p.cost)
+          if (p.roundCount !== undefined) setStatus('roundCount', p.roundCount)
+          if (p.model) setStatus('model', p.model)
+          if (p.availableModels) setStatus('availableModels', p.availableModels)
+        }
         // 同步 roundCount 到会话列表
         if (msgSid) {
           setSessions((prev) => prev.map((s) =>
-            s.id === msgSid ? { ...s, roundCount: msg.payload.roundCount } : s
+            s.id === msgSid ? { ...s, roundCount: p.roundCount } : s
           ))
         }
         break
+      }
 
       // ── 会话管理 ──
 
