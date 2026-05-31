@@ -49,13 +49,14 @@ function resolveModelFromRegistry(registry: ModelRegistry, modelName: string): M
   return all[0]
 }
 
-export function getAvailableModels(registry?: ModelRegistry): { id: string; name: string; contextWindow: number }[] {
+export function getAvailableModels(registry?: ModelRegistry): { id: string; name: string; contextWindow: number; provider: string }[] {
   const r = registry ?? cachedRegistry
   if (!r) return []
-  return r.getAll().map((m) => ({
+  return r.getAvailable().map((m) => ({
     id: m.id ?? m.name,
     name: m.name,
     contextWindow: (m as any).contextWindow ?? 0,
+    provider: (m as any).provider ?? '',
   }))
 }
 

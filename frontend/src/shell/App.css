@@ -443,18 +443,6 @@ html, body, #root {
 }
 .send-btn:hover { background: rgba(139,156,240,0.25); }
 
-/* 中断按钮（聊天头部） */
-.stop-btn {
-  padding: 4px 10px; border-radius: 6px;
-  border: 1px solid rgba(248,113,113,0.25);
-  background: rgba(248,113,113,0.08);
-  color: #f87171; font-size: 11px;
-  cursor: pointer; font-family: inherit;
-  transition: all 0.15s; margin-right: 8px;
-  white-space: nowrap;
-}
-.stop-btn:hover { background: rgba(248,113,113,0.18); }
-
 /* ====== 底部状态栏：时钟 + 用量 + 模型 ====== */
 .status-bar {
   display: flex; flex-direction: column; gap: 8px;
