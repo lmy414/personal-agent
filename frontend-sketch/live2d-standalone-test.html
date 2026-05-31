@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live2D 独立测试 — 卡拉</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12; color: #e8e6f0;
+    font-family: 'PingFang SC','Microsoft YaHei',sans-serif;
+    height: 100vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .toolbar {
+    display: flex; gap: 8px; padding: 12px 16px;
+    background: rgba(20,18,32,0.9);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap; align-items: center;
+    z-index: 10;
+  }
+  .toolbar button {
+    padding: 6px 14px; border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: #c0bcd0; font-size: 12px; font-family: inherit;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .toolbar button:hover { background: rgba(196,160,255,0.15); border-color: rgba(196,160,255,0.25); color: #fff; }
+  .toolbar button.active { background: rgba(196,160,255,0.2); border-color: rgba(196,160,255,0.35); color: #fff; }
+  .toolbar .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.06); margin: 0 4px; }
+  .stage {
+    flex: 1; position: relative; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 40%, rgba(139,156,240,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 55%, rgba(140,120,200,0.05) 0%, transparent 50%),
+                #0a0a12;
+  }
+  .stage canvas { display: block; }
+  .status-bar {
+    display: flex; gap: 16px; align-items: center;
+    padding: 8px 16px; font-size: 11px; color: #7a7688;
+    background: rgba(14,12,24,0.85);
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+  .status-bar .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+  .status-bar .dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  #log {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    padding: 8px 18px; border-radius: 16px;
+    background: rgba(20,18,32,0.8); backdrop-filter: blur(12px);
+    font-size: 13px; color: #e8e6f0;
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 5;
+  }
+  #log.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="toolbar" id="toolbar">
+  <span style="font-size:12px;color:#7a7688;margin-right:4px;">表情:</span>
+</div>
+
+<div class="stage" id="stage">
+  <div id="log"></div>
+</div>
+
+<div class="status-bar">
+  <div class="dot loading" id="statusDot"></div>
+  <span id="statusText">加载中...</span>
+</div>
+
+<!-- ══════════ Cubism SDK ══════════ -->
+<script src="http://localhost:8000/web/assets/vendor/live2dcubismcore.min.js"></script>
+<script src="http://localhost:8000/web/assets/vendor/cubism4.min.js"></script>
+
+<script>
+// ══════════ 配置 ══════════
+const MODEL_URL = 'http://localhost:8000/api/web/live2d/workspace/%E5%8D%A1%E6%8B%89(2)/%E5%8D%A1%E6%8B%89.model3.json'
+
+const EXPRESSIONS = [
+  'kongbai','aixinyan','xingxingyan','lianhong',
+  'duzui','guzui','han','lei','lianhei','lianqing',
+  'yun','yuanquanyan','xie','jiantou','xianhua','huatong','Scene1',
+]
+
+const EXPR_LABELS = {
+  kongbai:'空白',aixinyan:'爱心眼',xingxingyan:'星星眼',lianhong:'脸红',
+  duzui:'嘟嘴',guzui:'鼓嘴',han:'汗',lei:'泪',lianhei:'脸黑',lianqing:'脸青',
+  yun:'晕',yuanquanyan:'圆圈眼',xie:'斜眼',jiantou:'箭头',xianhua:'鲜花',huatong:'花筒',Scene1:'场景动作',
+}
+
+// ══════════ 状态 ══════════
+let app, model, activeExpr = null
+const logEl = document.getElementById('log')
+const dotEl = document.getElementById('statusDot')
+const statusEl = document.getElementById('statusText')
+
+function showLog(msg) {
+  logEl.textContent = msg
+  logEl.classList.add('show')
+  clearTimeout(logEl._timer)
+  logEl._timer = setTimeout(() => logEl.classList.remove('show'), 2000)
+}
+
+// ══════════ 加载模型 ══════════
+async function init() {
+  const PIXI = window.PIXI
+  if (!PIXI || !PIXI.live2d) {
+    statusEl.textContent = 'Cubism SDK 未加载 — EchoBot 在 localhost:8000 运行了吗？'
+    return
+  }
+
+  statusEl.textContent = '正在加载模型...'
+
+  app = new PIXI.Application({
+    view: document.createElement('canvas'),
+    resizeTo: document.getElementById('stage'),
+    backgroundAlpha: 0,
+    antialias: true,
+  })
+  document.getElementById('stage').appendChild(app.view)
+
+  try {
+    model = await PIXI.live2d.Live2DModel.from(MODEL_URL, { autoInteract: false })
+    app.stage.addChild(model)
+
+    model.anchor.set(0.5, 0.5)
+    model.x = app.screen.width / 2
+    model.y = app.screen.height / 2 - 20
+    model.scale.set(0.32)
+
+    // 窗口缩放
+    window.addEventListener('resize', () => {
+      app.renderer.resize(window.innerWidth, window.innerHeight)
+      model.x = app.screen.width / 2
+      model.y = app.screen.height / 2 - 20
+    })
+
+    dotEl.classList.remove('loading')
+    statusEl.textContent = '模型已加载 · 卡拉'
+    showLog('模型加载完成 ✓')
+  } catch (e) {
+    statusEl.textContent = '加载失败: ' + e.message
+    console.error(e)
+  }
+}
+
+// ══════════ 表情/动作控制 ══════════
+async function setExpression(name) {
+  if (!model) return
+
+  const internalModel = model.internalModel
+  const coreModel = internalModel?.coreModel
+  if (!coreModel) { showLog('模型尚未就绪'); return }
+
+  // 清除旧表情
+  if (activeExpr) {
+    for (const p of activeExpr.parameters) {
+      coreModel.removeParameterValueById(p.id)
+    }
+    activeExpr = null
+  }
+
+  if (name === 'kongbai') {
+    showLog('表情: 空白（默认）')
+    return
+  }
+
+  // 加载表情 JSON
+  const resp = await fetch(`http://localhost:8000/api/web/live2d/workspace/%E5%8D%A1%E6%8B%89(2)/${name}.exp3.json`)
+  if (!resp.ok) { showLog(`表情文件不存在: ${name}`); return }
+
+  const expDef = await resp.json()
+  const params = expDef.Parameters || []
+  for (const p of params) {
+    coreModel.addParameterValueById(p.Id, p.Value, p.Blend)
+  }
+  activeExpr = { parameters: params.map(p => ({ id: p.Id, value: p.Value, blend: p.Blend })) }
+
+  showLog(`表情: ${EXPR_LABELS[name] || name}`)
+}
+
+async function playMotion(name, index = 0) {
+  if (!model || typeof model.motion !== 'function') {
+    showLog('动作不支持')
+    return
+  }
+  try {
+    await model.motion(name, index)
+    showLog(`动作: ${EXPR_LABELS[name] || name}`)
+  } catch (e) {
+    showLog('动作播放失败')
+  }
+}
+
+function resetModel() {
+  if (!model) return
+  model.x = app.screen.width / 2
+  model.y = app.screen.height / 2 - 20
+  model.scale.set(0.32)
+  showLog('已重置位置')
+}
+
+// ══════════ 渲染表情按钮 ══════════
+const toolbar = document.getElementById('toolbar')
+EXPRESSIONS.forEach(name => {
+  const btn = document.createElement('button')
+  btn.textContent = EXPR_LABELS[name] || name
+  btn.addEventListener('click', () => {
+    if (name === 'Scene1') {
+      playMotion('EchoBotIdle', 0)
+    } else {
+      setExpression(name)
+    }
+    toolbar.querySelectorAll('button.active').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+  })
+  toolbar.appendChild(btn)
+})
+
+{
+  const sep = document.createElement('span'); sep.className = 'sep'; toolbar.appendChild(sep)
+  const btn = document.createElement('button'); btn.textContent = '↺ 重置'; btn.addEventListener('click', resetModel); toolbar.appendChild(btn)
+}
+
+// ══════════ 启动 ══════════
+init()
+</script>
+</body>
+</html>
