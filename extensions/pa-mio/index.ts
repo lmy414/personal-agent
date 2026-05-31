@@ -1,16 +1,18 @@
 /**
- * pa-mio — 澪号 Harness v2
+ * pa-mio — 澪号 Harness v3
  *
  * 基于 Hermes SOUL.md + SillyTavern 分层注入。
  * 只做三件事：
  *   1. 加载 SOUL.md + MEMORY.md / USER.md 快照
  *   2. 4 层 Prompt 组装（before_agent_start）
- *   3. 记忆写入工具（message_end 模式检测）
+ *   3. 注册 memory_add / memory_read 工具供 LLM 调用
  */
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
+import { defineTool } from '@mariozechner/pi-coding-agent'
+import { Type } from '@mariozechner/pi-ai'
 import fs from 'fs'
 import path from 'path'
-import { createMemoryStore, searchEntries, memoryAdd, persistMemoryFiles, getSnapshot } from '../shared/memory-store'
+import { createMemoryStore, searchEntries, memoryAdd, memoryRead, persistMemoryFiles, getSnapshot } from '../shared/memory-store'
 
 // ── 路径 ──────────────────────────────────────────────────
 
@@ -61,61 +63,79 @@ function assemblePrompt(userMessage: string, piSystemPrompt: string, store: Retu
     layers.push(injectedParts.join('\n\n'))
   }
 
-  // Layer 3: 工具定义 + Skill 描述（Pi 注入 + 记忆工具说明）
-  layers.push(
-    '[运行环境]\n' + piSystemPrompt + '\n\n' +
-    '[记忆工具]\n' +
-    '你有持久记忆能力。当需要记住一个事实时，在回复末尾附加：\n' +
-    '<memory-add target="memory|user">事实内容（声明式，不要指令式）</memory-add>\n' +
-    '这条标签会被自动处理并从回复中移除。',
-  )
+  // Layer 3: Pi 工具定义 + Skill 描述
+  layers.push('[运行环境]\n' + piSystemPrompt)
 
   return layers.join('\n\n')
 }
 
-// ── 记忆写入标签检测 ──────────────────────────────────────
+// ── Memory 工具定义 ────────────────────────────────────────
 
-const MEMORY_ADD_RE = /<memory-add\s+target="(memory|user)">([\s\S]*?)<\/memory-add>/g
-
-function processMemoryTags(content: string, store: ReturnType<typeof createMemoryStore>): string {
-  let cleaned = content
-  let wroteMemory = false
-
-  // Reset lastIndex since we're reusing a global regex
-  MEMORY_ADD_RE.lastIndex = 0
-  let match: RegExpExecArray | null
-  const matches: Array<{ target: 'memory' | 'user'; fact: string }> = []
-
-  while ((match = MEMORY_ADD_RE.exec(content)) !== null) {
-    matches.push({ target: match[1] as 'memory' | 'user', fact: match[2].trim() })
-  }
-
-  for (const { target, fact } of matches) {
-    if (fact) {
-      const result = memoryAdd(store, target, fact)
-      if (result.success) {
-        console.log(`[pa-mio] memory add (${target}): ${fact.slice(0, 50)}...`)
-        wroteMemory = true
-      } else {
-        console.warn(`[pa-mio] memory add failed: ${result.error}`)
-      }
+const memoryAddTool = defineTool({
+  name: 'memory_add',
+  label: 'Add Memory',
+  description:
+    '向持久记忆中保存一个事实。MEMORY.md 存环境/项目信息，USER.md 存用户画像。' +
+    '写声明式事实，不写命令式指令。MEMORY.md 上限 2200 字符，USER.md 上限 1375 字符，超限时操作会拒绝。',
+  parameters: Type.Object({
+    target: Type.String({
+      description: '记忆目标：memory（MEMORY.md，环境/项目）或 user（USER.md，用户画像）',
+    }),
+    content: Type.String({
+      description: '记忆内容。一个声明式事实。如 "Mirror 偏好 TypeScript 严格模式"',
+    }),
+  }),
+  execute: async (_id, params, _signal, _onUpdate, _ctx) => {
+    const target = params.target as 'memory' | 'user'
+    if (target !== 'memory' && target !== 'user') {
+      return { content: [{ type: 'text', text: 'target 必须是 memory 或 user' }], details: {} }
     }
-    cleaned = cleaned.replace(
-      new RegExp(`<memory-add\\s+target="${target}">[\\s\\S]*?<\\/memory-add>`, 'g'),
-      '',
-    )
-  }
+    const result = memoryAdd(memStore, target, params.content as string)
+    if (result.success) {
+      persistMemoryFiles(memStore, MEM_DIR)
+      const current = target === 'memory' ? memStore.memoryEntries.length : memStore.userEntries.length
+      return { content: [{ type: 'text', text: `已保存到 ${target === 'memory' ? 'MEMORY.md' : 'USER.md'}（当前 ${current} 条）` }], details: {} }
+    }
+    return { content: [{ type: 'text', text: `保存失败：${result.error}\n当前条目：\n${(result.entries ?? []).map(e => `§ ${e}`).join('\n')}` }], details: {} }
+  },
+})
 
-  if (wroteMemory) persistMemoryFiles(store, MEM_DIR)
-  return cleaned.trim()
-}
+const memoryReadTool = defineTool({
+  name: 'memory_read',
+  label: 'Read Memory',
+  description: '读取当前的 MEMORY.md 或 USER.md 全文内容。',
+  parameters: Type.Object({
+    target: Type.String({
+      description: '要读取的目标：memory（MEMORY.md）、user（USER.md）、或 both（两者）',
+    }),
+  }),
+  execute: async (_id, params) => {
+    const target = (params.target as string) || 'both'
+    if (target !== 'memory' && target !== 'user' && target !== 'both') {
+      return { content: [{ type: 'text', text: 'target 必须是 memory、user 或 both' }], details: {} }
+    }
+    const text = memoryRead(memStore, target as 'memory' | 'user' | 'both')
+    if (!text) return { content: [{ type: 'text', text: '（空）' }], details: {} }
+    return { content: [{ type: 'text', text }], details: {} }
+  },
+})
 
 // ── 注册 ──────────────────────────────────────────────────
 
-export default function register(api: ExtensionAPI) {
-  console.log('[pa-mio] 澪号 Harness v2 已加载')
+// 在 register() 闭包内，供工具 execute 回调访问
+let memStore: ReturnType<typeof createMemoryStore>
 
-  let store = createMemoryStore(MEM_DIR)
+export default function register(api: ExtensionAPI) {
+  console.log('[pa-mio] 澪号 Harness v3 已加载')
+
+  memStore = createMemoryStore(MEM_DIR)
+
+  // ════════════════════════════════════════════════
+  // 注册 memory 工具
+  // ════════════════════════════════════════════════
+  api.registerTool(memoryAddTool)
+  api.registerTool(memoryReadTool)
+  console.log('[pa-mio] memory_add / memory_read 工具已注册')
 
   // ════════════════════════════════════════════════
   // before_agent_start: 组装 Prompt
@@ -124,40 +144,22 @@ export default function register(api: ExtensionAPI) {
     const mioPrompt = assemblePrompt(
       event.prompt || '',
       event.systemPrompt || '',
-      store,
+      memStore,
     )
     console.log('[pa-mio] prompt assembled,', mioPrompt.length, 'chars')
     return { systemPrompt: mioPrompt }
   })
 
   // ════════════════════════════════════════════════
-  // message_end: 检测记忆写入标签
-  // ════════════════════════════════════════════════
-  api.on('message_end', (event) => {
-    const msg = event.message as any
-    if (!msg || msg.role !== 'assistant') return
-    const content = typeof msg.content === 'string' ? msg.content : ''
-    if (!content) return
-
-    // 检测 <memory-add> 标签并处理
-    if (content.includes('<memory-add')) {
-      const cleaned = processMemoryTags(content, store)
-      if (cleaned !== content) {
-        ;(msg as any).content = cleaned
-      }
-    }
-  })
-
-  // ════════════════════════════════════════════════
   // session_start: 重置快照（重新加载磁盘）
   // ════════════════════════════════════════════════
   api.on('session_start', () => {
-    store = createMemoryStore(MEM_DIR)
+    memStore = createMemoryStore(MEM_DIR)
     console.log('[pa-mio] session reset, memory snapshot refreshed')
   })
 
   // ════════════════════════════════════════════════
-  // 工具执行反馈（保留现有 UI 状态提示）
+  // 工具执行反馈（UI 状态提示）
   // ════════════════════════════════════════════════
   api.on('tool_execution_start', (_event, ctx) => {
     const name = _event.toolName
