@@ -74,11 +74,9 @@ export function SettingsPage() {
     }))
   }
 
-  // ── 仅 JSX 条件渲染 ──
-  if (!agent.isSettingsOpen()) return null
-
+  // ── CSS 控制可见性，避免 SolidJS early-return 问题 ──
   return (
-    <div class="settings-page open">
+    <div class="settings-page" classList={{ open: agent.isSettingsOpen() }}>
       <div class="settings-page-header">
         <button class="settings-back-btn" onClick={() => agent.setIsSettingsOpen(false)} title="返回">←</button>
         <span style="font-size:18px;">⚙</span>

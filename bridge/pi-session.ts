@@ -1,6 +1,7 @@
 import { createAgentSession, ModelRegistry } from '@pi/coding-agent'
 import type { CreateAgentSessionResult } from '@pi/coding-agent'
 import type { Model } from '@pi/ai'
+import { getDB } from './db'
 
 type AgentSessionType = CreateAgentSessionResult['session']
 
@@ -87,13 +88,25 @@ export async function createPiSession(options: {
 
   const contextWindow = (session.model as any)?.contextWindow ?? 0
 
+  // 从 SQLite 恢复 roundCount（桥接重启后仍保留）
+  let restoredRoundCount = 0
+  try {
+    const db = getDB()
+    const row = db.prepare(`
+      SELECT COUNT(*) as cnt FROM messages m
+      JOIN conversations c ON m.conversation_id = c.id
+      WHERE c.session_id = ? AND m.role = 'user'
+    `).get(sessionId) as { cnt: number } | undefined
+    restoredRoundCount = row?.cnt ?? 0
+  } catch { /* DB 未初始化或查询失败，使用 0 */ }
+
   const meta: PiSessionMeta = {
     id: sessionId,
     modelName: session.model?.id ?? modelName,
     thinkingLevel: options.thinkingLevel ?? 'medium',
     title: `会话 ${new Date().toLocaleDateString('zh-CN')}`,
     createdAt: Date.now(),
-    roundCount: 0,
+    roundCount: restoredRoundCount,
     contextWindow,
   }
 
