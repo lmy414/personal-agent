@@ -35,9 +35,9 @@ function broadcast(path: string) {
 
 let lastRestart = 0
 function handleExtensionChange(absPath: string) {
-  // 扩展/角色文件变化 → 退出进程，由 tsx watch 自动重启
-  // 冷却 10 秒，避免重启循环
   const norm = normalize(absPath)
+  // 只关注扩展和角色文件，忽略前端/bridge 自身变化（由 tsx watch 处理）
+  if (norm.includes('/frontend/') || norm.includes('/bridge/') || norm.includes('/vendor/')) return
   if (norm.includes('/extensions/') || norm.includes('/mio-harness/')) {
     const now = Date.now()
     if (now - lastRestart < 10_000) return
