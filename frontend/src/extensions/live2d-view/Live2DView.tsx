@@ -3,67 +3,78 @@ import { useAgent } from '@/shell/useAgent'
 import type { ServerMessage } from '@bridge/protocol'
 
 const ECHOBOT = 'http://localhost:8000'
-const MODEL_URL = ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
+const M_URL = ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
 
-const EXPRESSIONS: Record<string, { name: string; type: 'file' | 'custom'; params?: { id: string; value: number; blend: string }[] }> = {
-  kongbai:  { name: '空白', type: 'file' },
-  aixinyan: { name: '爱心眼', type: 'file' },
-  xingxingyan: { name: '星星眼', type: 'file' },
-  lianhong: { name: '脸红', type: 'file' },
-  duzui:    { name: '嘟嘴', type: 'file' },
-  guzui:    { name: '鼓嘴', type: 'file' },
-  han:      { name: '汗', type: 'file' },
-  lei:      { name: '泪', type: 'file' },
-  lianhei:  { name: '脸黑', type: 'file' },
-  lianqing: { name: '脸青', type: 'file' },
-  yun:      { name: '晕', type: 'file' },
-  yuanquanyan: { name: '圆圈眼', type: 'file' },
-  xie:      { name: '斜眼', type: 'file' },
-  jiantou:  { name: '箭头', type: 'file' },
-  xianhua:  { name: '鲜花', type: 'file' },
-  huatong:  { name: '花筒', type: 'file' },
-  smile:    { name: '微笑', type: 'custom', params: [
+const BUILTIN = ['kongbai','aixinyan','xingxingyan','lianhong','duzui','guzui','han','lei','lianhei','lianqing','yun','yuanquanyan','xie','jiantou','xianhua','huatong']
+
+const CUSTOM: Record<string, { id: string; value: number; blend: string }[]> = {
+  smile: [
     { id: 'ParamEyeLSmile', value: 0.6, blend: 'Add' },
     { id: 'ParamEyeRSmile', value: 0.6, blend: 'Add' },
     { id: 'ParamMouthForm', value: 0.5, blend: 'Add' },
-  ]},
-  bigsmile: { name: '大笑', type: 'custom', params: [
+  ],
+  bigsmile: [
     { id: 'ParamEyeLSmile', value: 1.0, blend: 'Add' },
     { id: 'ParamEyeRSmile', value: 1.0, blend: 'Add' },
     { id: 'ParamMouthForm', value: 0.8, blend: 'Add' },
     { id: 'ParamCheek', value: 0.5, blend: 'Add' },
     { id: 'ParamMouthOpenY', value: 0.3, blend: 'Add' },
-  ]},
-  sad:      { name: '难过', type: 'custom', params: [
+  ],
+  sad: [
     { id: 'ParamBrowLY', value: 0.4, blend: 'Add' },
     { id: 'ParamBrowRY', value: 0.4, blend: 'Add' },
     { id: 'ParamBrowLForm', value: -0.4, blend: 'Add' },
     { id: 'ParamBrowRForm', value: -0.4, blend: 'Add' },
     { id: 'ParamMouthForm', value: -0.3, blend: 'Add' },
-  ]},
+  ],
+}
+
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = src
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('load fail: ' + src))
+    document.head.appendChild(s)
+  })
 }
 
 export function Live2DView() {
   const { subscribe, send } = useAgent()
-  const [status, setStatus] = createSignal('未加载')
-  let container!: HTMLDivElement
+  const [status, setStatus] = createSignal('加载中...')
+  const [visible, setVisible] = createSignal(true)
+  let panel!: HTMLDivElement
+  let cv!: HTMLCanvasElement
   let app: any, model: any, activeParams: { id: string; value: number; blend: string }[] | null = null
 
-  // ── 动态加载 SDK 脚本 ──
-  function loadScript(src: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script')
-      s.src = src
-      s.onload = () => resolve()
-      s.onerror = () => reject(new Error('Failed to load: ' + src))
-      document.head.appendChild(s)
-    })
-  }
+  // ── 拖拽 ──
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0, docked = ''
+  let px = window.innerWidth - 252, py = window.innerHeight - 420
 
-  // ── 初始化 PIXI + Cubism ──
-  async function initLive2D() {
+  function onDown(e: MouseEvent) {
+    if ((e.target as HTMLElement)?.tagName === 'CANVAS') return
+    dragging = true; panel.classList.add('dragging')
+    sx = e.clientX; sy = e.clientY; ox = px; oy = py; docked = ''
+    panel.classList.remove('docked-left','docked-right')
+  }
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return
+    px = Math.max(-160, Math.min(window.innerWidth - 40, ox + e.clientX - sx))
+    py = Math.max(-20, Math.min(window.innerHeight - 40, oy + e.clientY - sy))
+    panel.style.left = px + 'px'; panel.style.top = py + 'px'
+  })
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return
+    dragging = false; panel.classList.remove('dragging')
+    if (px < 40) { px = 0; docked = 'left'; panel.classList.add('docked-left') }
+    else if (px + 220 > window.innerWidth - 40) { px = window.innerWidth - 220; docked = 'right'; panel.classList.add('docked-right') }
+    panel.style.left = px + 'px'; panel.style.top = py + 'px'
+  })
+
+  // ── 初始化 ──
+  onMount(async () => {
     try {
-      setStatus('加载 SDK...')
+      setStatus('SDK...')
       await loadScript(ECHOBOT + '/web/assets/vendor/pixi.min.js')
       await loadScript(ECHOBOT + '/web/assets/vendor/live2dcubismcore.min.js')
       await loadScript(ECHOBOT + '/web/assets/vendor/cubism4.min.js')
@@ -71,127 +82,109 @@ export function Live2DView() {
       const P = (window as any).PIXI
       if (!P?.live2d) { setStatus('SDK 不可用'); return }
 
-      setStatus('加载模型...')
-      const cv = document.createElement('canvas')
-      cv.style.width = '100%'
-      cv.style.height = '100%'
-      container.appendChild(cv)
-
-      app = new P.Application({
-        view: cv,
-        resizeTo: container,
-        backgroundAlpha: 0,
-        antialias: true,
-      })
-
-      model = await P.live2d.Live2DModel.from(MODEL_URL, { autoInteract: false })
+      setStatus('模型...')
+      app = new P.Application({ view: cv, backgroundAlpha: 0, antialias: true })
+      model = await P.live2d.Live2DModel.from(M_URL, { autoInteract: false })
       app.stage.addChild(model)
       model.anchor.set(0.5, 0.5)
-      model.x = app.screen.width / 2
-      model.y = app.screen.height / 2 - 30
-      model.scale.set(0.35)
 
-      window.addEventListener('resize', reposition)
-      // 标签切换时 display:none → block 导致 canvas 0 尺寸，强制重绘
-      new ResizeObserver(() => {
+      const fit = () => {
         if (!app || !model) return
-        app.renderer.resize(container.clientWidth, container.clientHeight)
-        reposition()
-      }).observe(container)
-
-      function reposition() {
-        model.x = app.screen.width / 2
-        model.y = app.screen.height / 2 - 30
+        const w = panel.clientWidth, h = panel.clientHeight
+        app.renderer.resize(w, h)
+        model.x = w / 2; model.y = h / 2 - 15
+        model.scale.set(Math.min(w, h) / 800)
       }
+      fit()
+      new ResizeObserver(fit).observe(panel)
+      window.addEventListener('resize', fit)
 
-      // 每帧应用表情参数
       model.internalModel.on('beforeModelUpdate', () => {
         if (!activeParams) return
         const cm = model.internalModel.coreModel
         if (!cm || typeof cm.setParameterValueById !== 'function') return
         for (const p of activeParams) {
           try {
-            if (p.blend === 'Add' && typeof cm.addParameterValueById === 'function')
-              cm.addParameterValueById(p.id, p.value)
-            else if (p.blend === 'Multiply' && typeof cm.multiplyParameterValueById === 'function')
-              cm.multiplyParameterValueById(p.id, p.value)
-            else
-              cm.setParameterValueById(p.id, p.value)
+            if (p.blend === 'Add' && typeof cm.addParameterValueById === 'function') cm.addParameterValueById(p.id, p.value)
+            else if (p.blend === 'Multiply' && typeof cm.multiplyParameterValueById === 'function') cm.multiplyParameterValueById(p.id, p.value)
+            else cm.setParameterValueById(p.id, p.value)
           } catch (_) {}
         }
       })
 
-      setStatus('就绪')
-    } catch (e: any) {
-      setStatus('加载失败: ' + (e.message || e))
-    }
-  }
+      setStatus('')
+    } catch (e: any) { setStatus('失败: ' + (e.message || e)) }
+  })
 
-  // ── 执行表情 ──
-  async function applyExpression(name: string) {
+  // ── Live2D 指令 ──
+  onMount(() => {
+    const unsub = subscribe('live2d.control', (msg: ServerMessage) => {
+      const p = msg.payload as { tool: string; args: Record<string, string> }
+      if (p.tool === 'live2d_expression') setExpr(p.args.name).then(() => send('live2d.result', { text: p.args.name }))
+      else if (p.tool === 'live2d_motion') playMotion().then(() => send('live2d.result', { text: 'motion' }))
+    })
+    onCleanup(() => unsub())
+  })
+
+  async function setExpr(name: string) {
     if (!model) return
-
-    const expr = EXPRESSIONS[name]
-    if (!expr) { setStatus('未知表情: ' + name); return }
-
-    if (expr.type === 'custom' && expr.params) {
-      activeParams = expr.params.map(p => ({ ...p }))
-      setStatus(expr.name)
-      return
-    }
-
-    // 内置表情：加载 .exp3.json
+    if (CUSTOM[name]) { activeParams = CUSTOM[name].map(p => ({ ...p })); setStatus(''); return }
+    if (name === 'kongbai') { activeParams = null; setStatus(''); return }
+    if (!BUILTIN.includes(name)) return
     try {
-      const resp = await fetch(ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + name + '.exp3.json')
-      if (!resp.ok) { setStatus('表情不存在: ' + name); return }
-      const data = await resp.json()
-      activeParams = (data.Parameters || []).map((p: any) => ({
-        id: p.Id, value: p.Value, blend: p.Blend || 'Add',
-      }))
-      setStatus(expr.name)
-    } catch (e: any) {
-      setStatus('加载表情失败')
-    }
-  }
-
-  // ── 播放动作 ──
-  async function applyMotion(name: string) {
-    if (!model || typeof model.motion !== 'function') return
-    try {
-      await model.motion('EchoBotIdle', 0)
-      setStatus('动作: ' + name)
+      const r = await fetch(ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + name + '.exp3.json')
+      if (!r.ok) return
+      const d = await r.json()
+      activeParams = (d.Parameters || []).map((p: any) => ({ id: p.Id, value: p.Value, blend: p.Blend || 'Add' }))
     } catch (_) {}
   }
 
-  // ── 监听 Bridge Live2D 指令 ──
-  onMount(() => {
-    initLive2D()
-
-    const unsub = subscribe('live2d.control', (msg: ServerMessage) => {
-      const payload = msg.payload as { tool: string; args: Record<string, string> }
-      if (payload.tool === 'live2d_expression') {
-        applyExpression(payload.args.name).then(() => {
-          send('live2d.result', { text: '表情切换: ' + payload.args.name })
-        })
-      } else if (payload.tool === 'live2d_motion') {
-        applyMotion(payload.args.name).then(() => {
-          send('live2d.result', { text: '动作播放: ' + payload.args.name })
-        })
-      }
-    })
-
-    onCleanup(() => {
-      unsub()
-      if (app) { try { app.destroy(true) } catch (_) {} }
-    })
-  })
+  async function playMotion() {
+    if (!model || typeof model.motion !== 'function') return
+    try { await model.motion('EchoBotIdle', 0) } catch (_) {}
+  }
 
   return (
-    <div style="display:flex;flex-direction:column;height:100%;">
-      <div style="font-size:11px;color:var(--text-muted);padding:6px 10px;text-align:center;">
-        {status()}
+    <>
+      {/* 切换按钮 */}
+      <button
+        onClick={() => setVisible(!visible())}
+        style={{
+          position:'fixed',bottom:'12px',left:'50%',transform:'translateX(-50%)',
+          zIndex:100000,padding:'4px 12px',borderRadius:'12px',
+          border:'1px solid rgba(255,255,255,0.06)',
+          background:'rgba(20,18,32,0.7)',color:'rgba(255,255,255,0.5)',
+          fontSize:'11px',fontFamily:'inherit',cursor:'pointer'
+        }}
+      >
+        {visible() ? '🎭 隐藏' : '🎭 澪号'}
+      </button>
+
+      {/* 悬浮面板 */}
+      <div
+        ref={panel}
+        onMouseDown={onDown}
+        style={{
+          position:'fixed',left:px+'px',top:py+'px',
+          width:'220px',height:'300px',zIndex:99999,
+          borderRadius:'16px',overflow:'hidden',
+          background: 'rgba(14,12,24,0.55)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter:'blur(20px)',
+          boxShadow:'0 16px 48px rgba(0,0,0,0.45)',
+          display: visible() ? 'block' : 'none',
+          cursor:'grab',
+        }}
+      >
+        <div style={{position:'absolute',top:'6px',left:'50%',transform:'translateX(-50%)',width:'24px',height:'3px',background:'rgba(255,255,255,0.1)',borderRadius:'2px',zIndex:2,pointerEvents:'none'}} />
+        <div style={{position:'absolute',top:'8px',right:'10px',width:'6px',height:'6px',borderRadius:'50%',background:'#4ade80',boxShadow:'0 0 5px rgba(74,222,128,0.4)',zIndex:2}} />
+        {status() && (
+          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontSize:'11px',color:'rgba(255,255,255,0.3)',zIndex:3,pointerEvents:'none'}}>
+            {status()}
+          </div>
+        )}
+        <canvas ref={cv} style={{width:'100%',height:'100%',display:'block'}} />
       </div>
-      <div ref={container} style="flex:1;min-height:0;overflow:hidden;border-radius:8px;" />
-    </div>
+    </>
   )
 }
