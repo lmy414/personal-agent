@@ -33,6 +33,15 @@ function broadcast(path: string) {
   }
 }
 
+function handleExtensionChange(absPath: string) {
+  // 扩展/角色文件变化 → 退出进程，由 tsx watch 自动重启
+  const norm = normalize(absPath)
+  if (norm.includes('/extensions/') || norm.includes('/mio-harness/')) {
+    console.log('[watcher] extension/harness file changed, restarting...')
+    setTimeout(() => process.exit(0), 200)
+  }
+}
+
 export function startWatcher(): void {
   if (watcher) return
 
@@ -52,6 +61,7 @@ export function startWatcher(): void {
     pending.set(absDir, setTimeout(() => {
       pending.delete(absDir)
       broadcast(absDir)
+      handleExtensionChange(absDir)
     }, DEBOUNCE_MS))
   })
 
