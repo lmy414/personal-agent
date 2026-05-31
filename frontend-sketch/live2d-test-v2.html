@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卡拉 Live2D 测试</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a12;color:#e8e6f0;font-family:'PingFang SC','Microsoft YaHei',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;gap:6px;padding:10px 14px;background:rgba(20,18,32,0.9);border-bottom:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;align-items:center;z-index:10}
+.toolbar button{padding:5px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#c0bcd0;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.toolbar button:hover{background:rgba(196,160,255,0.18);border-color:rgba(196,160,255,0.3);color:#fff}
+.toolbar button.active{background:rgba(196,160,255,0.22);border-color:rgba(196,160,255,0.4);color:#fff}
+.toolbar .sep{width:1px;height:18px;background:rgba(255,255,255,0.06);margin:0 2px}
+.toolbar input[type=range]{accent-color:#c4a0ff;cursor:pointer}
+.toolbar label{font-size:10px;color:#7a7688}
+.stage{flex:1;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,rgba(139,156,240,0.06) 0%,transparent 60%),radial-gradient(ellipse at 50% 55%,rgba(140,120,200,0.04) 0%,transparent 50%),#0a0a12;position:relative}
+.stage canvas{display:block}
+.status{display:flex;gap:16px;align-items:center;padding:6px 14px;font-size:11px;color:#7a7688;background:rgba(14,12,24,0.85);border-top:1px solid rgba(255,255,255,0.04)}
+.status .dot{width:6px;height:6px;border-radius:50%;background:#f59e0b}
+.status .dot.ok{background:#4ade80}
+#toast{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:14px;background:rgba(20,18,32,0.85);backdrop-filter:blur(12px);font-size:13px;pointer-events:none;z-index:5;opacity:0;transition:opacity 0.3s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="toolbar" id="tb">
+  <label>X</label><input type="range" id="px" min="-300" max="300" value="0" style="width:60px">
+  <label>Y</label><input type="range" id="py" min="-300" max="300" value="0" style="width:60px">
+  <label>缩放</label><input type="range" id="ps" min="15" max="80" value="45" style="width:60px">
+  <span class="sep"></span>
+  <span id="exprBtns"></span>
+</div>
+
+<div class="stage" id="stage"><div id="toast"></div></div>
+<div class="status"><div class="dot" id="dot"></div><span id="st">初始化...</span></div>
+
+<script src="/web/assets/vendor/pixi.min.js"></script>
+<script src="/web/assets/vendor/live2dcubismcore.min.js"></script>
+<script src="/web/assets/vendor/cubism4.min.js"></script>
+
+<script>
+const MODEL_URL = '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
+
+const EXPR = {
+  kongbai:'空白',aixinyan:'爱心眼',xingxingyan:'星星眼',lianhong:'脸红',
+  duzui:'嘟嘴',guzui:'鼓嘴',han:'汗',lei:'泪',lianhei:'脸黑',lianqing:'脸青',
+  yun:'晕',yuanquanyan:'圆圈眼',xie:'斜眼',jiantou:'箭头',xianhua:'鲜花',huatong:'花筒'
+}
+
+const toast = document.getElementById('toast')
+const dot = document.getElementById('dot')
+const st = document.getElementById('st')
+let T
+function msg(s){toast.textContent=s;toast.classList.add('show');clearTimeout(T);T=setTimeout(()=>toast.classList.remove('show'),2000)}
+
+let app, model, activeParams = null
+
+// ═══ 初始化 ═══
+async function init() {
+  const P = window.PIXI
+  if (!P||!P.live2d){st.textContent='SDK未加载';return}
+
+  st.textContent='加载模型...'
+  const cv = document.createElement('canvas')
+  document.getElementById('stage').appendChild(cv)
+  app = new P.Application({view:cv,resizeTo:document.getElementById('stage'),backgroundAlpha:0,antialias:true})
+
+  try {
+    model = await P.live2d.Live2DModel.from(MODEL_URL,{autoInteract:false})
+    app.stage.addChild(model)
+    model.anchor.set(0.5,0.5)
+    updatePos()
+    window.addEventListener('resize',updatePos)
+    dot.classList.add('ok')
+    st.textContent='卡拉 · 已加载 ('+Object.keys(EXPR).length+'表情)'
+    msg('加载完成')
+  } catch(e){st.textContent='加载失败: '+e.message;console.error(e)}
+}
+
+// ═══ 位置 ═══
+function updatePos(){
+  if(!model||!app)return
+  const x=(parseInt(document.getElementById('px').value)||0)
+  const y=(parseInt(document.getElementById('py').value)||0)
+  const s=(parseInt(document.getElementById('ps').value)||45)/100
+  model.x=app.screen.width/2+x
+  model.y=app.screen.height/2-40+y
+  model.scale.set(s)
+}
+document.addEventListener('input',e=>{if(e.target.id==='px'||e.target.id==='py'||e.target.id==='ps')updatePos()})
+
+// ═══ 表情 ═══
+async function setExpr(name){
+  if(!model)return
+  const cm=model.internalModel?.coreModel
+  if(!cm){msg('模型未就绪');return}
+
+  // 清除旧参数
+  if(activeParams){
+    for(const p of activeParams){
+      try{cm.setParameterValueById(p.id,0)}catch(e){}
+    }
+    activeParams=null
+  }
+
+  if(name==='kongbai'){msg('空白（默认）');return}
+
+  try{
+    const r=await fetch('/api/web/live2d/workspace/'+encodeURI('卡拉(2)')+'/'+name+'.exp3.json')
+    if(!r.ok){msg('表情不存在: '+name);return}
+    const d=await r.json()
+    const params=(d.Parameters||[]).map(p=>({id:p.Id,value:p.Value,blend:p.Blend||'Add'}))
+
+    for(const p of params){
+      try{
+        if(p.blend==='Add')cm.addParameterValueById(p.id,p.value)
+        else if(p.blend==='Multiply')cm.multiplyParameterValueById(p.id,p.value)
+        else cm.setParameterValueById(p.id,p.value)
+      }catch(e){}
+    }
+    activeParams=params
+    msg(EXPR[name]||name)
+  }catch(e){msg('加载失败')}
+}
+
+// ═══ 渲染按钮 ═══
+const eb=document.getElementById('exprBtns')
+Object.entries(EXPR).forEach(([k,v])=>{
+  const b=document.createElement('button');b.textContent=v
+  b.onclick=()=>{setExpr(k);eb.querySelectorAll('button.active').forEach(x=>x.classList.remove('active'));b.classList.add('active')}
+  eb.appendChild(b)
+})
+
+init()
+</script>
+</body>
+</html>
