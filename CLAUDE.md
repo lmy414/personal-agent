@@ -5,8 +5,8 @@
 ## 快速启动
 
 ```bash
-# 终端 1 — 桥接服务器
-cd bridge && npx tsx --env-file ../.env index.ts
+# 终端 1 — 桥接服务器（支持热重载）
+cd bridge && npm run dev
 
 # 终端 2 — 前端 dev
 cd frontend && npm run dev
@@ -20,27 +20,36 @@ cd frontend && npm run dev
 
 ```
 personal-agent/
-├── CLAUDE.md               ← 本文件（每次新会话先读这个）
-├── .gitignore               ← node_modules, dist, .env, *.db
-├── bridge/                  ← Node 桥接服务器（Pi SDK → WebSocket）
-│   ├── index.ts             ←   入口
-│   ├── protocol.ts          ←   消息类型定义（前后端共享）
-│   ├── dispatcher.ts        ←   消息路由
-│   └── handlers/            ←   按消息类型拆文件
-├── frontend/                ← SolidJS 前端
+├── CLAUDE.md                 ← 本文件（每次新会话先读这个）
+├── .gitignore                 ← node_modules, dist, .env, *.db
+├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
+│   ├── .pi/settings.json      ←   Pi 扩展注册（绝对路径）
+│   ├── index.ts               ←   入口
+│   ├── protocol.ts            ←   消息类型定义（前后端共享）
+│   ├── dispatcher.ts          ←   消息路由
+│   ├── watcher.ts             ←   文件监听 + 热重载
+│   └── handlers/              ←   按消息类型拆文件
+├── frontend/                  ← SolidJS 前端
 │   ├── src/
-│   │   ├── shell/           ←   壳（Grid 布局 + WS hook）
-│   │   ├── registry.ts      ←   扩展注册表
-│   │   └── extensions/      ←   每个扩展一个文件夹
+│   │   ├── shell/             ←   壳（Grid 布局 + WS hook）
+│   │   ├── registry.ts        ←   扩展注册表
+│   │   └── extensions/        ←   每个扩展一个文件夹
 │   ├── index.html
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
-├── extensions/              ← Pi 后端扩展（pa-mio, pa-sqlite, ...）
-├── mio-data/                ← 澪号角色数据 + 设计文档
-├── mio-harness/              ← 角色文件（soul, boundaries, knowledge）
-├── frontend-sketch/         ← UI 原型（layout-mockup-v2.html）
-├── docs/superpowers/specs/  ← 设计 spec
-└── vendor/pi/               ← Pi 框架（不修改）
+├── extensions/                ← Pi 扩展（由 bridge/.pi/settings.json 注册）
+│   ├── pa-mio/                ←   人格注入（SOUL.md + 4 层 Prompt + 记忆工具）
+│   ├── pa-files/              ←   文件浏览/预览工具
+│   └── shared/                ←   共享模块（memory-store）
+├── mio-harness/               ← 角色数据
+│   ├── SOUL.md                ←   人格定义（行为规则，<1KB）
+│   └── memories/              ←   持久记忆（§ 分隔 Markdown）
+│       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars）
+│       └── USER.md            ←     用户画像（≤1375 chars）
+├── mio-data/                  ← 澪号角色数据 + 设计文档
+├── frontend-sketch/           ← UI 原型（layout-mockup-v2.html）
+├── docs/superpowers/          ← 设计 spec + 实现计划
+└── vendor/pi/                 ← Pi 框架（不修改）
 ```
 
 ---
@@ -241,6 +250,49 @@ refactor: protocol.ts 拆分为独立文件
 - 提交 commit
 
 ---
+
+## 人格与记忆系统
+
+### 人格注入（pa-mio）
+
+澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。单个文件，行为规则，<1KB。
+
+每次 LLM 调用时，pa-mio 组装 4 层 System Prompt：
+
+```
+Layer 0: SOUL.md                        ← 人格定义，绝对顶部
+Layer 1: 记忆快照（MEMORY.md + USER.md） ← 会话启动冻结，<recall> 围栏
+Layer 2: 注入上下文（检索记忆 + 工具结果）← 每轮动态
+Layer 3: Pi 工具定义                     ← Pi 自动注入
+Layer 4: 对话历史                        ← Pi 管理
+```
+
+- **SOUL.md**：实时读取，改文件立即生效
+- **记忆快照**：会话启动冻结，中途写入不更新快照（保护 prefix cache），下次会话可见
+- **工具隔离**：`<recall>` 围栏包裹记忆，防止被当作指令
+- **思考分离**：`thinking_delta` 与 `text_delta` 分开处理，前端默认折叠
+
+### 记忆系统（Hermes 风格）
+
+```
+mio-harness/memories/
+├── MEMORY.md    ← § 分隔条目，≤2200 chars，环境/项目记忆
+└── USER.md      ← § 分隔条目，≤1375 chars，用户画像
+```
+
+- **条目格式**：`§ 声明式事实`（不是命令式指令）
+- **写入**：LLM 调用 `memory_add` 工具 → 原子写入磁盘（tempfile + fsync + rename）
+- **读取**：LLM 调用 `memory_read` 工具
+- **检索**：关键词匹配 § 条目
+- **安全**：写入前扫描 prompt injection 模式
+
+### 热重载
+
+改 `extensions/` 或 `mio-harness/` 下的文件 → bridge 自动重启（`tsx watch` 拉起）。
+
+改 bridge 自身代码 → `tsx watch` 直接追踪。
+
+改前端代码 → Vite HMR。
 
 ## 硬约束
 
