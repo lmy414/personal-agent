@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>澪号 · 悬浮面板</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a10;
+    --text: #e8e6f0;
+    --text-muted: #7a7688;
+    --accent: #c4a0ff;
+    --panel-bg: rgba(14,12,24,0.82);
+    --border: rgba(255,255,255,0.06);
+  }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh; width: 100vw;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     模拟主界面
+     ══════════════════════════════════════════════════════ */
+  .main-app {
+    position: relative; width: 100vw; height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr 280px;
+    grid-template-rows: 48px 1fr 36px;
+    gap: 4px; padding: 4px;
+    background: var(--bg);
+  }
+  .mock-panel {
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.02);
+    padding: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+  }
+  .mock-topbar    { grid-row: 1; grid-column: 1 / 4; background: rgba(20,18,32,0.6); display:flex; align-items:center; gap:12px; padding:0 16px; font-size:13px; }
+  .mock-left      { grid-row: 2; grid-column: 1; }
+  .mock-center    { grid-row: 2; grid-column: 2; display:flex; align-items:center; justify-content:center; }
+  .mock-right     { grid-row: 2; grid-column: 3; }
+  .mock-status    { grid-row: 3; grid-column: 1 / 4; background: rgba(20,18,32,0.6); display:flex; align-items:center; padding:0 16px; font-size:11px; }
+  .mock-line { height: 10px; background: rgba(255,255,255,0.02); border-radius: 3px; margin-bottom: 6px; }
+  .mock-line.w60 { width: 60%; }
+  .mock-line.w80 { width: 80%; }
+  .mock-line.w40 { width: 40%; }
+
+  .topbar-title { color: var(--text); font-weight: 600; }
+  .topbar-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+
+  /* ══════════════════════════════════════════════════════
+     悬浮 Live2D 面板
+     ══════════════════════════════════════════════════════ */
+  .floating-mio {
+    position: fixed;
+    z-index: 9999;
+    width: 200px; height: 260px;
+    border-radius: 16px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 16px 48px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,255,255,0.03) inset;
+    cursor: grab;
+    transition: border-radius 0.25s, box-shadow 0.25s;
+    overflow: hidden;
+  }
+  .floating-mio.dragging {
+    cursor: grabbing;
+    box-shadow:
+      0 24px 64px rgba(0,0,0,0.6),
+      0 0 30px rgba(196,160,255,0.06);
+  }
+  .floating-mio.docked-left  { border-radius: 0 16px 16px 0; border-left: none; }
+  .floating-mio.docked-right { border-radius: 16px 0 0 16px; border-right: none; }
+  .floating-mio.docked-top    { border-radius: 0 0 16px 16px; border-top: none; }
+  .floating-mio.docked-bottom { border-radius: 16px 16px 0 0; border-bottom: none; }
+
+  /* 拖拽把手 */
+  .mio-handle {
+    position: absolute; top: 0; left: 0; right: 0; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: grab;
+  }
+  .floating-mio:hover .mio-handle,
+  .floating-mio.dragging .mio-handle { opacity: 1; }
+  .mio-handle-bar {
+    width: 28px; height: 3px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+
+  /* Live2D 区域 */
+  .mio-view {
+    width: 100%; height: 100%;
+    display: flex; align-items: start; justify-content: center;
+    background: radial-gradient(ellipse 60% 25% at 50% 25%, rgba(196,160,255,0.05) 0%, transparent 60%);
+  }
+  .mio-view .placeholder {
+    margin-top: 34px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+  .mio-view .placeholder .face { font-size: 52px; margin-bottom: 6px; }
+  .mio-view .placeholder .label { font-size: 9px; color: rgba(255,255,255,0.4); }
+
+  /* 状态点 */
+  .mio-dot {
+    position: absolute; top: 8px; right: 10px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 5px rgba(74,222,128,0.4);
+    z-index: 5;
+  }
+
+  /* 控件按钮 */
+  .mio-controls {
+    position: absolute; top: 6px; left: 8px;
+    display: flex; gap: 4px;
+    z-index: 11;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .floating-mio:hover .mio-controls { opacity: 1; }
+  .mio-ctrl-btn {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.4);
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .mio-ctrl-btn:hover {
+    background: rgba(196,160,255,0.2);
+    color: var(--text);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     聊天气泡 —— 从悬浮窗旁边冒出
+     ══════════════════════════════════════════════════════ */
+  .speech-bubble {
+    position: fixed;
+    z-index: 9998;
+    max-width: 280px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    background: rgba(20,18,32,0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(16px);
+    font-size: 13px; line-height: 1.55;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    animation: bubble-in 0.3s ease-out forwards, bubble-out 0.5s ease-in 4.5s forwards;
+    pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  @keyframes bubble-in {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes bubble-out {
+    to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  }
+  .speech-bubble .expr { font-size: 18px; margin-right: 4px; vertical-align: middle; }
+
+  /* ══════════════════════════════════════════════════════
+     吸附指示器
+     ══════════════════════════════════════════════════════ */
+  .dock-indicator {
+    position: fixed;
+    z-index: 9997;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    background: rgba(196,160,255,0.06);
+    border: 1px dashed rgba(196,160,255,0.15);
+  }
+  .dock-indicator.show { opacity: 1; }
+
+  /* 控制面板提示 */
+  .toggle-panel {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex; gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(20,18,32,0.8);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    color: var(--text-muted);
+    align-items: center;
+  }
+  .toggle-btn {
+    padding: 4px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .toggle-btn.on {
+    background: rgba(196,160,255,0.15);
+    border-color: rgba(196,160,255,0.25);
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ 模拟主界面 ══════════ -->
+<div class="main-app">
+  <div class="mock-panel mock-topbar">
+    <div class="topbar-dot"></div>
+    <span class="topbar-title">澪号 Personal Agent</span>
+    <span style="font-size:11px;color:var(--text-muted);">· 在线</span>
+  </div>
+  <div class="mock-panel mock-left">
+    <div style="font-weight:600;margin-bottom:8px;">文件</div>
+    <div class="mock-line w60"></div><div class="mock-line w80"></div><div class="mock-line w40"></div>
+    <div class="mock-line w60"></div><div class="mock-line w80"></div>
+    <div style="margin-top:20px;font-weight:600;margin-bottom:8px;">会话</div>
+    <div class="mock-line w80"></div><div class="mock-line w80"></div><div class="mock-line w60"></div>
+  </div>
+  <div class="mock-panel mock-center">
+    <div style="text-align:center;opacity:0.3;">
+      <div style="font-size:48px;margin-bottom:8px;">💬</div>
+      <div>对话区域</div>
+    </div>
+  </div>
+  <div class="mock-panel mock-right">
+    <div style="font-weight:600;margin-bottom:8px;">工具</div>
+    <div class="mock-line w80"></div><div class="mock-line w60"></div><div class="mock-line w40"></div>
+    <div class="mock-line w80"></div>
+  </div>
+  <div class="mock-panel mock-status">
+    <span>deepseek-chat</span><span style="margin:0 12px;opacity:0.4;">|</span>
+    <span>Token: 3.2K</span><span style="margin:0 12px;opacity:0.4;">|</span>
+    <span>记忆: 25 条</span>
+  </div>
+</div>
+
+<!-- ══════════ 悬浮 Live2D 面板 ══════════ -->
+<div class="floating-mio" id="floatingMio">
+  <div class="mio-handle" id="mioHandle">
+    <div class="mio-handle-bar"></div>
+  </div>
+  <div class="mio-dot" id="mioDot"></div>
+  <div class="mio-controls">
+    <button class="mio-ctrl-btn" id="btnClose" title="关闭">✕</button>
+  </div>
+  <div class="mio-view">
+    <div class="placeholder">
+      <div class="face">🎭</div>
+      <div class="label">澪号</div>
+    </div>
+  </div>
+</div>
+
+<!-- 吸附指示器 -->
+<div class="dock-indicator" id="dockIndicator"></div>
+
+<!-- 底部控制 -->
+<div class="toggle-panel">
+  <span>澪号面板</span>
+  <button class="toggle-btn on" id="toggleBtn">显示</button>
+  <span style="opacity:0.5;font-size:10px;">拖拽移动 · 靠近边缘吸附</span>
+</div>
+
+<script>
+  const panel = document.getElementById('floatingMio');
+  const handle = document.getElementById('mioHandle');
+  const dockIndicator = document.getElementById('dockIndicator');
+  const mioDot = document.getElementById('mioDot');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const btnClose = document.getElementById('btnClose');
+
+  // ══════════ 状态 ══════════
+  let docked = 'none'; // none | left | right | top | bottom
+  let x = window.innerWidth - 232;
+  let y = window.innerHeight - 292;
+
+  // ══════════ 初始位置（右下） ══════════
+  function applyPosition() {
+    panel.style.left = x + 'px';
+    panel.style.top = y + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  }
+  applyPosition();
+
+  // ══════════ 拖拽 ══════════
+  let dragging = false;
+  let startX, startY, originX, originY;
+  const DOCK_THRESHOLD = 40; // 吸附距离
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    panel.classList.add('dragging');
+    panel.classList.remove('docked-left', 'docked-right', 'docked-top', 'docked-bottom');
+    docked = 'none';
+    dockIndicator.classList.remove('show');
+
+    startX = e.clientX;
+    startY = e.clientY;
+    originX = x;
+    originY = y;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    x = originX + dx;
+    y = originY + dy;
+
+    // 范围限制
+    x = Math.max(-160, Math.min(window.innerWidth - 40, x));
+    y = Math.max(-20, Math.min(window.innerHeight - 40, y));
+
+    panel.style.left = x + 'px';
+    panel.style.top = y + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+
+    // 检测吸附区域
+    let dockTarget = '';
+    if (x < DOCK_THRESHOLD) dockTarget = 'left';
+    else if (x + 200 > window.innerWidth - DOCK_THRESHOLD) dockTarget = 'right';
+    else if (y < DOCK_THRESHOLD) dockTarget = 'top';
+    else if (y + 260 > window.innerHeight - DOCK_THRESHOLD) dockTarget = 'bottom';
+
+    if (dockTarget) {
+      const r = dockIndicator;
+      r.classList.add('show');
+      switch (dockTarget) {
+        case 'left':   r.style.cssText = `left:0;top:0;width:${DOCK_THRESHOLD}px;height:100vh;`; break;
+        case 'right':  r.style.cssText = `right:0;top:0;width:${DOCK_THRESHOLD}px;height:100vh;`; break;
+        case 'top':    r.style.cssText = `top:0;left:0;height:${DOCK_THRESHOLD}px;width:100vw;`; break;
+        case 'bottom': r.style.cssText = `bottom:0;left:0;height:${DOCK_THRESHOLD}px;width:100vw;`; break;
+      }
+    } else {
+      dockIndicator.classList.remove('show');
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove('dragging');
+    dockIndicator.classList.remove('show');
+
+    // 执行吸附
+    if (x < DOCK_THRESHOLD) {
+      x = 0; docked = 'left';
+    } else if (x + 200 > window.innerWidth - DOCK_THRESHOLD) {
+      x = window.innerWidth - 200; docked = 'right';
+    } else if (y < DOCK_THRESHOLD) {
+      y = 0; docked = 'top';
+    } else if (y + 260 > window.innerHeight - DOCK_THRESHOLD) {
+      y = window.innerHeight - 260; docked = 'bottom';
+    } else {
+      docked = 'none';
+    }
+
+    panel.className = 'floating-mio';
+    if (docked !== 'none') panel.classList.add('docked-' + docked);
+    panel.style.left = x + 'px';
+    panel.style.top = y + 'px';
+  });
+
+  // ══════════ 气泡 ══════════
+  function showBubble(text, expr) {
+    const existing = document.querySelectorAll('.speech-bubble');
+    existing.forEach(b => b.remove());
+
+    const bubble = document.createElement('div');
+    bubble.className = 'speech-bubble';
+    const icon = expr ? `<span class="expr">${expr}</span>` : '';
+    bubble.innerHTML = icon + text;
+
+    // 定位在面板左侧或上方
+    const panelRect = panel.getBoundingClientRect();
+    if (docked === 'right') {
+      bubble.style.right = (window.innerWidth - panelRect.left + 12) + 'px';
+      bubble.style.top = (panelRect.top + 30) + 'px';
+    } else {
+      bubble.style.left = (panelRect.right + 12) + 'px';
+      bubble.style.top = (panelRect.top + 30) + 'px';
+    }
+
+    document.body.appendChild(bubble);
+    bubble.addEventListener('animationend', (e) => {
+      if (e.animationName === 'bubble-out') bubble.remove();
+    });
+
+    // 绿点闪紫
+    mioDot.style.background = '#c4a0ff';
+    mioDot.style.boxShadow = '0 0 10px rgba(196,160,255,0.6)';
+    setTimeout(() => {
+      mioDot.style.background = '#4ade80';
+      mioDot.style.boxShadow = '0 0 5px rgba(74,222,128,0.4)';
+    }, 500);
+  }
+
+  // ══════════ 模拟对话 ══════════
+  const replies = [
+    { text: 'hhh 好（）', expr: '😊' },
+    { text: '等下，让我看看...', expr: '🤔' },
+    { text: '嗯嗯，知道了', expr: '😶' },
+    { text: '这个挺有意思的', expr: '😄' },
+    { text: '不确定，我查一下', expr: '🤔' },
+    { text: '累了就歇会', expr: '😌' },
+    { text: '行，已经改了', expr: '😊' },
+  ];
+
+  let talkTimer;
+  function simulateChat() {
+    const r = replies[Math.floor(Math.random() * replies.length)];
+    showBubble(r.text, r.expr);
+    talkTimer = setTimeout(simulateChat, 3000 + Math.random() * 5000);
+  }
+  talkTimer = setTimeout(simulateChat, 1500);
+
+  // ══════════ 控制 ══════════
+  let visible = true;
+  toggleBtn.addEventListener('click', () => {
+    visible = !visible;
+    panel.style.display = visible ? '' : 'none';
+    toggleBtn.textContent = visible ? '显示' : '隐藏';
+    toggleBtn.classList.toggle('on', visible);
+    if (!visible) {
+      clearTimeout(talkTimer);
+      document.querySelectorAll('.speech-bubble').forEach(b => b.remove());
+    } else {
+      talkTimer = setTimeout(simulateChat, 1500);
+    }
+  });
+
+  btnClose.addEventListener('click', () => {
+    toggleBtn.click();
+  });
+
+  // 双击面板 → 模拟回复
+  panel.addEventListener('dblclick', (e) => {
+    if (e.target === handle || e.target.closest('.mio-handle-bar,.mio-ctrl-btn,.mio-controls')) return;
+    const r = replies[Math.floor(Math.random() * replies.length)];
+    showBubble(r.text, r.expr);
+  });
+</script>
+
+</body>
+</html>

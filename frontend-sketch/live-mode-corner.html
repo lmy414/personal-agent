@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>澪号 · 角落陪伴</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a10;
+    --text: #e8e6f0;
+    --text-muted: #7a7688;
+    --accent: #c4a0ff;
+  }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh; width: 100vw;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     桌面背景（模拟 Mirror 的工作环境）
+     ══════════════════════════════════════════════════════ */
+  .desktop {
+    position: relative;
+    width: 100vw; height: 100vh;
+    background:
+      linear-gradient(180deg, #0d0d18 0%, #0a0a14 100%);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .desktop-bg {
+    position: absolute; inset: 0;
+    opacity: 0.15;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.01) 40px, rgba(255,255,255,0.01) 41px);
+  }
+  .workspace-hint {
+    font-size: 14px; color: rgba(255,255,255,0.08);
+    letter-spacing: 4px;
+    pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     澪号 —— 右下角小窗
+     ══════════════════════════════════════════════════════ */
+  .mio-window {
+    position: absolute;
+    right: 32px; bottom: 24px;
+    width: 260px; height: 340px;
+    border-radius: 20px;
+    background: rgba(14,12,24,0.75);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.4),
+      0 0 0 1px rgba(255,255,255,0.03) inset;
+    overflow: hidden;
+    z-index: 100;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .mio-window:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 24px 70px rgba(0,0,0,0.5),
+      0 0 40px rgba(196,160,255,0.04),
+      0 0 0 1px rgba(196,160,255,0.06) inset;
+  }
+
+  /* Live2D 画布区域（聚焦上半身） */
+  .mio-canvas {
+    width: 100%; height: 100%;
+    display: flex; align-items: start; justify-content: center;
+    position: relative;
+    background:
+      radial-gradient(ellipse 70% 30% at 50% 30%, rgba(196,160,255,0.06) 0%, transparent 60%);
+  }
+  .mio-canvas .placeholder {
+    position: absolute;
+    top: 15%; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0.25;
+  }
+  .mio-canvas .placeholder .face {
+    font-size: 60px;
+    margin-bottom: 8px;
+  }
+  .mio-canvas .placeholder .label {
+    font-size: 10px; color: rgba(255,255,255,0.4);
+  }
+
+  /* 状态指示点 */
+  .mio-status-dot {
+    position: absolute; top: 12px; right: 14px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74,222,128,0.4);
+    z-index: 5;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     聊天气泡 —— 从澪号窗口旁冒出，短暂停留后消失
+     ══════════════════════════════════════════════════════ */
+  .speech-bubble {
+    position: absolute;
+    right: 300px; bottom: 180px;
+    max-width: 320px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    border-bottom-right-radius: 6px;
+    background: rgba(20,18,32,0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(16px);
+    font-size: 13px; line-height: 1.6;
+    color: var(--text);
+    z-index: 99;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    animation: speech-in 0.35s ease-out forwards, speech-out 0.6s ease-in 5s forwards;
+    pointer-events: none;
+  }
+  @keyframes speech-in {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes speech-out {
+    to { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  }
+  .speech-bubble .expr-icon {
+    font-size: 20px;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     迷你输入 —— 在澪号窗口底部，点击出现
+     ══════════════════════════════════════════════════════ */
+  .quick-input {
+    position: absolute;
+    left: 50%; bottom: 40px;
+    transform: translateX(-50%);
+    z-index: 200;
+    display: flex; gap: 8px;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .quick-input.visible { opacity: 1; }
+  .quick-input input {
+    width: 400px;
+    padding: 10px 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(14,12,24,0.85);
+    backdrop-filter: blur(16px);
+    color: var(--text);
+    font-size: 13px; font-family: inherit;
+    outline: none;
+    user-select: text;
+  }
+  .quick-input input:focus {
+    border-color: rgba(196,160,255,0.25);
+  }
+  .quick-input input::placeholder {
+    color: rgba(255,255,255,0.14);
+  }
+  .quick-input button {
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    background: rgba(196,160,255,0.2);
+    color: #fff; font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .quick-input button:hover {
+    background: rgba(196,160,255,0.35);
+  }
+
+  /* 唤起输入框的提示 */
+  .input-hint {
+    position: absolute;
+    bottom: 18px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .mio-window:hover .input-hint { opacity: 0.5; }
+
+  /* ══════════════════════════════════════════════════════
+     模式切换（左上）
+     ══════════════════════════════════════════════════════ */
+  .mode-switch {
+    position: absolute; top: 24px; left: 24px;
+    z-index: 200;
+    display: flex; gap: 8px;
+  }
+  .mode-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-muted);
+    font-size: 12px; cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: rgba(196,160,255,0.12);
+    border-color: rgba(196,160,255,0.2);
+    color: var(--text);
+  }
+  .mode-btn:hover { background: rgba(255,255,255,0.06); }
+</style>
+</head>
+<body>
+
+<div class="desktop">
+  <!-- 网格背景 -->
+  <div class="desktop-bg"></div>
+  <div class="workspace-hint">Mirror 的工作空间</div>
+
+  <!-- 模式切换 -->
+  <div class="mode-switch">
+    <button class="mode-btn active">🧑‍💻 开发</button>
+    <button class="mode-btn">🎬 陪伴</button>
+  </div>
+
+  <!-- ══════════ 澪号小窗 ══════════ -->
+  <div class="mio-window" id="mioWindow">
+    <div class="mio-status-dot" id="statusDot"></div>
+    <div class="mio-canvas">
+      <div class="placeholder">
+        <div class="face">🎭</div>
+        <div class="label">澪号 · 在线</div>
+      </div>
+    </div>
+    <div class="input-hint">点击这里和澪号说话</div>
+  </div>
+
+  <!-- 快捷输入 -->
+  <div class="quick-input" id="quickInput">
+    <input type="text" placeholder="和澪号说点什么..." id="chatInput">
+    <button id="sendBtn">↑</button>
+  </div>
+
+  <!-- 气泡容器 -->
+  <div id="bubbleContainer"></div>
+</div>
+
+<script>
+  const mioWindow = document.getElementById('mioWindow');
+  const quickInput = document.getElementById('quickInput');
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('sendBtn');
+  const bubbleContainer = document.getElementById('bubbleContainer');
+  const statusDot = document.getElementById('statusDot');
+
+  // 模拟表情 → 回复的映射
+  const replyMap = [
+    { text: 'hhh 好（）', expr: '😊' },
+    { text: '等下，让我看看...', expr: '🤔' },
+    { text: '嗯嗯，知道了', expr: '😶' },
+    { text: '这个挺有意思的', expr: '😄' },
+    { text: '不确定，我查一下', expr: '🤔' },
+    { text: '南蚌（）你这写法真有意思', expr: '😏' },
+    { text: '累了就歇会', expr: '😌' },
+    { text: '行，已经改了', expr: '😊' },
+  ];
+
+  function showSpeech(text, expr) {
+    const bubble = document.createElement('div');
+    bubble.className = 'speech-bubble';
+    const icon = expr ? `<span class="expr-icon">${expr}</span>` : '';
+    bubble.innerHTML = icon + text;
+    bubbleContainer.appendChild(bubble);
+
+    bubble.addEventListener('animationend', (e) => {
+      if (e.animationName === 'speech-out') bubble.remove();
+    });
+  }
+
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    // 用户气泡
+    showSpeech(text, null);
+    input.value = '';
+
+    // 澪号回复
+    const reply = replyMap[Math.floor(Math.random() * replyMap.length)];
+    // 绿点闪一下
+    statusDot.style.background = '#c4a0ff';
+    statusDot.style.boxShadow = '0 0 10px rgba(196,160,255,0.6)';
+    setTimeout(() => {
+      statusDot.style.background = '#4ade80';
+      statusDot.style.boxShadow = '0 0 6px rgba(74,222,128,0.4)';
+    }, 600);
+
+    setTimeout(() => showSpeech(reply.text, reply.expr), 700 + Math.random() * 1000);
+  }
+
+  btn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // 点击澪号窗口 → 弹出输入框
+  mioWindow.addEventListener('click', () => {
+    quickInput.classList.add('visible');
+    input.focus();
+  });
+
+  // ESC 或点击其他区域 → 收起输入框
+  document.addEventListener('click', (e) => {
+    if (!quickInput.contains(e.target) && !mioWindow.contains(e.target)) {
+      quickInput.classList.remove('visible');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') quickInput.classList.remove('visible');
+  });
+</script>
+
+</body>
+</html>

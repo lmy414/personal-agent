@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>澪号 · LIVE v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep: #0a0a10;
+    --text-primary: #e8e6f0;
+    --text-secondary: #9b97b0;
+    --text-muted: #636078;
+    --accent: #c4a0ff;
+    --live-red: #ff3b5c;
+  }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    height: 100vh; width: 100vw;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     全屏舞台
+     ══════════════════════════════════════════════════════ */
+  .live-stage {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% 35%, rgba(196,160,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 30% at 50% 45%, rgba(140,120,200,0.06) 0%, transparent 50%),
+      var(--bg-deep);
+  }
+
+  /* Live2D 视口 —— 聚焦上半身 */
+  .live-viewport {
+    position: absolute;
+    inset: 0;
+    /* 裁切下半身：底部向上偏移 20% */
+    display: flex; align-items: start; justify-content: center;
+    overflow: hidden;
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 55%,
+      transparent 75%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 55%,
+      transparent 75%
+    );
+  }
+
+  /* 角色站位引导 */
+  .live-viewport::after {
+    content: '';
+    position: absolute;
+    bottom: 28%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(196,160,255,0.15), transparent);
+  }
+
+  /* 模型区域占位 */
+  .model-placeholder {
+    position: absolute;
+    top: 5%; left: 50%;
+    transform: translateX(-50%);
+    width: 55vw; max-width: 700px;
+    aspect-ratio: 1 / 1.2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .model-placeholder .avatar-frame {
+    width: 70%; aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px dashed rgba(196,160,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .model-placeholder .avatar-emoji { font-size: 80px; }
+  .model-placeholder .avatar-label {
+    margin-top: 10px;
+    font-size: 11px; color: rgba(255,255,255,0.3);
+  }
+  .model-placeholder .crop-hint {
+    margin-top: 30px; font-size: 10px;
+    color: rgba(255,255,255,0.2);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     LIVE 角标 + 模式切换（顶部）
+     ══════════════════════════════════════════════════════ */
+  .top-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .top-bar > * { pointer-events: auto; }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .live-dot {
+    width: 10px; height: 10px;
+    background: var(--live-red);
+    border-radius: 50%;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,92,0.5); }
+    50%      { box-shadow: 0 0 0 8px rgba(255,59,92,0); }
+  }
+  .live-text {
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 3px;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(255,59,92,0.4);
+  }
+  .live-viewer {
+    font-size: 12px; color: var(--text-secondary);
+  }
+
+  .mode-btns {
+    display: flex; gap: 8px;
+  }
+  .mode-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    font-size: 12px; cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: rgba(196,160,255,0.15);
+    border-color: rgba(196,160,255,0.3);
+    color: var(--text-primary);
+  }
+  .mode-btn:hover { background: rgba(255,255,255,0.08); }
+
+  /* ══════════════════════════════════════════════════════
+     聊天气泡 —— 悬浮字幕
+     ══════════════════════════════════════════════════════ */
+  .chat-bubbles {
+    position: absolute; bottom: 28%; left: 50%;
+    transform: translateX(-50%);
+    width: 70vw; max-width: 800px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 12px;
+    z-index: 15;
+    pointer-events: none;
+  }
+
+  .bubble {
+    max-width: 85%;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px; line-height: 1.6;
+    backdrop-filter: blur(16px);
+    animation: bubble-in 0.4s ease-out, bubble-fade 6s ease-in forwards;
+    pointer-events: auto;
+    user-select: text;
+  }
+  @keyframes bubble-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes bubble-fade {
+    0%   { opacity: 1; }
+    70%  { opacity: 1; }
+    100% { opacity: 0.12; }
+  }
+
+  .bubble.user {
+    align-self: flex-end;
+    background: rgba(196,160,255,0.12);
+    border: 1px solid rgba(196,160,255,0.1);
+    color: var(--text-primary);
+    border-bottom-right-radius: 6px;
+  }
+  .bubble.assistant {
+    align-self: flex-start;
+    background: rgba(16,14,28,0.7);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+    border-bottom-left-radius: 6px;
+  }
+  .bubble .sender {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    opacity: 0.5;
+  }
+
+  /* 表情标记（气泡旁的小表情指示器） */
+  .bubble .expr-tag {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 18px;
+    vertical-align: middle;
+    opacity: 0.8;
+  }
+
+  /* ══════════════════════════════════════════════════════
+     底部输入区（需要时出现）
+     ══════════════════════════════════════════════════════ */
+  .input-zone {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50vw; max-width: 600px;
+    display: flex; gap: 10px;
+    z-index: 20;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .input-zone:hover, .input-zone:focus-within {
+    opacity: 1;
+  }
+  .input-zone input {
+    flex: 1;
+    background: rgba(16,14,28,0.75);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 12px 20px;
+    color: var(--text-primary);
+    font-size: 14px; font-family: inherit;
+    outline: none;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.2s;
+    user-select: text;
+  }
+  .input-zone input:focus {
+    border-color: rgba(196,160,255,0.3);
+  }
+  .input-zone input::placeholder {
+    color: rgba(255,255,255,0.15);
+  }
+  .input-zone button {
+    width: 48px; height: 48px;
+    border-radius: 50%; border: none;
+    background: linear-gradient(135deg, rgba(196,160,255,0.25), rgba(140,120,200,0.15));
+    color: #fff; font-size: 20px;
+    cursor: pointer; flex-shrink: 0;
+    transition: transform 0.15s, background 0.2s;
+  }
+  .input-zone button:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, rgba(196,160,255,0.45), rgba(140,120,200,0.3));
+  }
+
+  /* ══════════════════════════════════════════════════════
+     底部微小的状态指示
+     ══════════════════════════════════════════════════════ */
+  .status-dot {
+    position: absolute;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px;
+    z-index: 10;
+    font-size: 11px; color: var(--text-muted);
+    pointer-events: none;
+  }
+  .status-dot .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+  }
+</style>
+</head>
+<body>
+
+<div class="live-stage">
+
+  <!-- ═══ Live2D 视口（上半身聚焦） ═══ -->
+  <div class="live-viewport" id="viewport">
+    <div class="model-placeholder">
+      <div class="avatar-frame">
+        <div class="avatar-emoji">🎭</div>
+      </div>
+      <div class="avatar-label">Live2D 模型区域</div>
+      <div class="crop-hint">▾ 下半身裁切线 ▾</div>
+    </div>
+  </div>
+
+  <!-- ═══ 顶部栏 ═══ -->
+  <div class="top-bar">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span class="live-text">LIVE</span>
+      <span class="live-viewer">· Mirror</span>
+    </div>
+    <div class="mode-btns">
+      <button class="mode-btn">🧑‍💻 开发</button>
+      <button class="mode-btn active">🎬 LIVE</button>
+    </div>
+  </div>
+
+  <!-- ═══ 聊天气泡（悬浮字幕） ═══ -->
+  <div class="chat-bubbles" id="bubbles">
+    <div class="bubble user">
+      <div class="sender">MIRROR</div>
+      hhh 今天好累，帮我看看 bridge 目录有什么
+    </div>
+    <div class="bubble assistant">
+      <div class="sender">澪号 <span class="expr-tag">🤔</span></div>
+      等下，我看看（）<br>bridge 下面有 handlers、dispatcher、protocol... 还挺全的
+    </div>
+    <div class="bubble user">
+      <div class="sender">MIRROR</div>
+      把自动重启关了吧
+    </div>
+  </div>
+
+  <!-- ═══ 状态指示 ═══ -->
+  <div class="status-dot">
+    <div class="dot"></div>
+    <span>deepseek-chat · 25 条记忆</span>
+  </div>
+
+  <!-- ═══ 输入区 ═══ -->
+  <div class="input-zone">
+    <input type="text" placeholder="和澪号说点什么..." id="chatInput">
+    <button id="sendBtn">↑</button>
+  </div>
+
+</div>
+
+<script>
+  const bubbles = document.getElementById('bubbles');
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('sendBtn');
+  const exprEmojis = ['😶','😊','🤔','😮','😳','😄','😤','😢','🤩','🥱'];
+
+  function addBubble(role, text, expression) {
+    const div = document.createElement('div');
+    div.className = 'bubble ' + role;
+    const sender = role === 'user' ? 'MIRROR' : '澪号';
+    const exprHtml = expression ? `<span class="expr-tag">${expression}</span>` : '';
+    div.innerHTML = `<div class="sender">${sender}${exprHtml}</div>${text}`;
+    bubbles.appendChild(div);
+
+    // 只保留最近 6 条
+    while (bubbles.children.length > 6) {
+      bubbles.firstElementChild.remove();
+    }
+  }
+
+  btn.addEventListener('click', () => {
+    const text = input.value.trim();
+    if (!text) return;
+    addBubble('user', text);
+    input.value = '';
+
+    // 模拟澪号回复 + 自动表情
+    const replies = [
+      { text: 'hhh 好（）', expr: '😊' },
+      { text: '等下，让我想想...', expr: '🤔' },
+      { text: '嗯嗯，我知道了', expr: '😶' },
+      { text: '这个挺有意思的', expr: '😄' },
+      { text: '不确定，我查一下', expr: '🤔' },
+    ];
+    const r = replies[Math.floor(Math.random() * replies.length)];
+    setTimeout(() => addBubble('assistant', r.text, r.expr), 800 + Math.random() * 1200);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') btn.click();
+  });
+
+  // 点击空白区域聚焦输入框
+  document.querySelector('.live-viewport').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget || e.target.classList.contains('model-placeholder') || e.target.closest('.avatar-frame, .avatar-emoji, .avatar-label, .crop-hint')) {
+      input.focus();
+    }
+  });
+</script>
+
+</body>
+</html>
