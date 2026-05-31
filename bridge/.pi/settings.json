@@ -1,10 +1,6 @@
 {
   "extensions": [
     "../extensions/pa-mio/index.ts",
-    "../extensions/pa-sqlite/index.ts",
-    "../extensions/pa-files/index.ts",
-    "../extensions/pa-budget/index.ts",
-    "../extensions/pa-usage/index.ts",
-    "../extensions/pa-observe/index.ts"
+    "../extensions/pa-files/index.ts"
   ]
 }
