@@ -12,6 +12,8 @@ import './extensions/file-tree'
 import './extensions/doc-preview'
 import './extensions/memory-view'
 import './extensions/right-panel'
+import './extensions/top-menu'
+import './extensions/settings-page'
 
 render(() => (
   <AgentProvider sessionId="sess-default">
