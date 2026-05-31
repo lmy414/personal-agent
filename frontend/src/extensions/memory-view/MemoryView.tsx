@@ -1,4 +1,4 @@
-import { createSignal, For, onMount, onCleanup } from 'solid-js'
+import { createSignal, For, onMount, onCleanup, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { ServerMessage } from '@bridge/protocol'
 
@@ -9,10 +9,15 @@ interface MemoryItem {
 }
 
 export function MemoryView() {
-  const { send, subscribe } = useAgent()
+  const { send, subscribe, connected } = useAgent()
   const [query, setQuery] = createSignal('')
   const [memories, setMemories] = createSignal<MemoryItem[]>([])
   const [loading, setLoading] = createSignal(true)
+
+  const fetchList = () => {
+    setLoading(true)
+    send('memory.list', { limit: 50, offset: 0 })
+  }
 
   onMount(() => {
     const unsubResults = subscribe('memory.results', (msg: ServerMessage) => {
@@ -30,14 +35,17 @@ export function MemoryView() {
       unsubResults()
       unsubList()
     })
+  })
 
-    send('memory.list', { limit: 20, offset: 0 })
+  // WebSocket 连接建立后自动拉取
+  createEffect(() => {
+    if (connected()) fetchList()
   })
 
   const handleSearch = () => {
     const q = query().trim()
     if (!q) {
-      send('memory.list', { limit: 20, offset: 0 })
+      fetchList()
       return
     }
     setLoading(true)
@@ -57,7 +65,7 @@ export function MemoryView() {
         />
       </div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
-        {query() ? `搜索: ${query()}` : '最近记忆'}
+        {query() ? `搜索: ${query()}` : '所有记忆'}
       </div>
       {loading() ? (
         <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:16px;">
