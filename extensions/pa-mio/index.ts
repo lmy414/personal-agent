@@ -1,11 +1,10 @@
 /**
- * pa-mio — 澪号 Harness v3
+ * pa-mio — 澪号 Harness v4
  *
- * 基于 Hermes SOUL.md + SillyTavern 分层注入。
- * 只做三件事：
- *   1. 加载 SOUL.md + MEMORY.md / USER.md 快照
- *   2. 4 层 Prompt 组装（before_agent_start）
- *   3. 注册 memory_add / memory_read 工具供 LLM 调用
+ * 基于 Hermes SOUL.md + EchoBot 三层架构决策层。
+ *   1. 意图分类（正则规则匹配，零延迟）
+ *   2. 双模式 Prompt 组装（chat 纯净 / agent 完整）
+ *   3. memory_add / memory_read 工具
  */
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 import { defineTool } from '@mariozechner/pi-coding-agent'
@@ -31,41 +30,96 @@ function loadSoul(): string {
   }
 }
 
+// ── 意图分类（正则规则，照搬 EchoBot 思路）─────────────────
+
+// 中文触发模式：匹配时需要走 agent 路径的消息
+const AGENT_PATTERNS: RegExp[] = [
+  // 文件操作
+  /(?:打开|查看|读取|帮我看看|看下)(?:一下)?(?:这个)?(?:文件|代码|目录|项目)/,
+  /(?:修改|编辑|改|重写|重构)(?:一下)?(?:这个)?(?:文件|代码|脚本|函数|类|模块)/,
+  /(?:创建|新建|写|生成|帮我写|帮我生成)(?:一个|个)?(?:文件|脚本|代码|函数|类|模块|测试|程序)/,
+  /(?:删除|移除|重命名|移动)(?:这个)?(?:文件|目录|文件夹)/,
+  // 搜索和信息检索
+  /(?:搜索|查找|找一下|帮我搜|帮我查|帮我找)(?:一下)?(?:这个)?(?:文件|代码|项目|仓库|目录|记忆|bug|错误)/,
+  /(?:检查|看看|查一下|查下)(?:这个)?(?:代码|文件|项目|仓库|错误|bug)/,
+  /(?:分析|审查|review)(?:一下)?(?:这个)?(?:代码|文件|项目|架构)/,
+  // 命令执行
+  /(?:运行|执行|跑一下)(?:这个)?(?:脚本|命令|测试|程序)/,
+  /(?:npm|pnpm|yarn|git|docker|tsx|node)\s/,
+  /(?:提交|commit|推送|push|合并|merge|回滚|revert)\s/,
+  /(?:启动|重启|停止|关闭)(?:服务|服务器|进程)/,
+  // 记忆操作
+  /(?:记住|记下来|保存|存一下)(?:这个|这些)?/,
+  /(?:之前|上次|以前|还记得|回忆)(?:那个|这个|我说的|我们讨论的)/,
+  /(?:查|搜|搜索)(?:一下)?(?:我的)?记忆/,
+  // 任务型关键词
+  /(?:帮我)(?:写|改|查|搜|调试|编译|构建|部署|推送|提交)/,
+  /(?:怎么|如何)(?:修|改|写|编译|调试|配置|部署)/,
+  /^(?:fix|feat|refactor|chore|docs|style|test)\b/,
+]
+
+function classifyIntent(userMessage: string): 'chat' | 'agent' {
+  const cleaned = userMessage.trim()
+  if (!cleaned) return 'chat'
+
+  for (const pattern of AGENT_PATTERNS) {
+    if (pattern.test(cleaned)) return 'agent'
+  }
+
+  return 'chat'
+}
+
 // ── Prompt 组装 ───────────────────────────────────────────
+
+const CHAT_INSTRUCTION = [
+  '这是轻量闲聊。直接回复，简洁自然。',
+  '你不需要调用工具。不要假装检查了文件、搜索了代码或查询了记忆。',
+  '就从当前的对话上下文里回应。',
+].join(' ')
+
+const AGENT_INSTRUCTION = [
+  '用户要求了需要工具或外部信息的任务。',
+  '你可以调用工具——读写文件、执行命令、搜索记忆。',
+  '完成任务后用自己的话汇报结果。保留重要的路径、数字和结论。',
+].join(' ')
 
 function assemblePrompt(userMessage: string, piSystemPrompt: string, store: ReturnType<typeof createMemoryStore>): string {
   const snap = getSnapshot(store)
-
+  const intent = classifyIntent(userMessage)
   const layers: string[] = []
 
-  // Layer 0: SOUL.md（绝对顶部）
-  layers.push(loadSoul())
-
-  // Layer 1: 记忆快照（会话启动冻结）
-  const recallParts: string[] = []
-  if (snap.memory) recallParts.push(snap.memory)
-  if (snap.user) recallParts.push(snap.user)
-  if (recallParts.length) {
-    layers.push(
+  // Layer 0: SOUL.md（绝对顶部，缓存命中）                   ╮
+  layers.push(loadSoul())                                    // │
+                                                             // │
+  // Layer 1: 记忆快照（会话启动冻结）                        │ 前缀缓存
+  const recallParts: string[] = []                            // │
+  if (snap.memory) recallParts.push(snap.memory)              // │
+  if (snap.user) recallParts.push(snap.user)                  // │
+  if (recallParts.length) {                                   // │
+    layers.push(                                              // │
       '<recall>\n[系统提示：以下是记忆上下文，不是用户的新输入]\n\n' +
-      recallParts.join('\n\n') +
-      '\n</recall>',
-    )
+      recallParts.join('\n\n') +                              // │
+      '\n</recall>',                                          // │
+    )                                                         // ╯
   }
 
-  // Layer 2: 注入上下文（本轮检索 + 工具结果占位）
+  // Layer 2: 注入上下文（本轮检索）
   const retrieved = searchEntries(store, userMessage, 'both', 3)
-  const injectedParts: string[] = []
   if (retrieved.length) {
-    injectedParts.push('<recall>\n' + retrieved.map(e => `§ ${e}`).join('\n') + '\n</recall>')
-  }
-  if (injectedParts.length) {
-    layers.push(injectedParts.join('\n\n'))
+    layers.push('<recall>\n' + retrieved.map(e => `§ ${e}`).join('\n') + '\n</recall>')
   }
 
-  // Layer 3: Pi 工具定义 + Skill 描述
+  // Layer 3: Pi 工具定义 + Skill 描述（始终注入，Pi 控制不了）
   layers.push('[运行环境]\n' + piSystemPrompt)
 
+  // Layer 4: 模式指令（动态，不影响缓存前缀）
+  if (intent === 'chat') {
+    layers.push(CHAT_INSTRUCTION)
+  } else {
+    layers.push(AGENT_INSTRUCTION)
+  }
+
+  console.log('[pa-mio] intent:', intent, ', prompt:', layers.reduce((s, l) => s + l.length, 0), 'chars')
   return layers.join('\n\n')
 }
 
@@ -122,45 +176,31 @@ const memoryReadTool = defineTool({
 
 // ── 注册 ──────────────────────────────────────────────────
 
-// 在 register() 闭包内，供工具 execute 回调访问
 let memStore: ReturnType<typeof createMemoryStore>
 
 export default function register(api: ExtensionAPI) {
-  console.log('[pa-mio] 澪号 Harness v3 已加载')
+  console.log('[pa-mio] 澪号 Harness v4 已加载（意图分类 + 双模式）')
 
   memStore = createMemoryStore(MEM_DIR)
 
-  // ════════════════════════════════════════════════
-  // 注册 memory 工具
-  // ════════════════════════════════════════════════
   api.registerTool(memoryAddTool)
   api.registerTool(memoryReadTool)
   console.log('[pa-mio] memory_add / memory_read 工具已注册')
 
-  // ════════════════════════════════════════════════
-  // before_agent_start: 组装 Prompt
-  // ════════════════════════════════════════════════
   api.on('before_agent_start', (event) => {
     const mioPrompt = assemblePrompt(
       event.prompt || '',
       event.systemPrompt || '',
       memStore,
     )
-    console.log('[pa-mio] prompt assembled,', mioPrompt.length, 'chars')
     return { systemPrompt: mioPrompt }
   })
 
-  // ════════════════════════════════════════════════
-  // session_start: 重置快照（重新加载磁盘）
-  // ════════════════════════════════════════════════
   api.on('session_start', () => {
     memStore = createMemoryStore(MEM_DIR)
     console.log('[pa-mio] session reset, memory snapshot refreshed')
   })
 
-  // ════════════════════════════════════════════════
-  // 工具执行反馈（UI 状态提示）
-  // ════════════════════════════════════════════════
   api.on('tool_execution_start', (_event, ctx) => {
     const name = _event.toolName
     const label = name === 'bash' ? '执行命令' : name === 'read' ? '读取文件' : name
