@@ -125,11 +125,11 @@ export async function handleSessionSwitch(msg: ClientMessage, ws: WebSocket): Pr
     }
   }
 
-  sendSessionState(payload.sessionId, ws)
+  await sendSessionState(payload.sessionId, ws)
 }
 
-export function handleSessionState(msg: ClientMessage, ws: WebSocket): void {
-  sendSessionState(msg.sessionId, ws)
+export async function handleSessionState(msg: ClientMessage, ws: WebSocket): Promise<void> {
+  await sendSessionState(msg.sessionId, ws)
 }
 
 // ── session.history（新增：加载历史消息 + 工具调用）─────────────
@@ -241,9 +241,18 @@ export function handleSessionDelete(msg: ClientMessage, ws: WebSocket): void {
 
 // ── session.state（前端主动查询当前会话状态）────────────────────
 
-function sendSessionState(sessionId: string, ws: WebSocket): void {
+async function sendSessionState(sessionId: string, ws: WebSocket): Promise<void> {
+  let session = getPiSession(sessionId)
+  // 懒创建 Pi session：桥接重启后能够恢复上下文
+  if (!session) {
+    try {
+      await createPiSession({ sessionId })
+      session = getPiSession(sessionId)
+    } catch (err) {
+      console.warn('[session] failed to lazily create Pi session for state:', err)
+    }
+  }
   const meta = getSessionMeta(sessionId)
-  const session = getPiSession(sessionId)
   const contextUsage = session?.getContextUsage()
   const stats = (session as any)?.getSessionStats?.()
 
