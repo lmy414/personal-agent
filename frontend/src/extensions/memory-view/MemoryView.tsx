@@ -15,13 +15,11 @@ export function MemoryView() {
   const [loading, setLoading] = createSignal(true)
 
   onMount(() => {
-    // 订阅搜索结果
     const unsubResults = subscribe('memory.results', (msg: ServerMessage) => {
       const payload = msg.payload as { query: string; entries: MemoryItem[] }
       setMemories(payload.entries)
       setLoading(false)
     })
-    // 订阅列表
     const unsubList = subscribe('memory.list', (msg: ServerMessage) => {
       const payload = msg.payload as { entries: MemoryItem[]; total: number }
       setMemories(payload.entries)
@@ -48,6 +46,16 @@ export function MemoryView() {
 
   return (
     <>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input
+          type="text"
+          placeholder="搜索记忆..."
+          class="sub-search"
+          value={query()}
+          onInput={(e) => setQuery(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+        />
+      </div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
         {query() ? `搜索: ${query()}` : '最近记忆'}
       </div>
@@ -70,16 +78,6 @@ export function MemoryView() {
           </div>
         </>
       )}
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <input
-          type="text"
-          placeholder="搜索记忆..."
-          class="sub-search"
-          value={query()}
-          onInput={(e) => setQuery(e.currentTarget.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-      </div>
     </>
   )
 }
