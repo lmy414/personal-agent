@@ -168,7 +168,11 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
             id: `srv-${Date.now()}`,
             sessionId: msg.sessionId,
             ts: Date.now(),
-            payload: { messageId, delta: ame.delta },
+            payload: {
+              messageId,
+              delta: ame.delta,
+              deltaType: ame.type === 'thinking_delta' ? 'thinking' : 'text',
+            },
           }))
         }
         break

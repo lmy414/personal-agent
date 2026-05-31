@@ -17,6 +17,7 @@ export interface MessageEntry {
   messageId: string
   role: 'user' | 'assistant'
   content: string
+  thinking: string
   partial: boolean
   attachments?: { path: string; name: string; isImage: boolean }[]
 }
@@ -199,6 +200,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           messageId: msg.payload.messageId,
           role: msg.payload.role,
           content: '',
+          thinking: '',
           partial: true,
         }
         if (isCurrent) {
@@ -212,9 +214,32 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
       case 'message.delta': {
         const msgId = msg.payload.messageId
-        const pending = getPendingChars(msgSid)
-        pending.set(msgId, (pending.get(msgId) ?? '') + msg.payload.delta)
-        if (isCurrent) schedulePump()
+        const dtype = (msg.payload as any).deltaType as string | undefined
+
+        if (dtype === 'thinking') {
+          // 思考内容直接追加，不需要逐字动画（默认折叠不可见）
+          const appendThinking = (prev: MessageEntry[]) =>
+            prev.map((m) =>
+              m.messageId === msgId
+                ? { ...m, thinking: m.thinking + msg.payload.delta }
+                : m
+            )
+          if (isCurrent) {
+            setMessages((prev) => {
+              const next = appendThinking(prev)
+              sessionMessages.set(msgSid, next)
+              return next
+            })
+          } else {
+            const bg = sessionMessages.get(msgSid)
+            if (bg) sessionMessages.set(msgSid, appendThinking(bg))
+          }
+        } else {
+          // 文本 delta → 逐字动画
+          const pending = getPendingChars(msgSid)
+          pending.set(msgId, (pending.get(msgId) ?? '') + msg.payload.delta)
+          if (isCurrent) schedulePump()
+        }
         break
       }
 
@@ -411,6 +436,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           messageId: m.messageId,
           role: m.role as 'user' | 'assistant',
           content: m.content,
+          thinking: '',
           partial: m.partial ?? false,
           attachments: m.attachments ?? undefined,
         })) as MessageEntry[]
@@ -478,6 +504,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       messageId: `msg-${crypto.randomUUID()}`,
       role: 'user',
       content: displayContent ?? content,
+      thinking: '',
       partial: false,
       attachments,
     }

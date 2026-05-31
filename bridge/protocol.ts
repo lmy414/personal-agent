@@ -43,7 +43,7 @@ export type ServerMessage =
   // 对话层
   | ServerMsg<'turn.start', { turnIndex: number }>
   | ServerMsg<'message.start', { messageId: string; role: 'user' | 'assistant' }>
-  | ServerMsg<'message.delta', { messageId: string; delta: string }>
+  | ServerMsg<'message.delta', { messageId: string; delta: string; deltaType?: 'text' | 'thinking' }>
   | ServerMsg<'message.end', { messageId: string; content: string; usage: TokenUsage }>
   | ServerMsg<'turn.end', { turnIndex: number; usage: TokenUsage; cost: number }>
   // 工具层

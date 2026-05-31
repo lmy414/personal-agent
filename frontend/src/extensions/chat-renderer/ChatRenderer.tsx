@@ -29,10 +29,20 @@ export function ChatRenderer() {
   const [content, setContent] = createSignal('')
   const [attachments, setAttachments] = createSignal<Attachment[]>([])
   const [dragOver, setDragOver] = createSignal(false)
+  const [thinkingOpen, setThinkingOpen] = createSignal<Set<string>>(new Set())
   let scrollRef!: HTMLDivElement
   let textareaRef!: HTMLTextAreaElement
   const pendingPaths = new Set<string>()
   let unsubFile: (() => void) | null = null
+
+  const toggleThinking = (msgId: string) => {
+    setThinkingOpen((prev) => {
+      const next = new Set(prev)
+      if (next.has(msgId)) next.delete(msgId)
+      else next.add(msgId)
+      return next
+    })
+  }
 
   const isMainSession = () => {
     return agent.sessions().find((s) => s.title === '澪')?.id === agent.sessionId()
@@ -226,9 +236,36 @@ export function ChatRenderer() {
               const isLast = () => idx() === agent.messages().filter((m) => m.content || m.partial).length - 1
               const isAssistant = msg.role === 'assistant'
               const hasAttachments = msg.attachments?.length
+              const hasThinking = !!(msg as any).thinking
+              const thinkingExpanded = () => thinkingOpen().has(msg.messageId)
 
               return (
               <div class={`msg ${msg.role}`} classList={{ 'message-enter': isLast() && msg.partial }}>
+                {/* 思考过程（assistant，有 thinking 时显示） */}
+                {isAssistant && hasThinking && (
+                  <div class="thinking-block">
+                    <button
+                      class="thinking-toggle"
+                      onClick={() => toggleThinking(msg.messageId)}
+                    >
+                      <span class="thinking-arrow">{thinkingExpanded() ? '▼' : '▶'}</span>
+                      <span class="thinking-label">
+                        {msg.partial ? '思考中...' : '思考过程'}
+                      </span>
+                      {!msg.partial && (
+                        <span class="thinking-count">
+                          {(msg as any).thinking.length} 字
+                        </span>
+                      )}
+                    </button>
+                    {thinkingExpanded() && (
+                      <div class="thinking-content">
+                        {(msg as any).thinking}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* 用户消息 + 附件：展开附件徽章 */}
                 {msg.role === 'user' && hasAttachments ? (
                   <div class="msg-bubble">
