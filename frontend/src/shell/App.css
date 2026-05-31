@@ -379,12 +379,14 @@ html, body, #root {
   color: var(--text-muted);
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
 }
 
 .msg-bubble {
   padding: 10px 14px; border-radius: 12px;
   font-size: 13px; line-height: 1.6;
   color: var(--text-primary);
+  user-select: text;
 }
 .msg.user .msg-bubble {
   background: rgba(139,156,240,0.15);
@@ -475,6 +477,7 @@ html, body, #root {
   font-family: inherit; line-height: 1.5;
   outline: none; max-height: 120px;
   transition: border-color 0.2s;
+  user-select: text;
 }
 .chat-input:focus { border-color: rgba(139,156,240,0.3); }
 .chat-input::placeholder { color: rgba(255,255,255,0.20); }
