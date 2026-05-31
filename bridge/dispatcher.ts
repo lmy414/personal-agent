@@ -5,6 +5,7 @@ import { handleMessageSend, handleMessageCancel } from './handlers/message'
 import { handleModelSwitch, handleModelList } from './handlers/model'
 import { handleFileList, handleFileRead } from './handlers/file'
 import { handleMemorySearch, handleMemoryList } from './handlers/memory'
+import { handleSettingsGet, handleSettingsSet, handleSettingsDiscoverModels } from './handlers/settings'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -25,6 +26,9 @@ const routes: Record<string, Handler> = {
   'session.rename': handleSessionRename,
   'session.state': handleSessionState,
   'session.compact': handleSessionCompact,
+  'settings.get': handleSettingsGet,
+  'settings.set': handleSettingsSet,
+  'settings.discover-models': handleSettingsDiscoverModels,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {

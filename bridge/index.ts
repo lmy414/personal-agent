@@ -17,6 +17,21 @@ if (!mainSid) {
   db.prepare("INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, '澪')").run(mainSid)
   console.log('[bridge] 主会话「澪」已创建:', mainSid)
 }
+// 初始化默认设置（首次运行）
+const settingsCount = (db.prepare("SELECT COUNT(*) as cnt FROM settings WHERE key NOT LIKE 'main_%'").get() as { cnt: number }).cnt
+if (settingsCount === 0) {
+  const defaults: [string, string][] = [
+    ['default_model', 'deepseek-chat'],
+    ['thinking_level', 'medium'],
+    ['compact_threshold', '80'],
+    ['history_retention', '100'],
+    ['providers', JSON.stringify([{ id: 'deepseek', name: 'DeepSeek', apiKey: '', active: true }])],
+  ]
+  const insert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+  for (const [k, v] of defaults) insert.run(k, v)
+  console.log('[bridge] 默认设置已初始化')
+}
+
 // Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
 
 const wss = new WebSocketServer({ port: PORT })

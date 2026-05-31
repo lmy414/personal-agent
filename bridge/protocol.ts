@@ -27,6 +27,9 @@ export type ClientMessage =
   | ClientMsg<'session.rename', { sessionId: string; title: string }>
   | ClientMsg<'session.compact', {}>
   | ClientMsg<'session.state', {}>
+  | ClientMsg<'settings.get', {}>
+  | ClientMsg<'settings.set', { key: string; value: string }>
+  | ClientMsg<'settings.discover-models', {}>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -62,6 +65,7 @@ export type ServerMessage =
   | ServerMsg<'compaction', { beforeTokens: number; afterTokens: number }>
   | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }>
   | ServerMsg<'file.changed', { path: string }>
+  | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>
