@@ -411,9 +411,41 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
   }
 }
 
-export function handleMessageCancel(msg: ClientMessage, _ws: WebSocket): void {
+export async function handleMessageCancel(msg: ClientMessage, ws: WebSocket): Promise<void> {
   const session = getPiSession(msg.sessionId)
-  if (session) {
-    session.abort()
+  if (!session) return
+  try {
+    await session.abort()
+  } catch (err) {
+    console.warn('[message] abort error:', err)
   }
+  // 确认中断完成，推动状态同步
+  const ctx = session.getContextUsage()
+  const stats = (session as any).getSessionStats?.()
+  const meta = getSessionMeta(msg.sessionId)
+  ws.send(JSON.stringify({
+    type: 'turn.end',
+    id: `srv-${Date.now()}`,
+    sessionId: msg.sessionId,
+    ts: Date.now(),
+    payload: {
+      turnIndex: Date.now(),
+      usage: { input: stats?.tokens?.input ?? 0, output: stats?.tokens?.output ?? 0, total: stats?.tokens?.total ?? 0 },
+      cost: stats?.cost ?? 0,
+    },
+  }))
+  ws.send(JSON.stringify({
+    type: 'status.update',
+    id: `srv-${Date.now()}`,
+    sessionId: msg.sessionId,
+    ts: Date.now(),
+    payload: {
+      tokens: stats?.tokens?.total ?? 0,
+      cost: stats?.cost ?? 0,
+      contextUsed: ctx?.tokens ?? 0,
+      contextMax: ctx?.contextWindow ?? (session as any).model?.contextWindow ?? meta?.contextWindow ?? 0,
+      roundCount: meta?.roundCount ?? 0,
+      model: (session as any).model?.id ?? '',
+    },
+  }))
 }

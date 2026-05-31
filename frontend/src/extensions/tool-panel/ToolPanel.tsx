@@ -87,12 +87,12 @@ export function ToolPanel() {
         工具执行
         <span class="tool-count">{toolCalls().length} 条记录</span>
         <Show when={canCancel()}>
-          <button class="cancel-btn" onClick={handleCancel} title="中断当前操作">
-            ⏹
+          <button class="cancel-btn" onClick={handleCancel} title="中断AI输出">
+            ⏹ 中断
           </button>
         </Show>
         <Show when={cancelled()}>
-          <span class="cancel-toast">已中断</span>
+          <span class="cancel-toast">已中断，可继续对话</span>
         </Show>
       </div>
       <div class="tool-list">

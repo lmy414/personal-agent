@@ -198,7 +198,7 @@ export function ChatRenderer() {
         <span>澪号</span>
         <span class="chat-subtitle">
           ·{' '}
-          {agent.isStreaming() && !isMainSession() ? (
+          {agent.isStreaming() ? (
             <span class="praying-indicator">
               <span class="praying-dot" />
               <span class="praying-text">少女祈祷中</span>
@@ -208,6 +208,15 @@ export function ChatRenderer() {
           )}
         </span>
         <span class="chat-header-right">
+          {agent.isStreaming() && (
+            <button
+              class="stop-btn"
+              title="中断AI输出"
+              onClick={() => agent.cancelMessage()}
+            >
+              ⏹ 停止
+            </button>
+          )}
           <span class="energy-dot" style={{background: agent.connected() ? 'rgba(139,156,240,0.6)' : 'rgba(255,80,80,0.6)'}} />
           {agent.connected() ? '就绪' : '断连'}
         </span>

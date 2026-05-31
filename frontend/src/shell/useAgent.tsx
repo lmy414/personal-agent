@@ -466,7 +466,33 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     })
     send('message.send', { content, attachments })
   }
-  const cancelMessage = () => send('message.cancel', {})
+  const cancelMessage = () => {
+    // 立即本地清理：清空待渲染字符缓冲
+    const sid = currentSessionId()
+    sessionPendingChars.delete(sid)
+    if (pumpRafId !== null) {
+      cancelAnimationFrame(pumpRafId)
+      pumpRafId = null
+    }
+    // 终结所有 partial 消息 + 取消所有 running 工具
+    setMessages((prev) => {
+      const next = prev.map((m) =>
+        m.partial ? { ...m, partial: false, content: m.content || '(已中断)' } : m
+      )
+      sessionMessages.set(sid, next)
+      return next
+    })
+    setToolCalls((prev) => {
+      const next = prev.map((t) =>
+        t.status === 'running' ? { ...t, status: 'error' as const, output: t.output + '\n[已中断]' } : t
+      )
+      sessionToolCalls.set(sid, next)
+      return next
+    })
+    setIsStreaming(false)
+    // 发送中断指令给桥接层
+    send('message.cancel', {})
+  }
   const loadHistory = (sid: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return
     ws.send(JSON.stringify({
