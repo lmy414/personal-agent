@@ -11,27 +11,27 @@ function formatCw(n: number): string {
 }
 
 export function SettingsPage() {
-  const { isSettingsOpen, setIsSettingsOpen, settings, getSettings, setSetting, send, status } = useAgent()
+  const agent = useAgent()
+
+  // ── 所有 hooks 必须在早期 return 之前 ──
   const [expandedModelId, setExpandedModelId] = createSignal<string | null>(null)
 
   // 打开时拉取设置 + 自动发现模型
   createEffect(() => {
-    if (isSettingsOpen()) {
-      getSettings()
-      send('settings.discover-models', {})
+    if (agent.isSettingsOpen()) {
+      agent.getSettings()
+      agent.send('settings.discover-models', {})
     }
   })
 
   // ESC 关闭
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') setIsSettingsOpen(false)
+    if (e.key === 'Escape') agent.setIsSettingsOpen(false)
   }
 
   createEffect(() => {
-    if (isSettingsOpen()) {
+    if (agent.isSettingsOpen()) {
       window.addEventListener('keydown', handleKeyDown)
-    } else {
-      window.removeEventListener('keydown', handleKeyDown)
     }
   })
 
@@ -39,13 +39,13 @@ export function SettingsPage() {
     window.removeEventListener('keydown', handleKeyDown)
   })
 
-  const entries = () => settings()
+  // ── 派生值 ──
+  const entries = () => agent.settings()
   const defaultModel = () => getSetting(entries(), 'default_model') || 'deepseek-chat'
   const thinkingLevel = () => getSetting(entries(), 'thinking_level') || 'medium'
   const compactThreshold = () => getSetting(entries(), 'compact_threshold') || '80'
   const historyRetention = () => getSetting(entries(), 'history_retention') || '100'
 
-  // 模型列表：优先从 settings.providers 解析，fallback 到 availableModels
   const modelList = () => {
     const provRaw = getSetting(entries(), 'providers')
     if (provRaw) {
@@ -63,9 +63,9 @@ export function SettingsPage() {
           }
         }
         if (models.length > 0) return models
-      } catch { /* JSON parse error, fall through */ }
+      } catch { /* fall through */ }
     }
-    return (status.availableModels ?? []).map((m) => ({
+    return (agent.status.availableModels ?? []).map((m) => ({
       id: m.id,
       name: m.name,
       provider: 'DeepSeek',
@@ -74,12 +74,13 @@ export function SettingsPage() {
     }))
   }
 
-  if (!isSettingsOpen()) return null
+  // ── 仅 JSX 条件渲染 ──
+  if (!agent.isSettingsOpen()) return null
 
   return (
     <div class="settings-page open">
       <div class="settings-page-header">
-        <button class="settings-back-btn" onClick={() => setIsSettingsOpen(false)} title="返回">←</button>
+        <button class="settings-back-btn" onClick={() => agent.setIsSettingsOpen(false)} title="返回">←</button>
         <span style="font-size:18px;">⚙</span>
         <span class="settings-page-title">设置</span>
         <span class="settings-page-subtitle">配置智能体行为和模型接入</span>
@@ -92,7 +93,6 @@ export function SettingsPage() {
         </div>
 
         <div class="settings-content">
-          {/* 已配置厂商 */}
           <div class="settings-section">
             <div class="settings-section-title">🔌 已配置厂商</div>
             <div class="settings-section-desc">当前已接入的模型厂商。新对话将使用默认模型创建。</div>
@@ -111,7 +111,6 @@ export function SettingsPage() {
             </button>
           </div>
 
-          {/* 已接入模型 */}
           <div class="settings-section">
             <div class="settings-section-title">📋 已接入模型</div>
             <div class="settings-section-desc">点击行展开独立参数，★ 设为默认。</div>
@@ -130,7 +129,7 @@ export function SettingsPage() {
                           <td onClick={(e) => e.stopPropagation()}>
                             <span
                               class={`model-default-star${isDefault ? '' : ' inactive'}`}
-                              onClick={() => setSetting('default_model', m.id)}
+                              onClick={() => agent.setSetting('default_model', m.id)}
                               title={isDefault ? '当前默认' : '设为默认'}
                             >★</span>
                           </td>
@@ -147,7 +146,7 @@ export function SettingsPage() {
                               <div class="model-param">
                                 <span class="model-param-label">思考强度</span>
                                 <span class="model-param-value">
-                                  <select value={thinkingLevel()} onChange={(e) => setSetting('thinking_level', e.currentTarget.value)}>
+                                  <select value={thinkingLevel()} onChange={(e) => agent.setSetting('thinking_level', e.currentTarget.value)}>
                                     <option value="low">Low</option>
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
@@ -169,13 +168,12 @@ export function SettingsPage() {
             </table>
           </div>
 
-          {/* 默认参数 */}
           <div class="settings-section">
             <div class="settings-section-title">⚙ 默认参数</div>
             <div class="settings-form-row">
               <span class="settings-form-label">思考强度</span>
               <span class="settings-form-value">
-                <select class="settings-select" value={thinkingLevel()} onChange={(e) => setSetting('thinking_level', e.currentTarget.value)}>
+                <select class="settings-select" value={thinkingLevel()} onChange={(e) => agent.setSetting('thinking_level', e.currentTarget.value)}>
                   <option value="low">Low — 快速响应</option>
                   <option value="medium">Medium — 均衡</option>
                   <option value="high">High — 深度思考</option>
@@ -187,7 +185,7 @@ export function SettingsPage() {
               <span class="settings-form-value">
                 <input class="settings-input" type="number" min="50" max="95"
                   value={compactThreshold()}
-                  onChange={(e) => setSetting('compact_threshold', e.currentTarget.value)} />
+                  onChange={(e) => agent.setSetting('compact_threshold', e.currentTarget.value)} />
                 <span class="settings-input-unit">%</span>
               </span>
             </div>
@@ -196,7 +194,7 @@ export function SettingsPage() {
               <span class="settings-form-value">
                 <input class="settings-input" type="number" min="10" max="500"
                   value={historyRetention()}
-                  onChange={(e) => setSetting('history_retention', e.currentTarget.value)} />
+                  onChange={(e) => agent.setSetting('history_retention', e.currentTarget.value)} />
                 <span class="settings-input-unit">条</span>
               </span>
             </div>

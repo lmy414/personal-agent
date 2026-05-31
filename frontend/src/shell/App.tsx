@@ -1,9 +1,12 @@
 import { createSignal, For, onMount, onCleanup } from 'solid-js'
 import { SceneLayer } from './SceneLayer'
 import { registry, type Extension } from '@/registry'
+import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
+import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
 import './App.css'
 
 function renderExtension(ext: Extension) {
+  if (ext.id === 'top-menu' || ext.id === 'settings-page') return null
   return <ext.component />
 }
 
@@ -89,6 +92,8 @@ export function App() {
   return (
     <>
       <SceneLayer />
+      <TopMenuBar />
+      <SettingsPage />
       <div
         class="overlay"
         style={{
