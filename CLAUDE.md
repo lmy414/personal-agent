@@ -288,11 +288,11 @@ mio-harness/memories/
 
 ### 热重载
 
-改 `extensions/` 或 `mio-harness/` 下的文件 → bridge 自动重启（`tsx watch` 拉起）。
-
-改 bridge 自身代码 → `tsx watch` 直接追踪。
+改 bridge 自身代码 → `tsx watch` 自动重启。
 
 改前端代码 → Vite HMR。
+
+改扩展/角色文件（`extensions/` 或 `mio-harness/`）→ 需手动重启 bridge。
 
 ## 硬约束
 

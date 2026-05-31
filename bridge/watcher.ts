@@ -33,20 +33,6 @@ function broadcast(path: string) {
   }
 }
 
-let lastRestart = 0
-function handleExtensionChange(absPath: string) {
-  const norm = normalize(absPath)
-  // 只关注扩展和角色文件，忽略前端/bridge 自身变化（由 tsx watch 处理）
-  if (norm.includes('/frontend/') || norm.includes('/bridge/') || norm.includes('/vendor/')) return
-  if (norm.includes('/extensions/') || norm.includes('/mio-harness/')) {
-    const now = Date.now()
-    if (now - lastRestart < 10_000) return
-    lastRestart = now
-    console.log('[watcher] extension/harness file changed, restarting...')
-    setTimeout(() => process.exit(0), 200)
-  }
-}
-
 export function startWatcher(): void {
   if (watcher) return
 
@@ -66,7 +52,6 @@ export function startWatcher(): void {
     pending.set(absDir, setTimeout(() => {
       pending.delete(absDir)
       broadcast(absDir)
-      handleExtensionChange(absDir)
     }, DEBOUNCE_MS))
   })
 
