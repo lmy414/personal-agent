@@ -115,12 +115,12 @@ async function init() {
   statusEl.textContent = '正在加载模型...'
 
   app = new PIXI.Application({
-    view: document.createElement('canvas'),
+    view: (() => { const cv = document.createElement('canvas'); document.getElementById('stage').appendChild(cv); return cv; })(),
     resizeTo: document.getElementById('stage'),
     backgroundAlpha: 0,
     antialias: true,
   })
-  document.getElementById('stage').appendChild(app.view)
+  // canvas already appended
 
   try {
     model = await PIXI.live2d.Live2DModel.from(MODEL_URL, { autoInteract: false })
@@ -128,8 +128,8 @@ async function init() {
 
     model.anchor.set(0.5, 0.5)
     model.x = app.screen.width / 2
-    model.y = app.screen.height / 2 - 20
-    model.scale.set(0.32)
+    model.y = app.screen.height / 2 - 40
+    model.scale.set(0.45)
 
     // 窗口缩放
     window.addEventListener('resize', () => {
