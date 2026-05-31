@@ -79,3 +79,11 @@ export function addClient(ws: WebSocket): void {
 export function removeClient(ws: WebSocket): void {
   clients.delete(ws)
 }
+
+export function broadcastToAll(raw: string, exclude?: WebSocket): void {
+  for (const ws of clients) {
+    if (ws !== exclude && ws.readyState === WebSocket.OPEN) {
+      ws.send(raw)
+    }
+  }
+}

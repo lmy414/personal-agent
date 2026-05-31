@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { dispatch } from './dispatcher'
 import { initDB, getDB } from './db'
-import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
+import { startWatcher, stopWatcher, addClient, removeClient, broadcastToAll } from './watcher'
 
 const PORT = 9229
 
@@ -47,6 +47,13 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw.toString())
+
+      // Live2D 中继：MCP Server ↔ Bridge ↔ 浏览器
+      if (msg.type === 'live2d.control' || msg.type === 'live2d.result') {
+        broadcastToAll(raw.toString(), ws)
+        return
+      }
+
       dispatch(msg, ws)
     } catch (err) {
       console.error('[bridge] failed to parse message:', err)

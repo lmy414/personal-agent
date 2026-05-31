@@ -67,6 +67,9 @@ export type ServerMessage =
   | ServerMsg<'file.changed', { path: string }>
   | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
+  // Live2D 中继
+  | ServerMsg<'live2d.control', { tool: string; args: Record<string, string> }>
+  | ServerMsg<'live2d.result', { text: string }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>
 
