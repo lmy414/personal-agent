@@ -61,6 +61,9 @@ export function handleSettingsDiscoverModels(msg: ClientMessage, ws: WebSocket):
   }
   const db = getDB()
   const providerList = Array.from(providers.values())
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('providers', JSON.stringify(providerList))
+  const providerJson = JSON.stringify(providerList)
+  console.log('[settings] discover-models: active providers:', [...activeProviders], 'total models:', models.length, 'filtered:', providerList.reduce((s, p) => s + p.models.length, 0))
+  db.prepare("DELETE FROM settings WHERE key = 'providers'").run()
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('providers', providerJson)
   handleSettingsGet(msg, ws)
 }

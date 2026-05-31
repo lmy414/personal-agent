@@ -1,4 +1,4 @@
-import { createSignal, For, onCleanup } from 'solid-js'
+import { createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
 function formatTime(date: Date): string {
@@ -14,7 +14,7 @@ function formatTokens(n: number): string {
 }
 
 export function StatusBar() {
-  const { status, switchModel, isStreaming, send, subscribe } = useAgent()
+  const { status, isStreaming, send, subscribe } = useAgent()
   const [time, setTime] = createSignal(new Date())
   const [compactFeedback, setCompactFeedback] = createSignal<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -73,11 +73,11 @@ export function StatusBar() {
     return `${Number.isFinite(used) ? fmt(used) : '--'} / ${fmt(max)}`
   }
 
-  const models = () => status.availableModels ?? []
   const currentModel = () => status.model ?? ''
 
   const getModelDisplayName = (id: string) => {
-    const m = models().find((m) => m.id === id)
+    const models = status.availableModels ?? []
+    const m = models.find((m) => m.id === id)
     return m?.name ?? id
   }
 
@@ -88,23 +88,7 @@ export function StatusBar() {
         <span class="status-value mono">{formatTime(time())}</span>
         <span class="status-spacer" />
         <span class="status-label">模型</span>
-        <select
-          class="model-select"
-          disabled={isStreaming()}
-          onChange={(e) => switchModel(e.currentTarget.value)}
-        >
-          {models().length > 0 ? (
-            <For each={models()}>
-              {(m) => (
-                <option value={m.id} selected={m.id === currentModel()}>
-                  {m.name}
-                </option>
-              )}
-            </For>
-          ) : (
-            <option value={currentModel()}>{getModelDisplayName(currentModel()) || 'Loading...'}</option>
-          )}
-        </select>
+        <span class="status-value">{getModelDisplayName(currentModel()) || 'Loading...'}</span>
       </div>
       <div class="status-row">
         <span class="status-label">本次消耗</span>
