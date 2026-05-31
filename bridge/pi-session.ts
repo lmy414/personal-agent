@@ -67,10 +67,18 @@ export async function createPiSession(options: {
   thinkingLevel?: 'low' | 'medium' | 'high'
   sessionId?: string
 }): Promise<{ sessionId: string; model: string; thinkingLevel: string }> {
-  const modelName = options.modelName ?? 'deepseek-v3'
+  // 从 settings 读取用户配置的默认模型，fallback 到 deepseek-chat
+  let defaultModel = 'deepseek-chat'
+  try {
+    const db = getDB()
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'default_model'").get() as { value: string } | undefined
+    if (row?.value) defaultModel = row.value
+  } catch { /* DB 未初始化 */ }
+  const modelName = options.modelName ?? defaultModel
+  const thinkingLevel = options.thinkingLevel ?? 'medium'
 
   const result = await createAgentSession({
-    thinkingLevel: options.thinkingLevel ?? 'medium',
+    thinkingLevel,
     cwd: process.cwd(),
   })
 
@@ -104,7 +112,7 @@ export async function createPiSession(options: {
   const meta: PiSessionMeta = {
     id: sessionId,
     modelName: session.model?.id ?? modelName,
-    thinkingLevel: options.thinkingLevel ?? 'medium',
+    thinkingLevel,
     title: `会话 ${new Date().toLocaleDateString('zh-CN')}`,
     createdAt: Date.now(),
     roundCount: restoredRoundCount,
