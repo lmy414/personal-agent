@@ -1,8 +1,7 @@
 import { createSignal } from 'solid-js'
-import { useAgent } from '@/shell/useAgent'
+import { setIsSettingsOpen } from '@/shell/settings-signal'
 
 export function TopMenuBar() {
-  const { isSettingsOpen, setIsSettingsOpen } = useAgent()
   const [menuOpen, setMenuOpen] = createSignal(false)
 
   const handleToggle = () => setMenuOpen(!menuOpen())

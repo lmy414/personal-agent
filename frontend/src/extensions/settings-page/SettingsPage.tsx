@@ -1,5 +1,6 @@
 import { createEffect, For, createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
 
 function getSetting(entries: { key: string; value: string }[], key: string): string {
   return entries.find((e) => e.key === key)?.value ?? ''
@@ -13,12 +14,11 @@ function formatCw(n: number): string {
 export function SettingsPage() {
   const agent = useAgent()
 
-  // ── 所有 hooks 必须在早期 return 之前 ──
   const [expandedModelId, setExpandedModelId] = createSignal<string | null>(null)
 
   // 打开时拉取设置 + 自动发现模型
   createEffect(() => {
-    if (agent.isSettingsOpen()) {
+    if (isSettingsOpen()) {
       agent.getSettings()
       agent.send('settings.discover-models', {})
     }
@@ -26,11 +26,11 @@ export function SettingsPage() {
 
   // ESC 关闭
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') agent.setIsSettingsOpen(false)
+    if (e.key === 'Escape') setIsSettingsOpen(false)
   }
 
   createEffect(() => {
-    if (agent.isSettingsOpen()) {
+    if (isSettingsOpen()) {
       window.addEventListener('keydown', handleKeyDown)
     }
   })
@@ -74,11 +74,10 @@ export function SettingsPage() {
     }))
   }
 
-  // ── CSS 控制可见性，避免 SolidJS early-return 问题 ──
   return (
-    <div class="settings-page" classList={{ open: agent.isSettingsOpen() }}>
+    <div class="settings-page" classList={{ open: isSettingsOpen() }}>
       <div class="settings-page-header">
-        <button class="settings-back-btn" onClick={() => agent.setIsSettingsOpen(false)} title="返回">←</button>
+        <button class="settings-back-btn" onClick={() => setIsSettingsOpen(false)} title="返回">←</button>
         <span style="font-size:18px;">⚙</span>
         <span class="settings-page-title">设置</span>
         <span class="settings-page-subtitle">配置智能体行为和模型接入</span>
