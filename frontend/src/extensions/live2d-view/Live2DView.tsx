@@ -250,6 +250,31 @@ export function Live2DView() {
       })
 
       setStatus('')
+
+      // ── 待机微表情：空闲时随机眨眼/微笑 ──
+      const IDLE_EXPR = ['kongbai', 'kongbai', 'kongbai', 'smile', 'aixinyan']
+      let idleTimer: ReturnType<typeof setTimeout> | null = null
+      let lastActivity = Date.now()
+
+      function resetIdle() { lastActivity = Date.now() }
+      // 拖拽、滚轮、表情切换都算活动
+      panel.addEventListener('pointerdown', resetIdle)
+      panel.addEventListener('wheel', resetIdle)
+
+      function scheduleIdle() {
+        if (idleTimer) clearTimeout(idleTimer)
+        idleTimer = setTimeout(() => {
+          // 空闲 25s 以上才触发微表情
+          if (Date.now() - lastActivity < 25000) { scheduleIdle(); return }
+          const expr = IDLE_EXPR[Math.floor(Math.random() * IDLE_EXPR.length)]
+          setExpr(expr)
+          // 保持 3-5s 后恢复空白
+          setTimeout(() => { if (Date.now() - lastActivity >= 28000) setExpr('kongbai') }, 3000 + Math.random() * 2000)
+          scheduleIdle()
+        }, 25000)
+      }
+      scheduleIdle()
+      onCleanup(() => { if (idleTimer) clearTimeout(idleTimer) })
     } catch (e: any) {
       const msg = e?.message || String(e)
       console.error('[mio] 初始化失败:', e)

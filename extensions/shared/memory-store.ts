@@ -264,8 +264,9 @@ export function persistMemoryFiles(
 // ── 快照（用于 Prompt 注入）────────────────────────────────
 
 export function getSnapshot(store: MemoryStore): { memory: string; user: string } {
+  // 实时从 live entries 构建快照，不在会话启动时冻结
   return {
-    memory: store._memorySnapshot,
-    user: store._userSnapshot,
+    memory: joinEntries(store.memoryEntries),
+    user: joinEntries(store.userEntries),
   }
 }
