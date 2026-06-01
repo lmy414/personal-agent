@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><body>
+<div id="stage" style="width:800px;height:600px;background:#0a0a12;"></div>
+<script src="/vendor/pixi.min.js"></script>
+<script src="/vendor/live2dcubismcore.min.js"></script>
+<script src="/vendor/cubism4.min.js"></script>
+<script>
+const M_URL = '/live2d/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
+async function init() {
+  const P = window.PIXI
+  if (!P?.live2d) { document.body.innerHTML = 'SDK fail'; return }
+  const cv = document.createElement('canvas')
+  document.getElementById('stage').appendChild(cv)
+  const app = new P.Application({view:cv,resizeTo:document.getElementById('stage'),backgroundAlpha:0,antialias:true})
+  console.log('loading', M_URL)
+  const model = await P.live2d.Live2DModel.from(M_URL, {autoInteract:false})
+  app.stage.addChild(model)
+  model.anchor.set(0.5,0.5)
+  model.x = 400; model.y = 300
+  model.scale.set(0.3)
+  console.log('children:', model.children.length, 'internal:', !!model.internalModel)
+  document.getElementById('stage').style.outline = model.children.length > 0 ? '2px solid #4ade80' : '2px solid #f87171'
+}
+init().catch(e => console.error(e))
+</script>
+</body></html>

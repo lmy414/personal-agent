@@ -1,9 +1,10 @@
-import { onMount, onCleanup, createSignal } from 'solid-js'
+import { onMount, onCleanup, createSignal, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { live2dWidth, live2dHeight, live2dScale, setLive2dScale, live2dOffsetX, setLive2dOffsetX, live2dOffsetY, setLive2dOffsetY, live2dVisible } from '@/shell/live2d-signal'
 import type { ServerMessage } from '@bridge/protocol'
 
-const ECHOBOT = 'http://localhost:8000'
-const M_URL = ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
+const M_URL = '/live2d/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
+const EXPR_URL = '/live2d/' + encodeURI('卡拉(2)')
 
 const BUILTIN = ['kongbai','aixinyan','xingxingyan','lianhong','duzui','guzui','han','lei','lianhei','lianqing','yun','yuanquanyan','xie','jiantou','xianhua','huatong']
 
@@ -40,65 +41,211 @@ function loadScript(src: string): Promise<void> {
 }
 
 export function Live2DView() {
-  const { subscribe, send } = useAgent()
+  const { subscribe } = useAgent()
   const [status, setStatus] = createSignal('加载中...')
-  const [visible, setVisible] = createSignal(true)
+  const visible = live2dVisible
+  const [speaking, setSpeaking] = createSignal(false)
   let panel!: HTMLDivElement
-  let cv!: HTMLCanvasElement
+  let myCanvas: HTMLCanvasElement | null = null
   let app: any, model: any, activeParams: { id: string; value: number; blend: string }[] | null = null
+  let doFit: (() => void) | null = null
 
-  // ── 拖拽 ──
-  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0, docked = ''
-  let px = window.innerWidth - 252, py = window.innerHeight - 420
+  // 监听信号变化 → 实时跟新（面板尺寸 + 模型参数）
+  createEffect(() => {
+    live2dWidth(); live2dHeight()
+    live2dScale(); live2dOffsetX(); live2dOffsetY()
+    doFit?.()
+  })
+
+  // 隐藏→显示后，等 CSS 布局恢复再强制 resize PIXI
+  createEffect(() => {
+    if (live2dVisible() && app) {
+      requestAnimationFrame(() => {
+        const cw = panel.clientWidth, ch = panel.clientHeight
+        if (cw > 0 && ch > 0) {
+          app.renderer.resize(cw, ch)
+          doFit?.()
+        }
+      })
+    }
+  })
+
+  // ── Ghost 模式 ──
+  const enter = () => panel.classList.add('active')
+  const leave = () => {
+    // 拖拽中不退出 active
+    if (!dragging) panel.classList.remove('active')
+  }
+
+  // ── 拖拽 + 停靠 ──
+  const DOCK_THRESHOLD = 40
+  const getW = () => live2dWidth()
+  const getH = () => live2dHeight()
+  let dragging = false, docked = '', sx = 0, sy = 0, ox = 0, oy = 0
+  let px = window.innerWidth - getW() - 32, py = window.innerHeight - getH() - 100
+  const [dockCandidate, setDockCandidate] = createSignal<string | null>(null)
 
   function onDown(e: MouseEvent) {
-    if ((e.target as HTMLElement)?.tagName === 'CANVAS') return
-    dragging = true; panel.classList.add('dragging')
-    sx = e.clientX; sy = e.clientY; ox = px; oy = py; docked = ''
-    panel.classList.remove('docked-left','docked-right')
+    e.preventDefault()
+    dragging = true
+    panel.classList.add('dragging', 'active')
+    panel.classList.remove('docked-left', 'docked-right')
+    docked = ''
+    sx = e.clientX; sy = e.clientY; ox = px; oy = py
   }
+
   document.addEventListener('mousemove', (e) => {
     if (!dragging) return
-    px = Math.max(-160, Math.min(window.innerWidth - 40, ox + e.clientX - sx))
+    const w = getW()
+    px = Math.max(-w + 40, Math.min(window.innerWidth - 40, ox + e.clientX - sx))
     py = Math.max(-20, Math.min(window.innerHeight - 40, oy + e.clientY - sy))
-    panel.style.left = px + 'px'; panel.style.top = py + 'px'
+    panel.style.left = px + 'px'
+    panel.style.top = py + 'px'
+
+    let target: string | null = null
+    if (px < DOCK_THRESHOLD) target = 'left'
+    else if (px + w > window.innerWidth - DOCK_THRESHOLD) target = 'right'
+    setDockCandidate(target)
   })
+
   document.addEventListener('mouseup', () => {
     if (!dragging) return
-    dragging = false; panel.classList.remove('dragging')
-    if (px < 40) { px = 0; docked = 'left'; panel.classList.add('docked-left') }
-    else if (px + 220 > window.innerWidth - 40) { px = window.innerWidth - 220; docked = 'right'; panel.classList.add('docked-right') }
-    panel.style.left = px + 'px'; panel.style.top = py + 'px'
+    dragging = false
+    panel.classList.remove('dragging')
+    setDockCandidate(null)
+
+    const w = getW()
+    if (px < DOCK_THRESHOLD) { px = 0; docked = 'left' }
+    else if (px + w > window.innerWidth - DOCK_THRESHOLD) { px = window.innerWidth - w; docked = 'right' }
+    else { docked = '' }
+
+    // 重置 class
+    panel.classList.remove('docked-left', 'docked-right')
+    if (docked) panel.classList.add('docked-' + docked)
+    panel.style.left = px + 'px'
+    panel.style.top = py + 'px'
   })
 
-  // ── 初始化 ──
+  // ── 气泡 ──
+  function showBubble(text: string, expr?: string) {
+    document.querySelectorAll('.speech-bubble').forEach(b => b.remove())
+    const bubble = document.createElement('div')
+    bubble.className = 'speech-bubble'
+    bubble.innerHTML = (expr ? '<span class="expr">' + expr + '</span>' : '') + text
+    const pr = panel.getBoundingClientRect()
+    if (docked === 'right') {
+      bubble.style.right = (window.innerWidth - pr.left + 16) + 'px'
+    } else {
+      bubble.style.left = (pr.right + 16) + 'px'
+    }
+    bubble.style.top = (pr.top + 40) + 'px'
+    document.body.appendChild(bubble)
+    bubble.addEventListener('animationend', (e) => {
+      if ((e as AnimationEvent).animationName === 'bub-out') bubble.remove()
+    })
+
+    // 状态点变色
+    setSpeaking(true)
+    setTimeout(() => setSpeaking(false), 500)
+  }
+
+  // ── 初始化 PIXI + Live2D ──
   onMount(async () => {
+    const step = (label: string) => { console.log('[mio]', label); setStatus(label) }
     try {
-      setStatus('SDK...')
-      await loadScript(ECHOBOT + '/web/assets/vendor/pixi.min.js')
-      await loadScript(ECHOBOT + '/web/assets/vendor/live2dcubismcore.min.js')
-      await loadScript(ECHOBOT + '/web/assets/vendor/cubism4.min.js')
+      step('1/6 加载 PixiJS...')
+      await loadScript('/vendor/pixi.min.js')
+
+      step('2/6 加载 Cubism Core...')
+      await loadScript('/vendor/live2dcubismcore.min.js')
+
+      step('3/6 加载 Cubism4 PIXI...')
+      await loadScript('/vendor/cubism4.min.js')
 
       const P = (window as any).PIXI
-      if (!P?.live2d) { setStatus('SDK 不可用'); return }
+      if (!P?.live2d) { setStatus('失败: PIXI.live2d 未定义 — SDK 版本不兼容'); return }
+      console.log('[mio] PIXI.live2d OK, ver:', P.live2d.VERSION)
 
-      setStatus('模型...')
-      app = new P.Application({ view: cv, backgroundAlpha: 0, antialias: true })
+      step('4/6 创建 Canvas + Pixi App...')
+      myCanvas = document.createElement('canvas')
+      myCanvas.style.cssText = 'position:absolute;top:0;left:0;display:block;pointer-events:auto'
+      // 插到 panel 第一个子元素，确保不被其他 dom 遮挡
+      panel.insertBefore(myCanvas, panel.firstChild)
+
+      app = new P.Application({ view: myCanvas, resizeTo: panel, backgroundAlpha: 0, antialias: true })
+
+      step('5/6 加载模型...')
+      console.log('[mio] loading from:', M_URL)
+      const t0 = performance.now()
       model = await P.live2d.Live2DModel.from(M_URL, { autoInteract: false })
+      const t1 = performance.now()
+      console.log('[mio] model loaded in', Math.round(t1 - t0), 'ms')
+      console.log('[mio] children:', model.children?.length, 'internalModel:', !!model.internalModel)
+
       app.stage.addChild(model)
       model.anchor.set(0.5, 0.5)
 
       const fit = () => {
         if (!app || !model) return
-        const w = panel.clientWidth, h = panel.clientHeight
-        app.renderer.resize(w, h)
-        model.x = w / 2; model.y = h / 2 - 15
-        model.scale.set(Math.min(w, h) / 800)
+        const cw = panel.clientWidth, ch = panel.clientHeight
+        if (cw <= 0 || ch <= 0) return
+        app.renderer.resize(cw, ch)
+        const s = live2dScale()
+        const ox = live2dOffsetX()
+        const oy = live2dOffsetY()
+        model.x = cw / 2 + ox
+        model.y = ch / 2 + oy
+        model.scale.set(s > 0 ? s / 100 : Math.min(cw, ch) / 900)
       }
       fit()
+      doFit = fit
       new ResizeObserver(fit).observe(panel)
-      window.addEventListener('resize', fit)
 
+      // ── 模型交互：拖拽移动 / 滚轮缩放 / 双击重置 ──
+      app.stage.interactive = true
+      let panning = false, psx = 0, psy = 0, pox = 0, poy = 0, lastTap = 0
+
+      app.stage.on('pointerdown', (e: any) => {
+        panning = true
+        app.stage.cursor = 'grabbing'
+        const g = e.data.global
+        psx = g.x; psy = g.y
+        pox = live2dOffsetX(); poy = live2dOffsetY()
+      })
+
+      app.stage.on('pointermove', (e: any) => {
+        if (!panning) return
+        const g = e.data.global
+        setLive2dOffsetX(Math.round(pox + g.x - psx))
+        setLive2dOffsetY(Math.round(poy + g.y - psy))
+        fit()
+      })
+
+      const endPan = () => { if (panning) { panning = false; app.stage.cursor = 'grab' } }
+      app.stage.on('pointerup', endPan)
+      app.stage.on('pointerupoutside', endPan)
+
+      // 双击重置
+      app.stage.on('pointertap', () => {
+        const now = Date.now()
+        if (lastTap && now - lastTap < 400) {
+          setLive2dOffsetX(0); setLive2dOffsetY(0); setLive2dScale(0)
+          fit()
+        }
+        lastTap = now
+      })
+
+      // 滚轮缩放
+      panel.addEventListener('wheel', (e) => {
+        e.preventDefault()
+        const step = e.deltaY < 0 ? 1.06 : 0.94
+        const cur = live2dScale()
+        const base = cur > 0 ? cur / 100 : Math.min(panel.clientWidth, panel.clientHeight) / 500
+        setLive2dScale(Math.round(Math.max(8, Math.min(320, base * step * 100))) / 100)
+        fit()
+      }, { passive: false })
+
+      // ── 自定义参数表情循环注入 ──
       model.internalModel.on('beforeModelUpdate', () => {
         if (!activeParams) return
         const cm = model.internalModel.coreModel
@@ -113,26 +260,48 @@ export function Live2DView() {
       })
 
       setStatus('')
-    } catch (e: any) { setStatus('失败: ' + (e.message || e)) }
+    } catch (e: any) {
+      const msg = e?.message || String(e)
+      console.error('[mio] 初始化失败:', e)
+      setStatus('✗ ' + msg.slice(0, 80))
+    }
   })
 
-  // ── Live2D 指令 ──
+  // ── Live2D 指令（Bridge 中继来自 MCP Server）──
   onMount(() => {
     const unsub = subscribe('live2d.control', (msg: ServerMessage) => {
       const p = msg.payload as { tool: string; args: Record<string, string> }
-      if (p.tool === 'live2d_expression') setExpr(p.args.name).then(() => send('live2d.result', { text: p.args.name }))
-      else if (p.tool === 'live2d_motion') playMotion().then(() => send('live2d.result', { text: 'motion' }))
+      if (p.tool === 'live2d_expression') {
+        setExpr(p.args.name)
+        showBubble('', exprEmoji(p.args.name))
+      } else if (p.tool === 'live2d_motion') {
+        playMotion()
+      }
     })
-    onCleanup(() => unsub())
+    onCleanup(() => {
+      unsub()
+      app?.destroy?.(true)
+      myCanvas?.remove()
+    })
   })
+
+  function exprEmoji(name: string): string {
+    const map: Record<string, string> = {
+      aixinyan: '🥰', xingxingyan: '🤩', lianhong: '😳', duzui: '😗',
+      guzui: '😤', han: '😅', lei: '😢', lianhei: '😡', lianqing: '😨',
+      yun: '😵', yuanquanyan: '🌀', xie: '🤨', jiantou: '👉',
+      xianhua: '🌸', huatong: '🎉',
+    }
+    return map[name] || ''
+  }
 
   async function setExpr(name: string) {
     if (!model) return
-    if (CUSTOM[name]) { activeParams = CUSTOM[name].map(p => ({ ...p })); setStatus(''); return }
-    if (name === 'kongbai') { activeParams = null; setStatus(''); return }
+    if (CUSTOM[name]) { activeParams = CUSTOM[name].map(p => ({ ...p })); return }
+    if (name === 'kongbai') { activeParams = null; return }
     if (!BUILTIN.includes(name)) return
     try {
-      const r = await fetch(ECHOBOT + '/api/web/live2d/workspace/' + encodeURI('卡拉(2)') + '/' + name + '.exp3.json')
+      const r = await fetch(EXPR_URL + '/' + name + '.exp3.json')
       if (!r.ok) return
       const d = await r.json()
       activeParams = (d.Parameters || []).map((p: any) => ({ id: p.Id, value: p.Value, blend: p.Blend || 'Add' }))
@@ -141,50 +310,56 @@ export function Live2DView() {
 
   async function playMotion() {
     if (!model || typeof model.motion !== 'function') return
-    try { await model.motion('EchoBotIdle', 0) } catch (_) {}
+    try { await model.motion('Scene1', 0) } catch (_) {}
   }
 
   return (
     <>
-      {/* 切换按钮 */}
-      <button
-        onClick={() => setVisible(!visible())}
-        style={{
-          position:'fixed',bottom:'12px',left:'50%',transform:'translateX(-50%)',
-          zIndex:100000,padding:'4px 12px',borderRadius:'12px',
-          border:'1px solid rgba(255,255,255,0.06)',
-          background:'rgba(20,18,32,0.7)',color:'rgba(255,255,255,0.5)',
-          fontSize:'11px',fontFamily:'inherit',cursor:'pointer'
-        }}
-      >
-        {visible() ? '🎭 隐藏' : '🎭 澪号'}
-      </button>
+      {/* 停靠指示器 */}
+      <div
+        class="dock-indicator"
+        classList={{ show: !!dockCandidate() }}
+        style={
+          dockCandidate() === 'left'
+            ? 'left:0;top:0;width:' + DOCK_THRESHOLD + 'px;height:100vh;'
+            : dockCandidate() === 'right'
+              ? 'right:0;top:0;width:' + DOCK_THRESHOLD + 'px;height:100vh;'
+              : ''
+        }
+      />
 
       {/* 悬浮面板 */}
       <div
         ref={panel}
-        onMouseDown={onDown}
-        style={{
-          position:'fixed',left:px+'px',top:py+'px',
-          width:'220px',height:'300px',zIndex:99999,
-          borderRadius:'16px',overflow:'hidden',
-          background: 'rgba(14,12,24,0.55)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter:'blur(20px)',
-          boxShadow:'0 16px 48px rgba(0,0,0,0.45)',
-          display: visible() ? 'block' : 'none',
-          cursor:'grab',
+        class="floating-mio"
+        classList={{
+          'docked-left': docked === 'left',
+          'docked-right': docked === 'right',
         }}
+        style={{
+          left: px + 'px', top: py + 'px',
+          width: live2dWidth() + 'px', height: live2dHeight() + 'px',
+          visibility: visible() ? 'visible' : 'hidden',
+          'pointer-events': visible() ? 'auto' : 'none',
+        }}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
       >
-        <div style={{position:'absolute',top:'6px',left:'50%',transform:'translateX(-50%)',width:'24px',height:'3px',background:'rgba(255,255,255,0.1)',borderRadius:'2px',zIndex:2,pointerEvents:'none'}} />
-        <div style={{position:'absolute',top:'8px',right:'10px',width:'6px',height:'6px',borderRadius:'50%',background:'#4ade80',boxShadow:'0 0 5px rgba(74,222,128,0.4)',zIndex:2}} />
-        {status() && (
-          <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontSize:'11px',color:'rgba(255,255,255,0.3)',zIndex:3,pointerEvents:'none'}}>
-            {status()}
-          </div>
-        )}
-        <canvas ref={cv} style={{width:'100%',height:'100%',display:'block'}} />
+        <div class="mio-handle" onMouseDown={onDown}>
+          <div class="mio-handle-bar" />
+        </div>
+        <div
+          class="mio-dot"
+          style={{
+            background: speaking() ? '#8b9cf0' : '#4ade80',
+            'box-shadow': speaking() ? '0 0 10px rgba(139,156,240,0.6)' : '0 0 5px rgba(74,222,128,0.4)',
+          }}
+        />
+        <div class="mio-view">
+          {status() && <div class="mio-status-overlay">{status()}</div>}
+        </div>
       </div>
+
     </>
   )
 }

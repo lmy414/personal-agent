@@ -12,3 +12,5 @@ Thumbs.db
 mio-data/
 docs/
 frontend-sketch/
+frontend/public/live2d/
+bridge/.pi/extensions/

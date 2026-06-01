@@ -3,6 +3,7 @@ import { SceneLayer } from './SceneLayer'
 import { registry, type Extension } from '@/registry'
 import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
 import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
+import { Live2DView } from '@/extensions/live2d-view/Live2DView'
 import './App.css'
 
 function renderExtension(ext: Extension) {
@@ -94,6 +95,7 @@ export function App() {
       <SceneLayer />
       <TopMenuBar />
       <SettingsPage />
+      <Live2DView />
       <div
         class="overlay"
         style={{

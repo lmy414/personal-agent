@@ -1,0 +1,11 @@
+{
+  "name": "mio-personal-agent",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n bridge,frontend -c blue,green \"cd bridge && npx tsx --env-file ../.env index.ts\" \"cd frontend && npx vite --strictPort\"",
+    "check": "cd bridge && npm run check && cd ../frontend && npm run check"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
