@@ -21,34 +21,64 @@ cd frontend && npm run dev
 ```
 personal-agent/
 ├── CLAUDE.md                 ← 本文件（每次新会话先读这个）
+├── README.md                  ← 项目介绍
 ├── .gitignore                 ← node_modules, dist, .env, *.db
+├── package.json               ← monorepo root（concurrently 双启动）
 ├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
-│   ├── .pi/settings.json      ←   Pi 扩展注册（绝对路径）
-│   ├── index.ts               ←   入口
-│   ├── protocol.ts            ←   消息类型定义（前后端共享）
-│   ├── dispatcher.ts          ←   消息路由
-│   ├── watcher.ts             ←   文件监听 + 热重载
-│   └── handlers/              ←   按消息类型拆文件
+│   ├── .pi/settings.json      ←   Pi 扩展注册（3 个扩展，绝对路径）
+│   ├── index.ts               ←   入口：WS Server + SQLite + Live2D 中继
+│   ├── protocol.ts            ←   消息类型定义（前后端共享，~130 行）
+│   ├── dispatcher.ts          ←   消息路由表（18 路由）
+│   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
+│   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
+│   ├── watcher.ts             ←   文件监听 + 广播
+│   └── handlers/              ←   按消息类型拆文件（7 文件，9 handler）
 ├── frontend/                  ← SolidJS 前端
 │   ├── src/
-│   │   ├── shell/             ←   壳（Grid 布局 + WS hook）
-│   │   ├── registry.ts        ←   扩展注册表
-│   │   └── extensions/        ←   每个扩展一个文件夹
+│   │   ├── shell/             ←   壳（Grid 布局 + WS hook + 全局信号）
+│   │   │   ├── App.tsx        ←     壳组件 + 面板拖拽
+│   │   │   ├── App.css        ←     玻璃拟态 UI 全样式
+│   │   │   ├── useAgent.tsx   ←     全局状态 + WebSocket 管理
+│   │   │   ├── live2d-signal.ts ←   Live2D 面板参数信号
+│   │   │   ├── settings-signal.ts ← 设置页面开关信号
+│   │   │   └── SceneLayer.tsx ←     Live2D 场景层
+│   │   ├── registry.ts        ←   扩展注册表（Slot-based 插件系统）
+│   │   └── extensions/        ←   11 个扩展组件，每个一个文件夹
+│   │       ├── chat-input/    ←     对话输入框
+│   │       ├── chat-renderer/ ←     消息气泡渲染 + 思考折叠
+│   │       ├── session-panel/ ←     会话列表 + 切换
+│   │       ├── file-tree/     ←     文件树浏览
+│   │       ├── tool-panel/    ←     工具调用状态
+│   │       ├── doc-preview/   ←     文档内容预览
+│   │       ├── top-menu/      ←     顶部菜单栏
+│   │       ├── settings-page/ ←     全屏设置覆盖层
+│   │       ├── status-bar/    ←     状态栏
+│   │       ├── right-panel/   ←     右侧面板 Tab
+│   │       └── live2d-view/   ←     悬浮 Live2D 看板
 │   ├── index.html
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
 ├── extensions/                ← Pi 扩展（由 bridge/.pi/settings.json 注册）
-│   ├── pa-mio/                ←   人格注入（SOUL.md + 4 层 Prompt + 记忆工具）
-│   ├── pa-files/              ←   文件浏览/预览工具
-│   └── shared/                ←   共享模块（memory-store）
+│   ├── pa-mio/index.ts        ←   人格注入 v4（5 层 Prompt + 意图分类 + 记忆工具）
+│   ├── pa-files/index.ts      ←   文件浏览/预览工具
+│   ├── pa-live2d/index.ts     ←   Live2D 表情/动作/状态工具（WebSocket 中继）
+│   └── shared/memory-store.ts ←   记忆读写核心（§ 文件操作 + 原子写入）
+├── mcp-servers/live2d/        ← MCP Server（独立进程）
+│   ├── index.ts               ←   JSON-RPC over STDIO
+│   ├── test.ts                ←   协议测试
+│   └── package.json
 ├── mio-harness/               ← 角色数据
-│   ├── SOUL.md                ←   人格定义（行为规则，<1KB）
+│   ├── SOUL.md                ←   人格定义（行为规则，~800 chars）
 │   └── memories/              ←   持久记忆（§ 分隔 Markdown）
-│       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars）
-│       └── USER.md            ←     用户画像（≤1375 chars）
-├── mio-data/                  ← 澪号角色数据 + 设计文档
-├── frontend-sketch/           ← UI 原型（layout-mockup-v2.html）
-├── docs/superpowers/          ← 设计 spec + 实现计划
+│       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars，6 条 §）
+│       └── USER.md            ←     用户画像（≤1375 chars，17 条 §）
+├── mio-data/                  ← 澪号角色设计资料
+├── frontend-sketch/           ← UI 原型（设计源，9 个 HTML 原型）
+├── docs/
+│   ├── mio-status-2026-06-02.md ← 最新项目状态
+│   └── superpowers/
+│       ├── specs/             ←   设计 Specs（7 份）
+│       └── plans/             ←   实现计划（6 份）
 └── vendor/pi/                 ← Pi 框架（不修改）
 ```
 
@@ -233,11 +263,12 @@ refactor: protocol.ts 拆分为独立文件
 
 ```
 1. 读本文件（CLAUDE.md）
-2. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务
-3. 读 docs/superpowers/specs/ 下最新 spec
-4. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
-5. git log --oneline -20 了解最近改动
-6. npm run check 确认项目当前状态
+2. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务（auto-memory）
+3. 读 docs/mio-status-2026-06-02.md 了解当前项目状态
+4. 读 docs/superpowers/specs/ 下最新 spec
+5. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
+6. git log --oneline -20 了解最近改动
+7. npm run check 确认项目当前状态
 ```
 
 **修改代码前**：
@@ -257,14 +288,15 @@ refactor: protocol.ts 拆分为独立文件
 
 澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。单个文件，行为规则，<1KB。
 
-每次 LLM 调用时，pa-mio 组装 4 层 System Prompt：
+每次 LLM 调用时，pa-mio 组装 5 层 System Prompt：
 
 ```
-Layer 0: SOUL.md                        ← 人格定义，绝对顶部
+Layer 0: SOUL.md                        ← 人格定义，绝对顶部（实时读取，改文件立即生效）
 Layer 1: 记忆快照（MEMORY.md + USER.md） ← 会话启动冻结，<recall> 围栏
 Layer 2: 注入上下文（检索记忆 + 工具结果）← 每轮动态
-Layer 3: Pi 工具定义                     ← Pi 自动注入
-Layer 4: 对话历史                        ← Pi 管理
+Layer 3: Pi 工具定义                     ← Pi 自动注入（含 memory_add/read, live2d_expression 等）
+Layer 4: 模式指令（chat/agent）          ← 18 条正则意图分类，chat 免工具 / agent 可调工具
+Layer 5: 对话历史                        ← Pi 管理
 ```
 
 - **SOUL.md**：实时读取，改文件立即生效
@@ -293,6 +325,10 @@ mio-harness/memories/
 改前端代码 → Vite HMR。
 
 改扩展/角色文件（`extensions/` 或 `mio-harness/`）→ 需手动重启 bridge。
+
+改前端 Live2D 组件（`frontend/src/extensions/live2d-view/`）→ Vite HMR 自动生效。
+
+改 Live2D 模型文件 / Cubism SDK → 需通过 EchoBot (localhost:8000) 提供，无需重启。
 
 ## 硬约束
 
