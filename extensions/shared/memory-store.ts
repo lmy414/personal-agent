@@ -147,7 +147,7 @@ export function searchEntries(
   }
 
   return candidates
-    .filter(c => keywords.some(kw => c.entry.includes(kw)))
+    .filter(c => keywords.some(kw => c.entry.toLowerCase().includes(kw)))
     .sort((a, b) => {
       // 匹配更多关键词的排前面
       const aHits = keywords.filter(kw => a.entry.includes(kw)).length
