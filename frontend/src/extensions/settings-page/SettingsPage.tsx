@@ -273,7 +273,7 @@ export function SettingsPage() {
               <div class="settings-section">
                 <div class="settings-section-title">🎭 模型调节</div>
                 <div class="settings-section-desc">
-                  调节悬浮窗内模型的位置和大小。也可直接在悬浮窗上拖拽/滚轮操作。
+                  调节悬浮窗内模型的位置和大小。也可在悬浮窗上拖拽移动模型。
                 </div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">缩放</span>
@@ -315,9 +315,17 @@ export function SettingsPage() {
                   </span>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:8px;">
-                  <button class="provider-config-btn"
+                  <button
                     onClick={() => { setLive2dScale(0); setLive2dOffsetX(0); setLive2dOffsetY(0) }}
-                    style="flex:1;">重置全部</button>
+                    style={{
+                      flex: '1', padding: '7px 14px', 'border-radius': '6px',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'rgba(255,255,255,0.05)',
+                      color: 'var(--text-secondary)', cursor: 'pointer',
+                      'font-size': '12px', 'font-family': 'inherit',
+                      transition: 'all 0.15s',
+                    }}
+                  >重置全部</button>
                   <button class="provider-add-btn" disabled title="后续版本支持" style="margin-top:0;">
                     <span style="font-size:14px;">+</span> 加载模型
                   </button>

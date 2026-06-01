@@ -235,16 +235,6 @@ export function Live2DView() {
         lastTap = now
       })
 
-      // 滚轮缩放
-      panel.addEventListener('wheel', (e) => {
-        e.preventDefault()
-        const step = e.deltaY < 0 ? 1.06 : 0.94
-        const cur = live2dScale()
-        const base = cur > 0 ? cur / 100 : Math.min(panel.clientWidth, panel.clientHeight) / 500
-        setLive2dScale(Math.round(Math.max(8, Math.min(320, base * step * 100))) / 100)
-        fit()
-      }, { passive: false })
-
       // ── 自定义参数表情循环注入 ──
       model.internalModel.on('beforeModelUpdate', () => {
         if (!activeParams) return
