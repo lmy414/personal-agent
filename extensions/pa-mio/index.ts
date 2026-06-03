@@ -11,11 +11,14 @@ import { defineTool } from '@mariozechner/pi-coding-agent'
 import { Type } from '@mariozechner/pi-ai'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { createMemoryStore, searchEntries, memoryAdd, memoryRead, persistMemoryFiles, getSnapshot } from '../shared/memory-store'
 
 // ── 路径 ──────────────────────────────────────────────────
 
-const HARNESS_DIR = 'D:/claude/personal-agent/mio-harness'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const HARNESS_DIR = path.resolve(__dirname, '../../mio-harness')
 const SOUL_PATH = path.join(HARNESS_DIR, 'SOUL.md')
 const MEM_DIR = path.join(HARNESS_DIR, 'memories')
 
@@ -91,7 +94,7 @@ function assemblePrompt(userMessage: string, piSystemPrompt: string, store: Retu
   // Layer 0: SOUL.md（绝对顶部，缓存命中）                   ╮
   layers.push(loadSoul())                                    // │
                                                              // │
-  // Layer 1: 记忆快照（会话启动冻结）                        │ 前缀缓存
+  // Layer 1: 记忆快照（实时读取，修改后下轮可见）              │ 前缀缓存
   const recallParts: string[] = []                            // │
   if (snap.memory) recallParts.push(snap.memory)              // │
   if (snap.user) recallParts.push(snap.user)                  // │

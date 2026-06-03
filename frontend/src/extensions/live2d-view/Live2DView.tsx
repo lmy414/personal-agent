@@ -324,8 +324,8 @@ export function Live2DView() {
   }
 
   async function playMotion() {
-    if (!model || typeof model.motion !== 'function') return
-    try { await model.motion('Scene1', 0) } catch (_) {}
+    // Scene1 是表情序列动画，通过表情 API 触发（model3.json 注册为 Expression）
+    await setExpr('Scene1')
   }
 
   return (

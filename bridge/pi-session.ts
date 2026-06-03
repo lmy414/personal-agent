@@ -2,6 +2,7 @@ import { createAgentSession, ModelRegistry } from '@pi/coding-agent'
 import type { CreateAgentSessionResult } from '@pi/coding-agent'
 import type { Model } from '@pi/ai'
 import { getDB } from './db'
+import { generateUUID } from './protocol'
 
 type AgentSessionType = CreateAgentSessionResult['session']
 
@@ -67,8 +68,8 @@ export async function createPiSession(options: {
   thinkingLevel?: 'low' | 'medium' | 'high'
   sessionId?: string
 }): Promise<{ sessionId: string; model: string; thinkingLevel: string }> {
-  // 从 settings 读取用户配置的默认模型，fallback 到 deepseek-chat
-  let defaultModel = 'deepseek-chat'
+  // 从 settings 读取用户配置的默认模型，fallback 到 deepseek-v4-pro
+  let defaultModel = 'deepseek-v4-pro'
   try {
     const db = getDB()
     const row = db.prepare("SELECT value FROM settings WHERE key = 'default_model'").get() as { value: string } | undefined
@@ -83,10 +84,11 @@ export async function createPiSession(options: {
   })
 
   const session = result.session
-  const sessionId = options.sessionId ?? crypto.randomUUID()
+  const sessionId = options.sessionId ?? generateUUID()
 
-  // Switch to requested model if different from default
-  if (modelName !== 'deepseek-v3') {
+  // Switch to requested model if different from current default
+  const currentModelId = session.model?.id ?? ''
+  if (modelName && modelName !== currentModelId) {
     try {
       const model = resolveModelFromRegistry(session.modelRegistry, modelName)
       await session.setModel(model)

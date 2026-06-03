@@ -107,7 +107,7 @@ export function App() {
           <For each={registry.getBySlot('left-top')}>{renderExtension}</For>
         </div>
 
-        {/* 左下：工具面板 */}
+        {/* 左中：工具/文件面板 */}
         <div class="overlay-left-bottom">
           <For each={registry.getBySlot('left-middle')}>{renderExtension}</For>
         </div>

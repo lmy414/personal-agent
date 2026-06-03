@@ -36,11 +36,11 @@ const EXPRESSIONS: Record<string, string> = {
   jiantou:     '箭头 — 指向、强调、注意这里',
   xianhua:     '鲜花 — 赞美、庆祝、送你花',
   huatong:     '花筒 — 开心庆祝、party气氛',
-  Scene1:      '场景动作 — 完整动作序列',
+  Scene1:      '场景动作 — 表情序列动画',
 }
 
 const MOTIONS: Record<string, string> = {
-  Scene1: '场景动作 — 默认动作序列',
+  // Scene1 为表情序列动画，已注册为 live2d_expression，请使用 live2d_motion 触发（前端会映射到 Scene1 表情）
 }
 
 // ══════════════════════════════════════════════════════
@@ -65,13 +65,6 @@ function rpcErr(id: number | string | undefined, code: number, message: string):
 function log(msg: string): void {
   process.stderr.write(`[mcp-live2d] ${msg}\n`)
 }
-
-// ══════════════════════════════════════════════════════
-// 导出（供测试用）
-// ══════════════════════════════════════════════════════
-
-export { EXPRESSIONS, MOTIONS, TOOLS }
-export { ok, rpcErr }
 
 // ══════════════════════════════════════════════════════
 // 连接浏览器中的 Live2D 前端
@@ -213,12 +206,12 @@ export async function handleRequest(
 
         case 'live2d_motion': {
           const motionName = toolArgs.name
-          if (!motionName || !MOTIONS[motionName]) {
-            return rpcErr(id, -32602,
-              `未知动作: ${motionName}。可用: ${Object.keys(MOTIONS).join(', ')}`)
+          // Scene1 是表情序列动画，前端会映射到 Scene1 表情
+          if (!motionName || motionName !== 'Scene1') {
+            return rpcErr(id, -32602, `未知动作: ${motionName}。可用: Scene1（表情序列）`)
           }
           const result = await sendToBrowser('live2d_motion', { name: motionName })
-          return ok(id, { content: [{ type: 'text', text: result || `动作已播放: ${MOTIONS[motionName]}` }] })
+          return ok(id, { content: [{ type: 'text', text: result || '动作已播放: Scene1（表情序列）' }] })
         }
 
         case 'live2d_status': {
@@ -247,6 +240,13 @@ export async function handleRequest(
       return rpcErr(id, -32601, `Unknown method: ${method}`)
   }
 }
+
+// ══════════════════════════════════════════════════════
+// 导出（供测试用）
+// ══════════════════════════════════════════════════════
+
+export { EXPRESSIONS, MOTIONS, TOOLS }
+export { ok, rpcErr }
 
 // ══════════════════════════════════════════════════════
 // STDIO 传输

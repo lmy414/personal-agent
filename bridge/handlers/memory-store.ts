@@ -4,8 +4,11 @@
  */
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
-const MEM_DIR = 'D:/claude/personal-agent/mio-harness/memories'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const MEM_DIR = path.resolve(__dirname, '../../mio-harness/memories')
 
 function splitEntries(text: string): string[] {
   return text

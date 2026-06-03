@@ -11,7 +11,7 @@ import * as os from "os";
 
 // ── State ──────────────────────────────────────────────────────
 
-let workspaceRoot = "D:\\claude";
+let workspaceRoot = process.cwd();
 
 const ALLOWED_ROOTS = [process.cwd(), path.join(os.homedir(), "Documents")];
 

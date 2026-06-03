@@ -4,7 +4,7 @@
  *   - MEMORY.md ≤2200 chars, USER.md ≤1375 chars
  *   - 原子写入（tempfile + fsync + rename）
  *   - 安全扫描（prompt injection 检测）
- *   - 冻结快照（会话内写入不更新快照）
+ *   - 实时快照（修改后下次 Prompt 组装时可见）
  */
 import fs from 'fs'
 import path from 'path'
@@ -264,7 +264,7 @@ export function persistMemoryFiles(
 // ── 快照（用于 Prompt 注入）────────────────────────────────
 
 export function getSnapshot(store: MemoryStore): { memory: string; user: string } {
-  // 实时从 live entries 构建快照，不在会话启动时冻结
+  // 实时从 entries 构建快照，确保 memory_add 写入后下轮 Prompt 可见
   return {
     memory: joinEntries(store.memoryEntries),
     user: joinEntries(store.userEntries),

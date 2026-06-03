@@ -118,6 +118,18 @@ export interface MemoryEntry {
 
 // ========== 工具函数 ==========
 
+/** 生成 UUID v4，Node 19+ 使用原生 crypto.randomUUID()，旧版本使用 fallback */
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback for Node < 19
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 export function createEnvelope<T extends string, P>(
   type: T,
   sessionId: string,
@@ -125,7 +137,7 @@ export function createEnvelope<T extends string, P>(
 ): MessageEnvelope<T, P> {
   return {
     type,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     sessionId,
     ts: Date.now(),
     payload,

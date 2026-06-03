@@ -39,9 +39,16 @@ export function startWatcher(): void {
   watcher = watch(PROJECT_ROOT, { recursive: true }, (_event, filename) => {
     if (!filename) return
 
-    // 忽略 node_modules 和 .git 下的变化
+    // 忽略非关键目录的变化（避免 Vite HMR 导致的广播风暴）
     const norm = normalize(filename)
-    if (norm.startsWith('node_modules/') || norm.startsWith('.git/') || norm.startsWith('dist/')) return
+    if (
+      norm.startsWith('node_modules/') ||
+      norm.startsWith('.git/') ||
+      norm.startsWith('dist/') ||
+      norm.startsWith('frontend/') ||
+      norm.startsWith('.claude/') ||
+      norm.startsWith('vendor/')
+    ) return
 
     // 获取变化的父目录（绝对路径）
     const absDir = dirname(norm) === '.' ? PROJECT_ROOT : resolve(PROJECT_ROOT, dirname(norm))

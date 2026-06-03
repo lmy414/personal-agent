@@ -1,5 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws'
+import { writeFileSync, mkdirSync, existsSync } from 'fs'
+import { resolve, join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { dispatch } from './dispatcher'
+import { generateUUID } from './protocol'
 import { initDB, getDB } from './db'
 import { startWatcher, stopWatcher, addClient, removeClient, broadcastToAll } from './watcher'
 
@@ -12,7 +16,7 @@ console.log('[bridge] SQLite initialized at ~/.personal-agent/agent.db')
 // 确保主会话「澪」存在
 let mainSid = (db.prepare("SELECT value FROM settings WHERE key = 'main_session_id'").get() as { value: string } | undefined)?.value
 if (!mainSid) {
-  mainSid = crypto.randomUUID()
+  mainSid = generateUUID()
   db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('main_session_id', ?)").run(mainSid)
   db.prepare("INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, '澪')").run(mainSid)
   console.log('[bridge] 主会话「澪」已创建:', mainSid)
@@ -21,7 +25,7 @@ if (!mainSid) {
 const settingsCount = (db.prepare("SELECT COUNT(*) as cnt FROM settings WHERE key NOT LIKE 'main_%'").get() as { cnt: number }).cnt
 if (settingsCount === 0) {
   const defaults: [string, string][] = [
-    ['default_model', 'deepseek-chat'],
+    ['default_model', 'deepseek-v4-pro'],
     ['thinking_level', 'medium'],
     ['compact_threshold', '80'],
     ['history_retention', '100'],
@@ -30,6 +34,24 @@ if (settingsCount === 0) {
   const insert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
   for (const [k, v] of defaults) insert.run(k, v)
   console.log('[bridge] 默认设置已初始化')
+}
+
+// 生成 .pi/settings.json（若不存在），使用当前文件位置推导扩展绝对路径
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const piDir = resolve(__dirname, '.pi')
+if (!existsSync(piDir)) mkdirSync(piDir, { recursive: true })
+const piSettingsPath = join(piDir, 'settings.json')
+const extDir = resolve(__dirname, '../extensions')
+if (!existsSync(piSettingsPath)) {
+  writeFileSync(piSettingsPath, JSON.stringify({
+    extensions: [
+      resolve(extDir, 'pa-mio/index.ts'),
+      resolve(extDir, 'pa-files/index.ts'),
+      resolve(extDir, 'pa-live2d/index.ts'),
+    ],
+  }, null, 2))
+  console.log('[bridge] .pi/settings.json generated with', 3, 'extensions')
 }
 
 // Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
