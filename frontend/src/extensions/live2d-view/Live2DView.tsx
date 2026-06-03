@@ -6,29 +6,7 @@ import type { ServerMessage } from '@bridge/protocol'
 const M_URL = '/live2d/' + encodeURI('卡拉(2)') + '/' + encodeURI('卡拉.model3.json')
 const EXPR_URL = '/live2d/' + encodeURI('卡拉(2)')
 
-const BUILTIN = ['kongbai','aixinyan','xingxingyan','lianhong','duzui','guzui','han','lei','lianhei','lianqing','yun','yuanquanyan','xie','jiantou','xianhua','huatong']
-
-const CUSTOM: Record<string, { id: string; value: number; blend: string }[]> = {
-  smile: [
-    { id: 'ParamEyeLSmile', value: 0.6, blend: 'Add' },
-    { id: 'ParamEyeRSmile', value: 0.6, blend: 'Add' },
-    { id: 'ParamMouthForm', value: 0.5, blend: 'Add' },
-  ],
-  bigsmile: [
-    { id: 'ParamEyeLSmile', value: 1.0, blend: 'Add' },
-    { id: 'ParamEyeRSmile', value: 1.0, blend: 'Add' },
-    { id: 'ParamMouthForm', value: 0.8, blend: 'Add' },
-    { id: 'ParamCheek', value: 0.5, blend: 'Add' },
-    { id: 'ParamMouthOpenY', value: 0.3, blend: 'Add' },
-  ],
-  sad: [
-    { id: 'ParamBrowLY', value: 0.4, blend: 'Add' },
-    { id: 'ParamBrowRY', value: 0.4, blend: 'Add' },
-    { id: 'ParamBrowLForm', value: -0.4, blend: 'Add' },
-    { id: 'ParamBrowRForm', value: -0.4, blend: 'Add' },
-    { id: 'ParamMouthForm', value: -0.3, blend: 'Add' },
-  ],
-}
+// 所有表情从模型 .exp3.json 动态加载，无硬编码
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -251,8 +229,8 @@ export function Live2DView() {
 
       setStatus('')
 
-      // ── 待机微表情：空闲时随机眨眼/微笑 ──
-      const IDLE_EXPR = ['kongbai', 'kongbai', 'kongbai', 'smile', 'aixinyan']
+      // ── 待机微表情：空闲时随机切换模型表情 ──
+      const IDLE_EXPR = ['kongbai', 'kongbai', 'kongbai', 'aixinyan', 'xingxingyan']
       let idleTimer: ReturnType<typeof setTimeout> | null = null
       let lastActivity = Date.now()
 
@@ -282,19 +260,46 @@ export function Live2DView() {
     }
   })
 
-  // ── Live2D 指令（Bridge 中继来自 MCP Server）──
+  // ── Live2D 指令（v2 协议 + v1 兼容）──
   onMount(() => {
-    const unsub = subscribe('live2d.control', (msg: ServerMessage) => {
+    // v2: 表情切换 — 渲染器加载 .exp3.json
+    const unsubExpr = subscribe('live2d.expression', (msg: ServerMessage) => {
+      const p = msg.payload as { name: string }
+      setExpr(p.name)
+      showBubble('', exprEmoji(p.name))
+    })
+
+    // v2: 动作播放 — 渲染器加载 .motion3.json
+    const unsubMotion = subscribe('live2d.motion', (msg: ServerMessage) => {
+      const p = msg.payload as { group: string; index: number }
+      playMotion(p.group, p.index)
+    })
+
+    // v2: 参数操控
+    const unsubParam = subscribe('live2d.parameter', (msg: ServerMessage) => {
+      const p = msg.payload as { params: Array<{ id: string; value: number; duration?: number; easing?: string }> }
+      applyParameters(p.params)
+    })
+
+    // v2: 语义动画
+    const unsubAnim = subscribe('live2d.animate', (msg: ServerMessage) => {
+      const p = msg.payload as { animation: string; params: Array<{ id: string; value: number; duration?: number; easing?: string }> }
+      playAnimation(p.params)
+    })
+
+    // v1 旧协议兼容
+    const unsubLegacy = subscribe('live2d.control', (msg: ServerMessage) => {
       const p = msg.payload as { tool: string; args: Record<string, string> }
       if (p.tool === 'live2d_expression') {
         setExpr(p.args.name)
         showBubble('', exprEmoji(p.args.name))
       } else if (p.tool === 'live2d_motion') {
-        playMotion()
+        playMotion('Scene1', 0)
       }
     })
+
     onCleanup(() => {
-      unsub()
+      unsubExpr(); unsubMotion(); unsubParam(); unsubAnim(); unsubLegacy()
       app?.destroy?.(true)
       myCanvas?.remove()
     })
@@ -310,22 +315,91 @@ export function Live2DView() {
     return map[name] || ''
   }
 
+  /** 从模型 .exp3.json 加载表情（无硬编码，通用） */
   async function setExpr(name: string) {
     if (!model) return
-    if (CUSTOM[name]) { activeParams = CUSTOM[name].map(p => ({ ...p })); return }
     if (name === 'kongbai') { activeParams = null; return }
-    if (!BUILTIN.includes(name)) return
     try {
       const r = await fetch(EXPR_URL + '/' + name + '.exp3.json')
-      if (!r.ok) return
+      if (!r.ok) { activeParams = null; return }
       const d = await r.json()
       activeParams = (d.Parameters || []).map((p: any) => ({ id: p.Id, value: p.Value, blend: p.Blend || 'Add' }))
-    } catch (_) {}
+    } catch { activeParams = null }
   }
 
-  async function playMotion() {
-    // Scene1 是表情序列动画，通过表情 API 触发（model3.json 注册为 Expression）
-    await setExpr('Scene1')
+  /** 从模型 .motion3.json 加载并播放动作 */
+  async function playMotion(group: string, index: number) {
+    if (!model) return
+    try {
+      const manifestUrl = M_URL
+      const baseDir = manifestUrl.substring(0, manifestUrl.lastIndexOf('/'))
+      // 获取 model3.json 以找到 motion 文件路径
+      const r = await fetch(manifestUrl)
+      const manifest = await r.json()
+      const motions = manifest.FileReferences?.Motions
+      if (!motions || !motions[group]) return
+      const entry = motions[group][index]
+      if (!entry?.File) return
+      const motionUrl = baseDir + '/' + entry.File
+      const mr = await fetch(motionUrl)
+      if (!mr.ok) return
+      const motionData = await mr.json()
+      // 逐帧播放 motion curves
+      _executeMotion(motionData)
+    } catch { /* motion not available */ }
+  }
+
+  /** 直接应用参数列表（v2 参数操控） */
+  function applyParameters(params: Array<{ id: string; value: number; duration?: number; easing?: string }>) {
+    if (!model) return
+    activeParams = params.map((p) => ({ id: p.id, value: p.value, blend: 'Add' as const }))
+  }
+
+  /** 按 duration 序列播放语义动画 */
+  function playAnimation(params: Array<{ id: string; value: number; duration?: number; easing?: string }>) {
+    if (!model) return
+    const cm = model.internalModel?.coreModel
+    if (!cm) return
+    let delay = 0
+    for (const p of params) {
+      const dur = p.duration ?? 0
+      setTimeout(() => {
+        try { cm.setParameterValueById(p.id, p.value) } catch (_) {}
+      }, delay)
+      delay += dur
+    }
+  }
+
+  /** 简易 motion curve 执行器 */
+  function _executeMotion(data: { Meta?: { Duration?: number; Fps?: number }; Curves?: Array<{ Target: string; Id: string; Segments: Array<{ X: number; Y: number }> }> }) {
+    const cm = model?.internalModel?.coreModel
+    if (!cm || !data.Curves) return
+    const fps = data.Meta?.Fps ?? 30
+    const duration = data.Meta?.Duration ?? 1
+    const totalFrames = Math.round(duration * fps)
+    for (const curve of data.Curves) {
+      if (curve.Target !== 'Parameter' || !curve.Segments?.length) continue
+      let frame = 0
+      const iv = setInterval(() => {
+        if (frame > totalFrames) { clearInterval(iv); return }
+        const t = frame / totalFrames
+        // 线性插值：找 t 落在哪个 segment 里
+        const segs = curve.Segments.sort((a, b) => a.X - b.X)
+        let value = segs[0].Y
+        for (let i = 0; i < segs.length - 1; i++) {
+          const t0 = segs[i].X / (segs[segs.length - 1].X || 1)
+          const t1 = segs[i + 1].X / (segs[segs.length - 1].X || 1)
+          if (t >= t0 && t <= t1) {
+            const local = (t - t0) / (t1 - t0 || 0.001)
+            value = segs[i].Y + (segs[i + 1].Y - segs[i].Y) * local
+            break
+          }
+        }
+        try { cm.setParameterValueById(curve.Id, value) } catch (_) {}
+        frame++
+      }, 1000 / fps)
+      setTimeout(() => clearInterval(iv), duration * 1000 + 100)
+    }
   }
 
   return (
