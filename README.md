@@ -43,12 +43,12 @@ Layer 4: 模式指令（chat/agent）      ← 18 条正则意图分类
 
 照搬 Hermes Agent 设计——`mio-harness/memories/` 下两个 Markdown 文件：
 
-- `MEMORY.md` — 环境/项目记忆（≤2200 chars），当前 6 条 § 条目
-- `USER.md` — 用户画像（≤1375 chars），当前 17 条 § 条目
+- `MEMORY.md` — 环境/项目记忆（≤2200 chars）
+- `USER.md` — 用户画像（≤1375 chars）
 
 特性：
 - § 分隔条目，声明式事实（不是命令式指令）
-- 冻结快照注入（保护 prefix cache），写入原子持久化（tempfile + fsync + rename）
+- 实时快照注入，写入原子持久化（tempfile + fsync + rename）
 - LLM 通过 `memory_add` / `memory_read` 工具读写
 - 写入前扫描 prompt injection 模式
 
@@ -57,7 +57,7 @@ Layer 4: 模式指令（chat/agent）      ← 18 条正则意图分类
 卡拉模型悬浮看板，右下角可拖拽缩放：
 
 - **16 个内置表情** — 爱心眼、星星眼、脸红、嘟嘴、汗、泪…
-- **5 个自定义参数表情** — 微笑、大笑、生气、难过、惊讶
+- **3 个自定义参数表情** — 微笑、大笑、难过
 - **LLM 工具** — `live2d_expression` / `live2d_motion` / `live2d_status`
 - **MCP Server** — STDIO JSON-RPC 协议，Bridge WebSocket 中继到浏览器
 - **鬼影模式** — 降低透明度，不遮挡工作区
@@ -86,9 +86,6 @@ cd bridge && npm run dev
 
 # 终端 2 — 前端 (端口 5173)
 cd frontend && npm run dev
-
-# 终端 3 — EchoBot (端口 8000, Live2D SDK + 模型)
-cd bot/EchoBot && python -m echobot app
 ```
 
 浏览器打开 `http://localhost:5173`。
@@ -113,7 +110,8 @@ DEEPSEEK_API_KEY=sk-...
 ## 文档
 
 - `CLAUDE.md` — 开发者指南（代码规范、扩展规范、Git 规则、查错流程）
+- `CHANGELOG.md` — 变更日志（每次改动的意图和影响范围）
 - `docs/mio-status-2026-06-02.md` — 项目状态（架构/已完成/待完成/文件索引）
-- `docs/superpowers/specs/` — 设计 Specs（7 份）
-- `docs/superpowers/plans/` — 实现计划（6 份）
+- `docs/superpowers/specs/` — 设计 Specs（8 份）
+- `docs/superpowers/plans/` — 实现计划（7 份）
 - `frontend-sketch/` — UI 原型（设计源，9 个 HTML 原型）
