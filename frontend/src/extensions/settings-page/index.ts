@@ -1,8 +1,2 @@
-import { registry } from '@/registry'
-import { SettingsPage } from './SettingsPage'
-
-registry.register({
-  id: 'settings-page',
-  slot: 'center',
-  component: SettingsPage,
-})
+// Rendered directly in App.tsx (root level, not via registry slot)
+export { SettingsPage } from './SettingsPage'

@@ -114,7 +114,6 @@ connectL2DHub()
 setInterval(() => { if (!l2dWs || l2dWs.readyState !== WebSocket.OPEN) connectL2DHub() }, 30000)
 
 wss.on('connection', (ws: WebSocket) => {
-  console.log('[bridge] client connected')
   addClient(ws)
 
   ws.on('message', (raw) => {
@@ -141,7 +140,6 @@ wss.on('connection', (ws: WebSocket) => {
   })
 
   ws.on('close', () => {
-    console.log('[bridge] client disconnected')
     removeClient(ws)
   })
 

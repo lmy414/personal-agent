@@ -6,13 +6,25 @@
 
 ## 2026-06-03
 
+### 技术债务清理：12 项遗留问题修复
+
+- **原因**: 项目扫描发现 12 项技术债务——P0 check 失败阻塞提交，P1 死代码/过时文件占用，P2 维护负担（gitignore 漏洞/测试文件错位/嵌套仓库异常），P3 文档不一致/代码质量。
+- **改动**: 15 文件。
+  - **P0**: 创建 `bridge/scripts/check.mjs` 过滤 vendor/pi 类型错误，`npm run check` 恢复通过
+  - **P1**: 删除 `bridge/handlers/index.ts`（死文件）、`frontend/src/extensions/chat-input/`（死组件）、`bridge/.pi/extensions/`（过时副本，已分化 52 行）
+  - **P2**: `.gitignore` 加入 Vite 时间戳文件、`test-context-stats.ts` 迁至 `tests/`、物理删除 `D:claude​live2d-mcp` 嵌套 git 仓库
+  - **P3**: 路由数量文档修正（18→19）、`top-menu`/`settings-page` index.ts 移除死注册改为纯 export、`live2d-view` 注释修正、App.tsx 残留"记 忆 检 索"改为"文件"、bridge 移除 7 条 debug console.log
+- **影响**: 桥接检查流程、前端扩展注册模式、文档准确性、磁盘文件清理
+- **验证**: `npm run check` 通过；git status 干净（仅预期改动）
+- **Commit**: `7a1e9fb`
+
 ### 文档维护：全量审查 + 修正过期内容
 
 - **原因**: 项目文档多处与实际代码不符——EchoBot 已移除但多处引用、记忆快照改为实时但未更新、表情数量不准确、文档计数过时。
 - **改动**: `README.md`（移除 EchoBot 启动步骤、记忆改为实时快照、表情 5→3、CHANGELOG 入文档列表、specs 7→8、plans 6→7）；`docs/mio-status-2026-06-02.md`（移除 EchoBot 外部依赖、记忆快照描述修正、Live2D 表情数修正、watcher 排除 frontend 标记完成、MCP 进度 50→70%、git log 更新至 2026-06-03、文件树新增 godot-migration、specs/plans 计数修正）；`frontend-sketch/API.md`（顶部添加过时警告，指向实际协议定义）。
 - **影响**: README.md、docs/mio-status-2026-06-02.md、frontend-sketch/API.md
 - **验证**: 逐项对比代码实际状态确认。
-- **Commit**: （待提交）
+- **Commit**: `2b133c3`
 
 ---
 
@@ -32,4 +44,4 @@
 - **改动**: `CLAUDE.md` Git 规则章节新增"提交规则"和 CHANGELOG 条目格式模板；新会话接续清单增加 `读 CHANGELOG.md`；本文件创建。
 - **影响**: CLAUDE.md、CHANGELOG.md
 - **验证**: 规则文件内容审阅通过。
-- **Commit**: （待提交）
+- **Commit**: `c42541f`

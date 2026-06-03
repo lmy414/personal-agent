@@ -27,7 +27,7 @@
 ┌─ Bridge (Node.js + Pi Agent SDK) ──────────────────────────────────┐
 │                                                                     │
 │  index.ts ── WebSocket Server + SQLite 初始化 + Live2D 中继        │
-│  dispatcher.ts ── 消息路由（9 个 handler，18 个消息类型）           │
+│  dispatcher.ts ── 消息路由（7 个 handler，19 个消息类型）           │
 │  pi-session.ts ── Pi 会话管理 + 模型注册表                         │
 │  watcher.ts ── 文件监听 + 广播                                     │
 │  db.ts ── SQLite 持久化层                                          │

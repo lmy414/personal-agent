@@ -26,14 +26,12 @@ async function generateSessionTitle(sessionId: string): Promise<string | null> {
     `).all(sessionId) as { role: string; content: string }[]
 
     if (msgs.length < 2) {
-      console.log('[auto-name] not enough messages:', msgs.length, 'for', sessionId.slice(0, 8))
       return null
     }
 
     const userMsg = msgs.find((m) => m.role === 'user' && m.content)?.content?.slice(0, 200) ?? ''
     const aiMsg = msgs.find((m) => m.role === 'assistant' && m.content)?.content?.slice(0, 200) ?? ''
     if (!userMsg || !aiMsg) {
-      console.log('[auto-name] missing user/assistant message for', sessionId.slice(0, 8))
       return null
     }
 
@@ -60,7 +58,7 @@ async function generateSessionTitle(sessionId: string): Promise<string | null> {
     const data = await resp.json() as any
     const title = data.choices?.[0]?.message?.content?.trim()
     if (title) {
-      console.log('[auto-name] generated title:', title, 'for', sessionId.slice(0, 8))
+      // title generated successfully
     } else {
       console.log('[auto-name] DeepSeek returned no title:', JSON.stringify(data).slice(0, 200))
     }
@@ -318,9 +316,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
         // 首轮完成后 AI 自动命名（跳过主会话澪）
         const isMain = isMainSession(msg.sessionId)
         const shouldName = newRoundCount === 1 && !isMain
-        console.log('[auto-name] shouldName:', shouldName, 'newRoundCount:', newRoundCount, 'isMain:', isMain, 'session:', msg.sessionId.slice(0, 8))
         if (shouldName) {
-          console.log('[auto-name] triggering generateSessionTitle for', msg.sessionId.slice(0, 8))
           generateSessionTitle(msg.sessionId).then((title) => {
             if (title) {
               const db = getDB()

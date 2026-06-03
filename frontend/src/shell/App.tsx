@@ -138,7 +138,7 @@ export function App() {
               classList={{ hidden: panelVisible() }}
               onClick={handleExpandClick}
             >
-              记 忆 检 索
+              文件
             </div>
             <div class="right-panel-body">
               <For each={registry.getBySlot('right')}>{renderExtension}</For>

@@ -1,8 +1,2 @@
-import { registry } from '@/registry'
-import { TopMenuBar } from './TopMenuBar'
-
-registry.register({
-  id: 'top-menu',
-  slot: 'center',
-  component: TopMenuBar,
-})
+// Rendered directly in App.tsx (root level, not via registry slot)
+export { TopMenuBar } from './TopMenuBar'

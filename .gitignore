@@ -15,3 +15,4 @@ docs/
 frontend-sketch/
 frontend/public/live2d/
 bridge/.pi/extensions/
+frontend/vite.config.ts.timestamp-*.mjs
