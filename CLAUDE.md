@@ -219,11 +219,31 @@ fix: 工具面板展开后宽度不跟随
 refactor: protocol.ts 拆分为独立文件
 ```
 
+### 提交规则
+
+1. **每次改动确认通过后立即提交** — 不攒多个改动一起交。
+2. 提交信息（commit message）记录 **改了什么**（what）。
+3. 同步写入 `CHANGELOG.md`，记录 **为什么要改 + 影响范围**（why + impact）。
+4. git 追踪改动记录，CHANGELOG 追踪改动意图。每条记录对应一个具体意图。
+
+CHANGELOG 条目格式：
+```markdown
+## YYYY-MM-DD
+
+### <意图摘要>
+- **原因**: <为什么改，问题根因>
+- **改动**: <改了什么文件/逻辑>
+- **影响**: <影响范围>
+- **验证**: <如何确认通过>
+- **Commit**: <commit-hash>
+```
+
 ### 提交前检查
 
 - [ ] `npm run check` 通过（TypeScript + lint）
 - [ ] 前端 dev server 无报错
 - [ ] 原型文件（`frontend-sketch/`）的改动已同步到实际组件
+- [ ] CHANGELOG.md 已更新
 
 ### 不提交
 
@@ -263,12 +283,13 @@ refactor: protocol.ts 拆分为独立文件
 
 ```
 1. 读本文件（CLAUDE.md）
-2. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务（auto-memory）
-3. 读 docs/mio-status-2026-06-02.md 了解当前项目状态
-4. 读 docs/superpowers/specs/ 下最新 spec
-5. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
-6. git log --oneline -20 了解最近改动
-7. npm run check 确认项目当前状态
+2. 读 CHANGELOG.md 了解最近改动及意图
+3. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务（auto-memory）
+4. 读 docs/mio-status-2026-06-02.md 了解当前项目状态
+5. 读 docs/superpowers/specs/ 下最新 spec
+6. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
+7. git log --oneline -20 了解最近改动
+8. npm run check 确认项目当前状态
 ```
 
 **修改代码前**：
