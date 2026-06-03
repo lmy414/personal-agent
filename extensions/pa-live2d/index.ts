@@ -113,20 +113,65 @@ const motionTool = defineTool({
 const statusTool = defineTool({
   name: 'live2d_status',
   label: 'Live2D Status',
-  description: '获取澪号当前 Live2D 状态：可用表情列表、可用动作列表。',
+  description: '获取澪号当前 Live2D 状态：可用表情列表、可用动作列表、可用动画列表。',
   parameters: Type.Object({}),
   execute: async () => {
     const text = [
       `可用表情(${Object.keys(EXPRESSIONS).length}): ${Object.keys(EXPRESSIONS).join(', ')}`,
       `可用动作(1): Scene1`,
+      `可用动画(6): wink, slow_blink, double_blink, nod, shake_head, tilt_head`,
     ].join('\n')
     return { content: [{ type: 'text' as const, text }], details: {} }
   },
 })
 
+const paramTool = defineTool({
+  name: 'live2d_parameter',
+  label: 'Live2D Parameter',
+  description:
+    '操控 Live2D 底层参数。可同时设置多个参数。' +
+    '常用: ParamEyeLOpen(眼睛,0=闭1=开)、ParamAngleX(点头)、ParamAngleY(摇头)、ParamAngleZ(歪头)、ParamBreath(呼吸)、ParamMouthOpenY(张嘴)。',
+  parameters: Type.Object({
+    params: Type.Array(Type.Object({
+      id: Type.String({ description: '参数 ID' }),
+      value: Type.Number({ description: '目标值' }),
+      duration: Type.Number({ description: '过渡时长(ms)，0=立即' }),
+      easing: Type.String({ description: '缓动: linear/easeIn/easeOut/easeInOut' }),
+    }), { description: '参数数组' }),
+  }),
+  execute: async (_id, params) => {
+    const arr = params.params as Array<{ id: string; value: number; duration?: number; easing?: string }>
+    if (!arr || arr.length === 0) {
+      return { content: [{ type: 'text' as const, text: '缺少 params 参数数组' }], details: {} }
+    }
+    sendControl('live2d_parameter', { params: JSON.stringify(arr) })
+    return { content: [{ type: 'text' as const, text: `参数已应用 (${arr.length} 项)` }], details: {} }
+  },
+})
+
+const animTool = defineTool({
+  name: 'live2d_animate',
+  label: 'Live2D Animate',
+  description:
+    '播放语义动画。可用: wink(单眼眨)、slow_blink(慢眨眼)、double_blink(双眨眼)、nod(点头)、shake_head(摇头)、tilt_head(歪头)。',
+  parameters: Type.Object({
+    name: Type.String({ description: '动画名称: wink/slow_blink/double_blink/nod/shake_head/tilt_head' }),
+  }),
+  execute: async (_id, params) => {
+    const name = params.name as string
+    if (!name) {
+      return { content: [{ type: 'text' as const, text: '缺少动画名称' }], details: {} }
+    }
+    sendControl('live2d_animate', { name })
+    return { content: [{ type: 'text' as const, text: `动画已播放: ${name}` }], details: {} }
+  },
+})
+
 export default function register(api: ExtensionAPI) {
-  console.log('[pa-live2d] Live2D 控制工具已加载')
+  console.log('[pa-live2d] Live2D 控制工具已加载 (5 tools: expression/motion/status/parameter/animate)')
   api.registerTool(exprTool)
   api.registerTool(motionTool)
   api.registerTool(statusTool)
+  api.registerTool(paramTool)
+  api.registerTool(animTool)
 }

@@ -287,7 +287,7 @@ export function Live2DView() {
       playAnimation(p.params)
     })
 
-    // v1 旧协议兼容
+    // v1 旧协议兼容（pa-live2d Pi 扩展路径）
     const unsubLegacy = subscribe('live2d.control', (msg: ServerMessage) => {
       const p = msg.payload as { tool: string; args: Record<string, string> }
       if (p.tool === 'live2d_expression') {
@@ -295,6 +295,15 @@ export function Live2DView() {
         showBubble('', exprEmoji(p.args.name))
       } else if (p.tool === 'live2d_motion') {
         playMotion('Scene1', 0)
+      } else if (p.tool === 'live2d_parameter') {
+        // pa-live2d 发送 JSON stringified params 数组
+        try {
+          const params = JSON.parse(p.args.params) as Array<{ id: string; value: number; duration?: number; easing?: string }>
+          applyParameters(params)
+        } catch { /* ignore parse errors */ }
+      } else if (p.tool === 'live2d_animate') {
+        // legacy animate 只发名字 → 用内置参数执行
+        _legacyAnimate(p.args.name)
       }
     })
 
@@ -399,6 +408,61 @@ export function Live2DView() {
         frame++
       }, 1000 / fps)
       setTimeout(() => clearInterval(iv), duration * 1000 + 100)
+    }
+  }
+
+  /** v1 旧协议 animate 回退（只有名字，无 params，用标准参数 ID） */
+  function _legacyAnimate(name: string) {
+    if (!model) return
+    const cm = model.internalModel?.coreModel
+    if (!cm) return
+    // 标准参数回退（无 Groups 信息可用时）
+    const builtin: Record<string, Array<{ id: string; value: number; duration: number }>> = {
+      wink: [
+        { id: 'ParamEyeLOpen', value: 0, duration: 120 },
+        { id: 'ParamEyeLOpen', value: 1, duration: 120 },
+      ],
+      slow_blink: [
+        { id: 'ParamEyeLOpen', value: 0, duration: 400 },
+        { id: 'ParamEyeROpen', value: 0, duration: 400 },
+        { id: 'ParamEyeLOpen', value: 1, duration: 400 },
+        { id: 'ParamEyeROpen', value: 1, duration: 400 },
+      ],
+      double_blink: [
+        { id: 'ParamEyeLOpen', value: 0, duration: 80 },
+        { id: 'ParamEyeROpen', value: 0, duration: 80 },
+        { id: 'ParamEyeLOpen', value: 1, duration: 80 },
+        { id: 'ParamEyeROpen', value: 1, duration: 80 },
+        { id: 'ParamEyeLOpen', value: 0, duration: 80 },
+        { id: 'ParamEyeROpen', value: 0, duration: 80 },
+        { id: 'ParamEyeLOpen', value: 1, duration: 80 },
+        { id: 'ParamEyeROpen', value: 1, duration: 80 },
+      ],
+      nod: [
+        { id: 'ParamAngleX', value: -15, duration: 250 },
+        { id: 'ParamAngleX', value: 0, duration: 250 },
+        { id: 'ParamAngleX', value: -10, duration: 200 },
+        { id: 'ParamAngleX', value: 0, duration: 200 },
+      ],
+      shake_head: [
+        { id: 'ParamAngleY', value: -15, duration: 200 },
+        { id: 'ParamAngleY', value: 15, duration: 200 },
+        { id: 'ParamAngleY', value: -10, duration: 200 },
+        { id: 'ParamAngleY', value: 0, duration: 150 },
+      ],
+      tilt_head: [
+        { id: 'ParamAngleZ', value: -20, duration: 300 },
+        { id: 'ParamAngleZ', value: 0, duration: 300 },
+      ],
+    }
+    const seq = builtin[name]
+    if (!seq) return
+    let delay = 0
+    for (const p of seq) {
+      setTimeout(() => {
+        try { cm.setParameterValueById(p.id, p.value) } catch (_) {}
+      }, delay)
+      delay += p.duration
     }
   }
 
