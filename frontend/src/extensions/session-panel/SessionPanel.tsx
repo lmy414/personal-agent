@@ -1,6 +1,5 @@
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { live2dVisible, setLive2dVisible } from '@/shell/live2d-signal'
 
 export function SessionPanel() {
   const agent = useAgent()
@@ -55,21 +54,6 @@ export function SessionPanel() {
             <span class="praying-text">少女祈祷中</span>
           </div>
         </Show>
-        <button
-          onClick={(e) => { e.stopPropagation(); setLive2dVisible(!live2dVisible()) }}
-          title={live2dVisible() ? '隐藏澪号' : '显示澪号'}
-          style={{
-            background: live2dVisible() ? 'rgba(139,156,240,0.12)' : 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: live2dVisible() ? 'var(--accent)' : 'var(--text-muted)',
-            cursor: 'pointer', 'border-radius': '6px',
-            padding: '3px 8px', 'font-size': '12px',
-            'flex-shrink': '0', 'font-family': 'inherit',
-            transition: 'all 0.15s',
-          }}
-        >
-          🎭
-        </button>
       </div>
 
       {/* 操作栏：新建 + 搜索 + 折叠箭头 */}

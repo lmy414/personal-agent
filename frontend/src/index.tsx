@@ -12,7 +12,6 @@ import './extensions/doc-preview'
 import './extensions/right-panel'
 import './extensions/top-menu'
 import './extensions/settings-page'
-import './extensions/live2d-view'
 
 render(() => (
   <AgentProvider sessionId="sess-default">
