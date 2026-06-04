@@ -10,9 +10,15 @@ cd bridge && npm run dev
 
 # 终端 2 — 前端 dev
 cd frontend && npm run dev
-```
 
-浏览器打开 `http://localhost:5173`。
+# 终端 3 — Live2D 桌面宠物（可选）
+cd packages/live2d-pet/packages/desktop
+node scripts/build.mjs
+../../../node_modules/electron/dist/electron.exe .
+# 注意：需要先解除 ELECTRON_RUN_AS_NODE 环境变量
+# PowerShell: Remove-Item Env:ELECTRON_RUN_AS_NODE
+# Bash:      unset ELECTRON_RUN_AS_NODE
+```
 
 ---
 
@@ -53,20 +59,24 @@ personal-agent/
 │   │       ├── top-menu/      ←     顶部菜单栏
 │   │       ├── settings-page/ ←     全屏设置覆盖层
 │   │       ├── status-bar/    ←     状态栏
-│   │       ├── right-panel/   ←     右侧面板 Tab
-│   │       └── live2d-view/   ←     悬浮 Live2D 看板
+│   │       └── right-panel/   ←     右侧面板 Tab
 │   ├── index.html
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
 ├── extensions/                ← Pi 扩展（由 bridge/.pi/settings.json 注册）
 │   ├── pa-mio/index.ts        ←   人格注入 v4（5 层 Prompt + 意图分类 + 记忆工具）
 │   ├── pa-files/index.ts      ←   文件浏览/预览工具
-│   ├── pa-live2d/index.ts     ←   Live2D 表情/动作/状态工具（WebSocket 中继）
+│   ├── pa-mcp/index.ts        ←   通用 MCP 客户端桥接（任何 MCP server → Pi 工具）
 │   └── shared/memory-store.ts ←   记忆读写核心（§ 文件操作 + 原子写入）
-├── mcp-servers/live2d/        ← MCP Server（独立进程）
-│   ├── index.ts               ←   JSON-RPC over STDIO
-│   ├── test.ts                ←   协议测试
-│   └── package.json
+├── packages/
+│   └── live2d-pet/            ← Live2D Electron 桌面宠物（独立包）
+│       ├── packages/
+│       │   ├── core/           ←   PIXI + Cubism 引擎
+│       │   ├── desktop/        ←   Electron 窗口（WS:9228 + HTTP:9230）
+│       │   ├── hub/            ←   消息中继
+│       │   ├── protocol/       ←   共享类型
+│       │   └── adapters/mcp/   ←   MCP JSON-RPC 适配器（7 工具）
+│       └── src/                ←   CLI + 工具定义 + 动画引擎
 ├── mio-harness/               ← 角色数据
 │   ├── SOUL.md                ←   人格定义（行为规则，~800 chars）
 │   └── memories/              ←   持久记忆（§ 分隔 Markdown）
@@ -339,17 +349,64 @@ mio-harness/memories/
 - **检索**：关键词匹配 § 条目
 - **安全**：写入前扫描 prompt injection 模式
 
-### 热重载
+### Live2D 桌面宠物架构
 
-改 bridge 自身代码 → `tsx watch` 自动重启。
+Live2D 渲染已从浏览器迁移到独立 Electron 桌面宠物，通过标准 MCP 协议供智能体控制。
+
+### 接入方式
+
+**方式 1 — MCP 标准协议（推荐，任何智能体）**
+```json
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "live2d": {
+      "command": "npx",
+      "args": ["tsx", "<project>/packages/live2d-pet/packages/adapters/mcp/src/index.ts"]
+    }
+  }
+}
+```
+
+**方式 2 — Pi 扩展桥接（personal-agent 内置）**
+`extensions/pa-mcp/` 自动启动 MCP adapter 子进程，7 个工具注册到 Pi。详见该文件注释。
+
+**方式 3 — 原生 WebSocket**
+直连 `ws://localhost:9228`，`l2d.*` 消息协议（`_rid` 请求-响应）。
+
+### 通信架构
+```
+任何智能体 ──MCP STDIO──→ MCP Adapter ──WS(:9228)──→ Electron 桌面宠物
+Pi + DeepSeek ──pa-mcp──→ MCP Adapter ──WS(:9228)──→ Electron 桌面宠物
+    原生客户端 ───WS直连──────→ Electron 桌面宠物  (:9228)
+```
+
+### 端口
+| 端口 | 服务 |
+|------|------|
+| 9228 | Electron WS Hub（指令通道） |
+| 9230 | Electron HTTP（模型文件服务） |
+| 9229 | Bridge WS（personal-agent） |
+
+### 可用工具（MCP）
+`model_load` · `expression_set` · `expression_list` · `action_perform` · `action_list` · `settings_get` · `settings_set`
+
+### ⚠️ 早期开发注意事项
+- **Electron 启动**：必须清除 `ELECTRON_RUN_AS_NODE` 环境变量，否则 Electron 降级为纯 Node.js
+- **SDK 文件**：`packages/live2d-pet/packages/desktop/src/vendor/` 下的 `live2dcubismcore.min.js` 是 Live2D 专有文件，需用户自行获取
+- **模型路径**：通过 `model_load` 指令动态加载，不自动扫描。路径需为包含 `.model3.json` 的目录
+- **pa-mcp 子进程**：首次工具调用时懒启动 MCP adapter，首次调用可能较慢（~2s）
+- **Windows spawn**：`spawn('npx', ...)` 不可用（.cmd 批处理），pa-mcp 已使用 `node` + 绝对路径规避
+
+## 热重载
+
+改 bridge 自身代码 → 手动重启（`tsx` 不带 watch）。
 
 改前端代码 → Vite HMR。
 
 改扩展/角色文件（`extensions/` 或 `mio-harness/`）→ 需手动重启 bridge。
 
-改前端 Live2D 组件（`frontend/src/extensions/live2d-view/`）→ Vite HMR 自动生效。
-
-改 Live2D 模型文件 / Cubism SDK → 需通过 EchoBot (localhost:8000) 提供，无需重启。
+改 Live2D MCP adapter（`packages/live2d-pet/packages/adapters/mcp/`）→ 新建会话时自动生效（pa-mcp 懒连接）。
 
 ## 硬约束
 

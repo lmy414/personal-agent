@@ -9,6 +9,8 @@ import { defineTool } from '@mariozechner/pi-coding-agent'
 import { Type } from '@mariozechner/pi-ai'
 import { spawn, type ChildProcess } from 'child_process'
 import { createInterface } from 'readline'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
 // ── Config ─────────────────────────────────────
 
@@ -25,13 +27,16 @@ interface PreDefTool {
   params: Record<string, { type: 'string' | 'number' | 'boolean'; required: boolean; description: string }>
 }
 
+/** 解析项目根目录（extensions/pa-mcp/index.ts → ../../） */
+const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+
 /** 硬编码工具定义 — 与 MCP adapter tools.ts 保持同步 */
 const SERVERS: MCPServer[] = [
   {
     command: 'node',
     args: [
-      'D:/claude/personal-agent/bridge/node_modules/tsx/dist/cli.mjs',
-      'D:/claude/personal-agent/packages/live2d-pet/packages/adapters/mcp/src/index.ts',
+      resolve(PROJECT_ROOT, 'bridge/node_modules/tsx/dist/cli.mjs'),
+      resolve(PROJECT_ROOT, 'packages/live2d-pet/packages/adapters/mcp/src/index.ts'),
     ],
     tools: [
       {
