@@ -4,6 +4,49 @@
 
 ---
 
+## 2026-06-05
+
+### 审计修复：P0/P1/P2 共 8 项
+
+- **原因**: 全项目源码审计发现 3 处设计冲突（工作目录双根、slot 文档错误、设置项悬空）、4 项过期/未实现、5 项代码质量隐患。逐项修复 P0-P2。
+- **改动**: 7 文件。
+  - **P0**: pa-files fallback 从 `process.cwd()` 改为 `PROJECT_ROOT`（统一前后端根路径）；`/workspace` 命令改为写 SQLite（与设置页统一数据源）；状态文档 tool-panel slot 修正 + 架构图布局修正
+  - **P1**: `history_retention` 消费——`handleSessionHistory` 读取设置限制返回消息数；`compact_threshold` 消费——`agent_end` 后检查使用率超阈值自动 compact；`npm test` 接入 `tests/run-all.ts`
+  - **P2**: WebSocket 心跳——前端每 30s 发 ping 防静默断线；tool duration——记录 `tool_execution_start` 时间戳计算实际耗时；Bridge 优雅退出——SIGINT/SIGTERM 关闭 wss + db
+- **影响**: pa-files 路径解析、会话历史加载、上下文压缩触发时机、测试入口、WS 连接稳定性、工具耗时展示、进程退出安全
+- **验证**: `npm run check` 全过（仅 vendor/pi 上游错误）
+- **Commit**: `2ef5e4a`
+
+### 文档更新：移除 Live2D、新增工作目录、同步目录结构
+
+- **原因**: Live2D 集成已从主应用移除（6 个 refactor 连续 commit），但 CLAUDE.md 和状态文档仍有大量 Live2D 引用。同时新增工作目录系统、pa-mcp、架构图等未在文档中反映。
+- **改动**: 11 文件。
+  - `CLAUDE.md`：移除 Live2D 启动步骤（终端 3）、架构章节（接入方式/通信架构/端口/工具）、`live2d-signal.ts` / `SceneLayer.tsx` / `chat-input` 等已删除文件；更新目录结构匹配实际 9 个前端扩展 + 7 handler + 6 层 Prompt
+  - 新建 `docs/mio-status-2026-06-05.md`：最新项目状态（工作目录系统、Live2D 移除记录、完整进度表）
+  - 新建 `docs/architecture.html`：vis-network 交互式架构图（6 色分组、tooltip、双击聚焦）
+  - `docs/mio-status-2026-06-01.md`：标注已过期
+  - 4 份 Live2D spec/plan：标注 ⚠️ 已废弃；2 份 Electron 迁移文档：标注 ✅ 已完成
+  - `bridge/index.ts`：修复 `.pi/settings.json` 生成中残留的 `pa-live2d` → `pa-mcp`
+- **影响**: 项目文档体系（CLAUDE.md、状态文档、spec/plan 历史记录）；首次安装默认配置生成
+- **验证**: Grep 确认 CLAUDE.md Live2D 引用从 14 降至 2（仅在 packages/live2d-pet 独立项目说明中）
+- **Commit**: `61e9403`
+
+### 工作目录设置：文件面板 + 智能体感知 + 工具操作三线打通
+
+- **原因**: 文件管理面板硬编码项目根目录，智能体无法感知用户自定义工作目录，导致路径分裂（前端看一处、LLM 工具看另一处）。
+- **改动**: 6 文件。
+  - `bridge/handlers/file.ts`：`resolveSafe` 新增绝对路径分支（`isAbsolute` → `existsSync` → 放行）
+  - `frontend/.../SettingsPage.tsx`：新增"工作目录"输入框，`onBlur`/`Enter` 提交
+  - `frontend/.../FileTree.tsx`：读取 `work_dir` 设置 → 订阅 `settings.state` → 自动切换根目录 + 刷新
+  - `extensions/pa-files/index.ts`：`getWorkspaceRoot()` 动态读 SQLite，工具操作指向正确目录
+  - `extensions/pa-mio/index.ts`：Layer 2.5 `<recall>` 围栏注入工作目录描述 → 智能体感知
+  - `.gitignore`：新增 `.codegraph/`
+- **影响**: 文件浏览、LLM 工具调用（`list_directory`/`preview_file`）、system prompt 上下文
+- **验证**: `npm run check` 全过；设置页输入路径 → 文件面板自动切换；智能体回复确认工作目录
+- **Commit**: `4f49282`
+
+---
+
 ## 2026-06-03
 
 ### 技术债务清理：12 项遗留问题修复
