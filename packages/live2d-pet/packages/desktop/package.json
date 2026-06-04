@@ -1,0 +1,21 @@
+{
+  "name": "@live2d-pet/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live2D Desktop Pet — Electron shell with frameless transparent window",
+  "type": "module",
+  "main": "./dist/main.cjs",
+  "scripts": {
+    "dev": "electron .",
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}

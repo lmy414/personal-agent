@@ -1,0 +1,22 @@
+{
+  "name": "@live2d-pet/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live2D Desktop Pet — unified protocol types + JSON Schema",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

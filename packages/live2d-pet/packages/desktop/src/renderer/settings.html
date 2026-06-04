@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live2D Pet 设置</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #1a1a2e;
+    overflow: hidden;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: rgba(255,255,255,0.85);
+  }
+  h3 {
+    font-size: 14px; font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 4px;
+  }
+  .setting-group { display: flex; flex-direction: column; gap: 6px; }
+  .setting-group label {
+    color: rgba(255,255,255,0.55); font-size: 11px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .setting-group label span.val { color: rgba(255,255,255,0.4); font-size: 10px; }
+  .setting-group input[type="range"] {
+    width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none;
+  }
+  .setting-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: #58a6ff; cursor: pointer;
+  }
+  .setting-group input[type="number"] {
+    width: 52px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+    color: #fff; padding: 2px 6px; font-size: 11px; text-align: right;
+  }
+  .setting-row { display: flex; gap: 8px; align-items: center; }
+  .setting-row input { flex: 1; }
+  .btn-row { display: flex; gap: 6px; margin-top: 2px; }
+  .btn {
+    flex: 1; padding: 6px 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7);
+    font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .btn.primary { background: rgba(88,166,255,0.18); border-color: rgba(88,166,255,0.25); }
+  .btn.primary:hover { background: rgba(88,166,255,0.3); }
+  .sep { border-top: 1px solid rgba(255,255,255,0.08); margin: 2px 0; }
+</style>
+</head>
+<body>
+  <h3>控制面板</h3>
+
+  <div class="setting-group">
+    <label>窗口宽度 <span class="val" id="val-width"></span></label>
+    <div class="setting-row">
+      <input type="range" id="set-width" min="200" max="600">
+      <input type="number" id="set-width-num" min="200" max="600" step="10">
+    </div>
+  </div>
+  <div class="setting-group">
+    <label>窗口高度 <span class="val" id="val-height"></span></label>
+    <div class="setting-row">
+      <input type="range" id="set-height" min="260" max="800">
+      <input type="number" id="set-height-num" min="260" max="800" step="10">
+    </div>
+  </div>
+  <div class="setting-group">
+    <label>透明度 <span class="val" id="val-opacity"></span></label>
+    <input type="range" id="set-opacity" min="30" max="100">
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="setting-group">
+    <label>模型缩放 <span class="val" id="val-scale"></span></label>
+    <div class="setting-row">
+      <input type="range" id="set-scale" min="0" max="200">
+      <input type="number" id="set-scale-num" min="0" max="200" step="5">
+    </div>
+  </div>
+  <div class="setting-group">
+    <label>横向偏移 <span class="val" id="val-offx"></span></label>
+    <div class="setting-row">
+      <input type="range" id="set-offx" min="-200" max="200">
+      <input type="number" id="set-offx-num" min="-200" max="200" step="5">
+    </div>
+  </div>
+  <div class="setting-group">
+    <label>纵向偏移 <span class="val" id="val-offy"></span></label>
+    <div class="setting-row">
+      <input type="range" id="set-offy" min="-200" max="200">
+      <input type="number" id="set-offy-num" min="-200" max="200" step="5">
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="btn-row">
+    <button class="btn primary" id="btn-reset">重置位置</button>
+    <button class="btn" id="btn-hide">隐藏模型</button>
+  </div>
+
+  <script type="module" src="./settings.js"></script>
+</body>
+</html>
