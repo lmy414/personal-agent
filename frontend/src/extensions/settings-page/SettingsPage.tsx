@@ -1,9 +1,8 @@
 import { createEffect, For, createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
-import { live2dWidth, setLive2dWidth, live2dHeight, setLive2dHeight, live2dScale, setLive2dScale, live2dOffsetX, setLive2dOffsetX, live2dOffsetY, setLive2dOffsetY } from '@/shell/live2d-signal'
 
-type SettingsTab = 'agent' | 'live2d'
+type SettingsTab = 'agent'
 
 function getSetting(entries: { key: string; value: string }[], key: string): string {
   return entries.find((e) => e.key === key)?.value ?? ''
@@ -98,13 +97,6 @@ export function SettingsPage() {
             onClick={() => setSettingsTab('agent')}
           >
             <span class="nav-icon">🤖</span> 智能体基础设置
-          </div>
-          <div
-            class="settings-nav-item"
-            classList={{ active: settingsTab() === 'live2d' }}
-            onClick={() => setSettingsTab('live2d')}
-          >
-            <span class="nav-icon">🎭</span> Live2D 设置
           </div>
         </div>
 
@@ -236,99 +228,6 @@ export function SettingsPage() {
                   <span class="settings-form-value">
                     <span style="font-size:13px;color:var(--accent);font-weight:500;">{defaultModel()}</span>
                   </span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ══════════ Live2D 设置 ══════════ */}
-          {settingsTab() === 'live2d' && (
-            <>
-              <div class="settings-section">
-                <div class="settings-section-title">📐 窗口尺寸</div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">宽度</span>
-                  <span class="settings-form-value">
-                    <input class="settings-input" type="number" min="200" max="500" step="10"
-                      value={live2dWidth()} onChange={(e) => setLive2dWidth(parseInt(e.currentTarget.value) || 280)} />
-                    <span class="settings-input-unit">px</span>
-                    <input type="range" min="200" max="500" step="10"
-                      value={live2dWidth()} onInput={(e) => setLive2dWidth(parseInt(e.currentTarget.value))}
-                      style="flex:1;margin-left:8px;accent-color:var(--accent);cursor:pointer;" />
-                  </span>
-                </div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">高度</span>
-                  <span class="settings-form-value">
-                    <input class="settings-input" type="number" min="260" max="650" step="10"
-                      value={live2dHeight()} onChange={(e) => setLive2dHeight(parseInt(e.currentTarget.value) || 380)} />
-                    <span class="settings-input-unit">px</span>
-                    <input type="range" min="260" max="650" step="10"
-                      value={live2dHeight()} onInput={(e) => setLive2dHeight(parseInt(e.currentTarget.value))}
-                      style="flex:1;margin-left:8px;accent-color:var(--accent);cursor:pointer;" />
-                  </span>
-                </div>
-              </div>
-
-              <div class="settings-section">
-                <div class="settings-section-title">🎭 模型调节</div>
-                <div class="settings-section-desc">
-                  调节悬浮窗内模型的位置和大小。也可在悬浮窗上拖拽移动模型。
-                </div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">缩放</span>
-                  <span class="settings-form-value">
-                    <input class="settings-input" type="number" min="0" max="200" step="5"
-                      value={live2dScale()}
-                      onChange={(e) => setLive2dScale(parseInt(e.currentTarget.value) || 0)} />
-                    <span class="settings-input-unit">%(0=自动)</span>
-                    <input type="range" min="0" max="200" step="5"
-                      value={live2dScale()}
-                      onInput={(e) => setLive2dScale(parseInt(e.currentTarget.value))}
-                      style="flex:1;margin-left:8px;accent-color:var(--accent);cursor:pointer;" />
-                  </span>
-                </div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">水平偏移</span>
-                  <span class="settings-form-value">
-                    <input class="settings-input" type="number" min="-500" max="500" step="1"
-                      value={live2dOffsetX()}
-                      onChange={(e) => setLive2dOffsetX(parseInt(e.currentTarget.value) || 0)} />
-                    <span class="settings-input-unit">px</span>
-                    <input type="range" min="-500" max="500" step="1"
-                      value={live2dOffsetX()}
-                      onInput={(e) => setLive2dOffsetX(parseInt(e.currentTarget.value))}
-                      style="flex:1;margin-left:8px;accent-color:var(--accent);cursor:pointer;" />
-                  </span>
-                </div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">垂直偏移</span>
-                  <span class="settings-form-value">
-                    <input class="settings-input" type="number" min="-500" max="500" step="1"
-                      value={live2dOffsetY()}
-                      onChange={(e) => setLive2dOffsetY(parseInt(e.currentTarget.value) || 0)} />
-                    <span class="settings-input-unit">px</span>
-                    <input type="range" min="-500" max="500" step="1"
-                      value={live2dOffsetY()}
-                      onInput={(e) => setLive2dOffsetY(parseInt(e.currentTarget.value))}
-                      style="flex:1;margin-left:8px;accent-color:var(--accent);cursor:pointer;" />
-                  </span>
-                </div>
-                <div style="display:flex;gap:8px;margin-top:8px;">
-                  <button
-                    onClick={() => { setLive2dScale(0); setLive2dOffsetX(0); setLive2dOffsetY(0) }}
-                    style={{
-                      flex: '1', padding: '7px 14px', 'border-radius': '6px',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(255,255,255,0.05)',
-                      color: 'var(--text-secondary)', cursor: 'pointer',
-                      'font-size': '12px', 'font-family': 'inherit',
-                      transition: 'all 0.15s',
-                    }}
-                  >重置全部</button>
-                  <button class="provider-add-btn" disabled title="后续版本支持" style="margin-top:0;">
-                    <span style="font-size:14px;">+</span> 加载模型
-                  </button>
                 </div>
               </div>
             </>
