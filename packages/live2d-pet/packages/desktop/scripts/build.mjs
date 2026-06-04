@@ -32,4 +32,14 @@ cpSync('src/renderer/app.js', 'dist/renderer/app.js')
 cpSync('src/renderer/settings.html', 'dist/renderer/settings.html')
 cpSync('src/renderer/settings.js', 'dist/renderer/settings.js')
 
+// Copy vendor files (SDK scripts required at runtime)
+if (!existsSync('dist/vendor')) mkdirSync('dist/vendor', { recursive: true })
+if (existsSync('src/vendor')) {
+  const vendorFiles = ['pixi.min.js', 'live2dcubismcore.min.js', 'cubism4.min.js']
+  for (const f of vendorFiles) {
+    const src = `src/vendor/${f}`
+    if (existsSync(src)) cpSync(src, `dist/vendor/${f}`)
+  }
+}
+
 console.log('build OK')
