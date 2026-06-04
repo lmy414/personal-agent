@@ -62,69 +62,12 @@ console.log(`[bridge] WebSocket server listening on ws://localhost:${PORT}`)
 
 startWatcher()
 
-// ── 连接 live2d-mcp 的内部 WS hub（协议 v2）──
-const L2D_HUB = 'ws://127.0.0.1:9228'
-let l2dWs: WebSocket | null = null
-
-function connectL2DHub(): void {
-  if (l2dWs && l2dWs.readyState === WebSocket.OPEN) return
-  l2dWs = new WebSocket(L2D_HUB)
-  l2dWs.on('open', () => console.log('[bridge] connected to live2d-mcp hub'))
-  l2dWs.on('message', (data) => {
-    try {
-      const raw = JSON.parse(data.toString()) as { type: string; [key: string]: unknown }
-      // Wrap WSBroadcast into MessageEnvelope format
-      let envelope: { type: string; id: string; sessionId: string; ts: number; payload: unknown }
-      switch (raw.type) {
-        case 'expression':
-          envelope = {
-            type: 'live2d.expression', id: generateUUID(), sessionId: '', ts: Date.now(),
-            payload: { name: raw.name },
-          }
-          break
-        case 'motion':
-          envelope = {
-            type: 'live2d.motion', id: generateUUID(), sessionId: '', ts: Date.now(),
-            payload: { group: raw.group, index: raw.index },
-          }
-          break
-        case 'parameter':
-          envelope = {
-            type: 'live2d.parameter', id: generateUUID(), sessionId: '', ts: Date.now(),
-            payload: { params: raw.params },
-          }
-          break
-        case 'animate':
-          envelope = {
-            type: 'live2d.animate', id: generateUUID(), sessionId: '', ts: Date.now(),
-            payload: { animation: raw.animation, params: raw.params },
-          }
-          break
-        default:
-          return
-      }
-      broadcastToAll(JSON.stringify(envelope))
-    } catch { /* ignore malformed messages */ }
-  })
-  l2dWs.on('close', () => { console.log('[bridge] live2d-mcp hub disconnected'); l2dWs = null })
-  l2dWs.on('error', () => { l2dWs = null })
-}
-connectL2DHub()
-// 断线重连（每 30s 尝试）
-setInterval(() => { if (!l2dWs || l2dWs.readyState !== WebSocket.OPEN) connectL2DHub() }, 30000)
-
 wss.on('connection', (ws: WebSocket) => {
   addClient(ws)
 
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw.toString())
-
-      // Live2D 中继：MCP Server ↔ Bridge ↔ 浏览器
-      if (msg.type === 'live2d.control' || msg.type === 'live2d.result') {
-        broadcastToAll(raw.toString(), ws)
-        return
-      }
 
       dispatch(msg, ws)
     } catch (err) {
