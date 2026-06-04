@@ -128,6 +128,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
   let turnIndex = 0
   let messageId = ''
   let lastUsage: { input: number; output: number; total: number; cost: number } | undefined
+  const toolStartTimes = new Map<string, number>()
 
   const unsubscribe = session.subscribe((event: any) => {
     switch (event.type) {
@@ -219,6 +220,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
       }
 
       case 'tool_execution_start': {
+        toolStartTimes.set(event.toolCallId, Date.now())
         ws.send(JSON.stringify({
           type: 'tool.start',
           id: `srv-${Date.now()}`,
@@ -260,6 +262,9 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
       }
 
       case 'tool_execution_end': {
+        const startTime = toolStartTimes.get(event.toolCallId)
+        const duration = startTime ? Date.now() - startTime : 0
+        toolStartTimes.delete(event.toolCallId)
         ws.send(JSON.stringify({
           type: 'tool.end',
           id: `srv-${Date.now()}`,
@@ -269,7 +274,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
             toolCallId: event.toolCallId,
             toolName: event.toolName,
             output: typeof event.result === 'string' ? event.result : JSON.stringify(event.result),
-            duration: 0,
+            duration,
             status: event.isError ? 'error' : 'success',
           },
         }))
@@ -282,7 +287,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
           ).run(
             typeof event.result === 'string' ? event.result : JSON.stringify(event.result),
             event.isError ? 'error' : 'success',
-            0,
+            duration,
             event.toolCallId,
           )
         } catch (e) {
@@ -311,6 +316,43 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
         const newRoundCount = (meta?.roundCount ?? 0) + 1
         if (meta) {
           updateSessionMeta(msg.sessionId, { roundCount: newRoundCount })
+        }
+
+        // P1: 检查 context 使用率，超阈值自动 compact
+        try {
+          const db = getDB()
+          const thrRow = db.prepare("SELECT value FROM settings WHERE key = 'compact_threshold'").get() as { value: string } | undefined
+          const threshold = thrRow?.value ? parseInt(thrRow.value, 10) : 80
+          const ctx = session.getContextUsage()
+          const ctxTokens = ctx?.tokens ?? 0
+          const ctxWindow = ctx?.contextWindow ?? 0
+          if (ctxTokens > 0 && ctxWindow > 0) {
+            const pct = Math.round((ctxTokens / ctxWindow) * 100)
+            if (pct >= threshold) {
+              const compactFn = (session as any).compact as ((instructions?: string) => Promise<{ tokensBefore: number; summary: string }>) | undefined
+              if (typeof compactFn === 'function' && !(session as any).isStreaming) {
+                const before = ctxTokens
+                compactFn().then((result) => {
+                  const after = session.getContextUsage()
+                  const saved = result?.tokensBefore ?? before - (after?.tokens ?? 0)
+                  ws.send(JSON.stringify({
+                    type: 'session.compacted',
+                    id: `srv-${Date.now()}`,
+                    sessionId: msg.sessionId,
+                    ts: Date.now(),
+                    payload: {
+                      tokensBefore: before,
+                      tokensAfter: after?.tokens ?? 0,
+                      tokensSaved: Math.max(0, saved),
+                      contextWindow: ctxWindow,
+                    },
+                  }))
+                }).catch(() => { /* 自动 compact 失败不阻塞 */ })
+              }
+            }
+          }
+        } catch {
+          // compact_threshold 读取失败不阻塞
         }
 
         // 首轮完成后 AI 自动命名（跳过主会话澪）

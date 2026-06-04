@@ -91,5 +91,12 @@ wss.on('connection', (ws: WebSocket) => {
   })
 })
 
-process.on('SIGINT', () => { stopWatcher(); process.exit() })
-process.on('SIGTERM', () => { stopWatcher(); process.exit() })
+function shutdown() {
+  stopWatcher()
+  wss.close()
+  try { db.close() } catch { /* already closed */ }
+  console.log('[bridge] shutdown complete')
+  process.exit(0)
+}
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)

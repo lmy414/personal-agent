@@ -134,9 +134,26 @@ export async function handleSessionState(msg: ClientMessage, ws: WebSocket): Pro
 
 // ── session.history（新增：加载历史消息 + 工具调用）─────────────
 
+function getHistoryRetention(): number {
+  try {
+    const db = getDB()
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'history_retention'").get() as { value: string } | undefined
+    return row?.value ? parseInt(row.value, 10) || 100 : 100
+  } catch { return 100 }
+}
+
 export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
   const payload = msg.payload as { sessionId: string }
   const db = getDB()
+  const retention = getHistoryRetention()
+
+  const total = db.prepare(`
+    SELECT COUNT(*) as cnt FROM messages m
+    JOIN conversations c ON m.conversation_id = c.id
+    WHERE c.session_id = ?
+  `).get(payload.sessionId) as { cnt: number }
+
+  const offset = Math.max(0, total.cnt - retention)
 
   const messages = db.prepare(`
     SELECT m.message_id, m.role, m.content, m.attachments
@@ -144,7 +161,8 @@ export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
     JOIN conversations c ON m.conversation_id = c.id
     WHERE c.session_id = ?
     ORDER BY m.id ASC
-  `).all(payload.sessionId) as { message_id: string; role: string; content: string; attachments: string }[]
+    LIMIT ? OFFSET ?
+  `).all(payload.sessionId, retention, offset) as { message_id: string; role: string; content: string; attachments: string }[]
 
   const toolCalls = db.prepare(`
     SELECT tool_call_id, tool_name, input, output, status, duration

@@ -14,10 +14,10 @@
 │  ├─ SettingsPage        ← 全屏设置覆盖层（模型/参数/工作目录）      │
 │  └─ Overlay (Grid 布局) ← 对话 + 面板区                            │
 │      ├─ left-top        ← 会话面板                                 │
-│      ├─ left-middle     ← 文件树 + 工具面板                        │
+│      ├─ left-middle     ← 工具面板                                │
 │      ├─ left-bottom     ← 状态栏                                   │
 │      ├─ center          ← 对话渲染 + 输入框                        │
-│      └─ right           ← 文档预览 / 右侧面板                      │
+│      └─ right           ← 文件树 / 文档预览 (Tab 切换)             │
 │                                                                     │
 └──────────────┬──────────────────────────────────────────────────────┘
                │ WebSocket (ws://localhost:9229)
@@ -121,7 +121,7 @@
 | 3 | `chat-renderer` | chat-renderer/ | center | 消息气泡渲染 + 思考折叠 |
 | 4 | `session-panel` | session-panel/ | left-top | 会话列表 + 切换 |
 | 5 | `file-tree` | file-tree/ | right-tab | 文件树浏览（工作目录感知） |
-| 6 | `tool-panel` | tool-panel/ | right-tab | 工具调用状态 |
+| 6 | `tool-panel` | tool-panel/ | left-middle | 工具调用状态 |
 | 7 | `doc-preview` | doc-preview/ | right-tab | 文档内容预览 |
 | 8 | `right-panel` | right-panel/ | right | 右侧面板 Tab 切换 |
 | 9 | `status-bar` | status-bar/ | left-bottom | 状态栏（tokens/费用/模型/连接） |

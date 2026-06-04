@@ -91,6 +91,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null
   let pumpRafId: number | null = null
   let reconnectAttempts = 0
   const CHARS_PER_FRAME = 15
@@ -117,6 +118,13 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     ws.onopen = () => {
       setConnected(true)
       reconnectAttempts = 0
+      // 心跳：每 30s 发送 ping 防止静默断线
+      if (heartbeatTimer) clearInterval(heartbeatTimer)
+      heartbeatTimer = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping', id: '', sessionId: '', ts: Date.now(), payload: {} }))
+        }
+      }, 30000)
       // 初始化：请求 session 列表 + 模型列表
       const initMessages = [
         JSON.stringify({
@@ -143,6 +151,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
     ws.onclose = () => {
       setConnected(false)
+      if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null }
       if (reconnectTimer) clearTimeout(reconnectTimer)
       const delay = Math.min(3000 * Math.pow(2, reconnectAttempts), 30000)
       reconnectAttempts++
@@ -608,6 +617,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   connect()
 
   onCleanup(() => {
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null }
     if (reconnectTimer) clearTimeout(reconnectTimer)
     if (pumpRafId !== null) cancelAnimationFrame(pumpRafId)
     ws?.close()

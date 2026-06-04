@@ -9,14 +9,17 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { getDB } from "../../bridge/db";
+import { fileURLToPath } from "url";
 
 // ── State ──────────────────────────────────────────────────────
 
-let workspaceRoot = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, "..", "..");
 
-const ALLOWED_ROOTS = [process.cwd(), path.join(os.homedir(), "Documents")];
+const ALLOWED_ROOTS = [PROJECT_ROOT, path.join(os.homedir(), "Documents")];
 
-/** 从 SQLite 读取用户设置的工作目录，fallback 到运行时 workspaceRoot */
+/** 从 SQLite 读取用户设置的工作目录，fallback 到 PROJECT_ROOT */
 function getWorkspaceRoot(): string {
   try {
     const db = getDB()
@@ -25,7 +28,7 @@ function getWorkspaceRoot(): string {
       return row.value
     }
   } catch { /* DB 未就绪 */ }
-  return workspaceRoot
+  return PROJECT_ROOT
 }
 
 function isAllowedRoot(dir: string): boolean {
@@ -205,8 +208,13 @@ export default function (pi: ExtensionAPI) {
           ctx.ui.notify(`Not in allowed list. Allowed: ${ALLOWED_ROOTS.join(", ")}`, "warning");
           return;
         }
-        workspaceRoot = newRoot;
-        ctx.ui.notify(`Workspace set to: ${newRoot}`, "info");
+        try {
+          const db = getDB()
+          db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('work_dir', ?)").run(newRoot)
+          ctx.ui.notify(`Workspace set to: ${newRoot}`, "info");
+        } catch {
+          ctx.ui.notify("Failed to persist workspace setting", "warning");
+        }
       }
     },
   });
