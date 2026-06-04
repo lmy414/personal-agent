@@ -1,7 +1,6 @@
 {
   "extensions": [
     "D:/claude/personal-agent/extensions/pa-mio/index.ts",
-    "D:/claude/personal-agent/extensions/pa-files/index.ts",
-    "D:/claude/personal-agent/extensions/pa-live2d/index.ts"
+    "D:/claude/personal-agent/extensions/pa-files/index.ts"
   ]
 }
