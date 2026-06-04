@@ -48,7 +48,7 @@ if (!existsSync(piSettingsPath)) {
     extensions: [
       resolve(extDir, 'pa-mio/index.ts'),
       resolve(extDir, 'pa-files/index.ts'),
-      resolve(extDir, 'pa-live2d/index.ts'),
+      resolve(extDir, 'pa-mcp/index.ts'),
     ],
   }, null, 2))
   console.log('[bridge] .pi/settings.json generated with', 3, 'extensions')

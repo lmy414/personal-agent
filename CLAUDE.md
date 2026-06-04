@@ -5,19 +5,11 @@
 ## 快速启动
 
 ```bash
-# 终端 1 — 桥接服务器（支持热重载）
+# 终端 1 — 桥接服务器
 cd bridge && npm run dev
 
 # 终端 2 — 前端 dev
 cd frontend && npm run dev
-
-# 终端 3 — Live2D 桌面宠物（可选）
-cd packages/live2d-pet/packages/desktop
-node scripts/build.mjs
-../../../node_modules/electron/dist/electron.exe .
-# 注意：需要先解除 ELECTRON_RUN_AS_NODE 环境变量
-# PowerShell: Remove-Item Env:ELECTRON_RUN_AS_NODE
-# Bash:      unset ELECTRON_RUN_AS_NODE
 ```
 
 ---
@@ -32,44 +24,48 @@ personal-agent/
 ├── package.json               ← monorepo root（concurrently 双启动）
 ├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
 │   ├── .pi/settings.json      ←   Pi 扩展注册（3 个扩展，绝对路径）
-│   ├── index.ts               ←   入口：WS Server + SQLite + Live2D 中继
+│   ├── index.ts               ←   入口：WS Server + SQLite 初始化
 │   ├── protocol.ts            ←   消息类型定义（前后端共享，~130 行）
 │   ├── dispatcher.ts          ←   消息路由表（18 路由）
 │   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
 │   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
 │   ├── watcher.ts             ←   文件监听 + 广播
-│   └── handlers/              ←   按消息类型拆文件（7 文件，9 handler）
+│   └── handlers/              ←   按消息类型拆文件（7 文件）
+│       ├── settings.ts        ←     设置 CRUD + 模型发现
+│       ├── file.ts            ←     文件列表/读取（支持工作目录）
+│       ├── session.ts         ←     会话 CRUD + 历史 + 压缩
+│       ├── message.ts         ←     消息发送/取消 + 自动命名
+│       ├── model.ts           ←     模型切换/列表
+│       ├── memory.ts          ←     记忆搜索/列表
+│       └── memory-store.ts    ←     Bridge 侧记忆读写
 ├── frontend/                  ← SolidJS 前端
 │   ├── src/
 │   │   ├── shell/             ←   壳（Grid 布局 + WS hook + 全局信号）
 │   │   │   ├── App.tsx        ←     壳组件 + 面板拖拽
 │   │   │   ├── App.css        ←     玻璃拟态 UI 全样式
 │   │   │   ├── useAgent.tsx   ←     全局状态 + WebSocket 管理
-│   │   │   ├── live2d-signal.ts ←   Live2D 面板参数信号
-│   │   │   ├── settings-signal.ts ← 设置页面开关信号
-│   │   │   └── SceneLayer.tsx ←     Live2D 场景层
+│   │   │   └── settings-signal.ts ← 设置页面开关信号
 │   │   ├── registry.ts        ←   扩展注册表（Slot-based 插件系统）
-│   │   └── extensions/        ←   11 个扩展组件，每个一个文件夹
-│   │       ├── chat-input/    ←     对话输入框
+│   │   └── extensions/        ←   9 个扩展组件，每个一个文件夹
 │   │       ├── chat-renderer/ ←     消息气泡渲染 + 思考折叠
 │   │       ├── session-panel/ ←     会话列表 + 切换
-│   │       ├── file-tree/     ←     文件树浏览
+│   │       ├── file-tree/     ←     文件树浏览（支持工作目录切换）
 │   │       ├── tool-panel/    ←     工具调用状态
 │   │       ├── doc-preview/   ←     文档内容预览
 │   │       ├── top-menu/      ←     顶部菜单栏
-│   │       ├── settings-page/ ←     全屏设置覆盖层
+│   │       ├── settings-page/ ←     全屏设置覆盖层（工作目录配置）
 │   │       ├── status-bar/    ←     状态栏
 │   │       └── right-panel/   ←     右侧面板 Tab
 │   ├── index.html
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
 ├── extensions/                ← Pi 扩展（由 bridge/.pi/settings.json 注册）
-│   ├── pa-mio/index.ts        ←   人格注入 v4（5 层 Prompt + 意图分类 + 记忆工具）
-│   ├── pa-files/index.ts      ←   文件浏览/预览工具
+│   ├── pa-mio/index.ts        ←   人格注入 v4（6 层 Prompt + 意图分类 + 记忆工具）
+│   ├── pa-files/index.ts      ←   文件浏览/预览工具（动态工作目录感知）
 │   ├── pa-mcp/index.ts        ←   通用 MCP 客户端桥接（任何 MCP server → Pi 工具）
 │   └── shared/memory-store.ts ←   记忆读写核心（§ 文件操作 + 原子写入）
 ├── packages/
-│   └── live2d-pet/            ← Live2D Electron 桌面宠物（独立包）
+│   └── live2d-pet/            ← Live2D Electron 桌面宠物（独立项目，非主应用集成）
 │       ├── packages/
 │       │   ├── core/           ←   PIXI + Cubism 引擎
 │       │   ├── desktop/        ←   Electron 窗口（WS:9228 + HTTP:9230）
@@ -80,15 +76,16 @@ personal-agent/
 ├── mio-harness/               ← 角色数据
 │   ├── SOUL.md                ←   人格定义（行为规则，~800 chars）
 │   └── memories/              ←   持久记忆（§ 分隔 Markdown）
-│       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars，6 条 §）
-│       └── USER.md            ←     用户画像（≤1375 chars，17 条 §）
+│       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars）
+│       └── USER.md            ←     用户画像（≤1375 chars）
 ├── mio-data/                  ← 澪号角色设计资料
-├── frontend-sketch/           ← UI 原型（设计源，9 个 HTML 原型）
+├── frontend-sketch/           ← UI 原型（设计源）
 ├── docs/
-│   ├── mio-status-2026-06-02.md ← 最新项目状态
+│   ├── architecture.html      ←   交互式架构图（vis-network）
+│   ├── mio-status-2026-06-05.md ← 最新项目状态
 │   └── superpowers/
-│       ├── specs/             ←   设计 Specs（7 份）
-│       └── plans/             ←   实现计划（6 份）
+│       ├── specs/             ←   设计 Specs
+│       └── plans/             ←   实现计划
 └── vendor/pi/                 ← Pi 框架（不修改）
 ```
 
@@ -295,7 +292,7 @@ CHANGELOG 条目格式：
 1. 读本文件（CLAUDE.md）
 2. 读 CHANGELOG.md 了解最近改动及意图
 3. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务（auto-memory）
-4. 读 docs/mio-status-2026-06-02.md 了解当前项目状态
+4. 读 docs/mio-status-2026-06-05.md 了解当前项目状态
 5. 读 docs/superpowers/specs/ 下最新 spec
 6. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
 7. git log --oneline -20 了解最近改动
@@ -324,8 +321,8 @@ CHANGELOG 条目格式：
 ```
 Layer 0: SOUL.md                        ← 人格定义，绝对顶部（实时读取，改文件立即生效）
 Layer 1: 记忆快照（MEMORY.md + USER.md） ← 会话启动冻结，<recall> 围栏
-Layer 2: 注入上下文（检索记忆 + 工具结果）← 每轮动态
-Layer 3: Pi 工具定义                     ← Pi 自动注入（含 memory_add/read, live2d_expression 等）
+Layer 2: 注入上下文（检索记忆 + 工作目录）← 每轮动态
+Layer 3: Pi 工具定义                     ← Pi 自动注入（含 memory_add/read 等）
 Layer 4: 模式指令（chat/agent）          ← 18 条正则意图分类，chat 免工具 / agent 可调工具
 Layer 5: 对话历史                        ← Pi 管理
 ```
@@ -349,54 +346,21 @@ mio-harness/memories/
 - **检索**：关键词匹配 § 条目
 - **安全**：写入前扫描 prompt injection 模式
 
-### Live2D 桌面宠物架构
+### Live2D 桌面宠物（已移除）
 
-Live2D 渲染已从浏览器迁移到独立 Electron 桌面宠物，通过标准 MCP 协议供智能体控制。
+> **注意**：Live2D 集成功能已从主应用中完全移除。相关代码已通过以下 commit 清理：
+> - `d99532c` 移除旧 `pa-live2d` Pi 扩展
+> - `03da3ee` 移除前端 Live2D 渲染组件（`live2d-view/`、`SceneLayer.tsx`、`live2d-signal.ts`）
+> - `6c3e604` 移除 bridge Live2D 中继代码
+> - `b649da7` 移除 SettingsPage Live2D 设置 Tab
+>
+> `packages/live2d-pet/` 保留为独立 Electron 项目，可通过 MCP 协议由任意智能体调用。它与 personal-agent 主应用无直接耦合。
+>
+> 如需使用 Live2D，参考 `packages/live2d-pet/` 内的文档，通过 MCP 标准协议接入即可。
 
-### 接入方式
+### pa-mcp（通用 MCP 桥接）
 
-**方式 1 — MCP 标准协议（推荐，任何智能体）**
-```json
-// claude_desktop_config.json
-{
-  "mcpServers": {
-    "live2d": {
-      "command": "npx",
-      "args": ["tsx", "<project>/packages/live2d-pet/packages/adapters/mcp/src/index.ts"]
-    }
-  }
-}
-```
-
-**方式 2 — Pi 扩展桥接（personal-agent 内置）**
-`extensions/pa-mcp/` 自动启动 MCP adapter 子进程，7 个工具注册到 Pi。详见该文件注释。
-
-**方式 3 — 原生 WebSocket**
-直连 `ws://localhost:9228`，`l2d.*` 消息协议（`_rid` 请求-响应）。
-
-### 通信架构
-```
-任何智能体 ──MCP STDIO──→ MCP Adapter ──WS(:9228)──→ Electron 桌面宠物
-Pi + DeepSeek ──pa-mcp──→ MCP Adapter ──WS(:9228)──→ Electron 桌面宠物
-    原生客户端 ───WS直连──────→ Electron 桌面宠物  (:9228)
-```
-
-### 端口
-| 端口 | 服务 |
-|------|------|
-| 9228 | Electron WS Hub（指令通道） |
-| 9230 | Electron HTTP（模型文件服务） |
-| 9229 | Bridge WS（personal-agent） |
-
-### 可用工具（MCP）
-`model_load` · `expression_set` · `expression_list` · `action_perform` · `action_list` · `settings_get` · `settings_set`
-
-### ⚠️ 早期开发注意事项
-- **Electron 启动**：必须清除 `ELECTRON_RUN_AS_NODE` 环境变量，否则 Electron 降级为纯 Node.js
-- **SDK 文件**：`packages/live2d-pet/packages/desktop/src/vendor/` 下的 `live2dcubismcore.min.js` 是 Live2D 专有文件，需用户自行获取
-- **模型路径**：通过 `model_load` 指令动态加载，不自动扫描。路径需为包含 `.model3.json` 的目录
-- **pa-mcp 子进程**：首次工具调用时懒启动 MCP adapter，首次调用可能较慢（~2s）
-- **Windows spawn**：`spawn('npx', ...)` 不可用（.cmd 批处理），pa-mcp 已使用 `node` + 绝对路径规避
+`extensions/pa-mcp/` 是一个通用 MCP 客户端桥接，子进程懒启动，自动发现工具并注册到 Pi。首次调用可能较慢（~2s）。Windows 下使用 `node` + 绝对路径规避 `.cmd` spawn 问题。
 
 ## 热重载
 
@@ -405,8 +369,6 @@ Pi + DeepSeek ──pa-mcp──→ MCP Adapter ──WS(:9228)──→ Electro
 改前端代码 → Vite HMR。
 
 改扩展/角色文件（`extensions/` 或 `mio-harness/`）→ 需手动重启 bridge。
-
-改 Live2D MCP adapter（`packages/live2d-pet/packages/adapters/mcp/`）→ 新建会话时自动生效（pa-mcp 懒连接）。
 
 ## 硬约束
 
