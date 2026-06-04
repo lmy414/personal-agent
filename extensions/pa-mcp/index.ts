@@ -28,8 +28,11 @@ interface PreDefTool {
 /** 硬编码工具定义 — 与 MCP adapter tools.ts 保持同步 */
 const SERVERS: MCPServer[] = [
   {
-    command: 'npx',
-    args: ['tsx', 'D:/claude/personal-agent/packages/live2d-pet/packages/adapters/mcp/src/index.ts'],
+    command: 'node',
+    args: [
+      'D:/claude/personal-agent/bridge/node_modules/tsx/dist/cli.mjs',
+      'D:/claude/personal-agent/packages/live2d-pet/packages/adapters/mcp/src/index.ts',
+    ],
     tools: [
       {
         name: 'model_load',
