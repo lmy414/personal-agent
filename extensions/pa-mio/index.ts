@@ -13,6 +13,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { createMemoryStore, searchEntries, memoryAdd, memoryRead, persistMemoryFiles, getSnapshot } from '../shared/memory-store'
+import { getDB } from '../../bridge/db'
 
 // ── 路径 ──────────────────────────────────────────────────
 
@@ -31,6 +32,16 @@ function loadSoul(): string {
     console.error('[pa-mio] SOUL.md 读取失败')
     return '你是澪号。Mirror 的搭档。'
   }
+}
+
+// ── 工作目录感知 ──────────────────────────────────────────
+
+function getWorkDir(): string {
+  try {
+    const db = getDB()
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'work_dir'").get() as { value: string } | undefined
+    return row?.value || ''
+  } catch { return '' }
 }
 
 // ── 意图分类（正则规则，照搬 EchoBot 思路）─────────────────
@@ -110,6 +121,17 @@ function assemblePrompt(userMessage: string, piSystemPrompt: string, store: Retu
   const retrieved = searchEntries(store, userMessage, 'both', 3)
   if (retrieved.length) {
     layers.push('<recall>\n' + retrieved.map(e => `§ ${e}`).join('\n') + '\n</recall>')
+  }
+
+  // Layer 2.5: 工作目录上下文
+  const workDir = getWorkDir()
+  if (workDir) {
+    layers.push(
+      '<recall>\n[系统提示：以下是工作目录信息，不是用户的新输入]\n\n' +
+      `当前工作目录：${workDir}\n` +
+      '用户提到的文件、项目路径默认基于此目录。' +
+      '\n</recall>',
+    )
   }
 
   // Layer 3: Pi 工具定义 + Skill 描述（始终注入，Pi 控制不了）

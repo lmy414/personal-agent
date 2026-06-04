@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
 import { readdirSync, statSync, readFileSync, existsSync } from 'fs'
-import { join, resolve, normalize, relative, dirname } from 'path'
+import { join, resolve, normalize, relative, dirname, isAbsolute } from 'path'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -10,6 +10,14 @@ const PROJECT_ROOT = resolve(join(__dirname, '..', '..'))
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'])
 
 function resolveSafe(targetPath: string): string {
+  // 绝对路径：验证存在即可访问（工作目录支持）
+  if (isAbsolute(targetPath)) {
+    const normalized = normalize(targetPath)
+    if (!existsSync(normalized)) {
+      throw new Error(`Path not found: ${targetPath}`)
+    }
+    return normalized
+  }
   // 相对路径基于 PROJECT_ROOT 解析，而非 CWD
   const resolved = resolve(PROJECT_ROOT, normalize(targetPath))
   const rel = relative(PROJECT_ROOT, resolved)

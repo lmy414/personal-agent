@@ -12,6 +12,10 @@ interface TreeNode {
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'])
 
+function getSettingFromList(entries: { key: string; value: string }[], key: string): string {
+  return entries.find((e) => e.key === key)?.value ?? ''
+}
+
 function fileIcon(name: string, type: 'file' | 'directory'): string {
   if (type === 'directory') return '📁'
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
@@ -35,8 +39,14 @@ export function FileTree() {
   const [dirChildren, setDirChildren] = createSignal<Record<string, TreeNode[]>>({})
   const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set())
   let rootPath = ''
+  let currentWorkDir = ''
 
   onMount(() => {
+    // 读取工作目录设置作为根路径
+    const settingsEntries = agent.settings()
+    currentWorkDir = getSettingFromList(settingsEntries, 'work_dir')
+    const initialSendPath = currentWorkDir || '.'
+
     const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
       const payload = msg.payload as { path: string; entries: FileEntry[] }
       const entries: TreeNode[] = payload.entries
@@ -69,11 +79,27 @@ export function FileTree() {
     // 自动刷新：bridge 推送 file.changed 时重新加载可见目录
     const unsubChange = agent.subscribe('file.changed', (msg: ServerMessage) => {
       const changedPath = (msg.payload as { path: string }).path
-      // 根目录总是刷新
-      agent.send('file.list', { path: '.' })
+      const rootSendPath = currentWorkDir || '.'
+      agent.send('file.list', { path: rootSendPath })
       // 如果变化的目录正好是已展开的子目录，也刷新它
       if (expandedDirs().has(changedPath)) {
         agent.send('file.list', { path: changedPath })
+      }
+    })
+
+    // 监听工作目录设置变更
+    const unsubSettings = agent.subscribe('settings.state', (_msg: ServerMessage) => {
+      const entries = (_msg.payload as { entries: { key: string; value: string }[] }).entries
+      const newWorkDir = getSettingFromList(entries, 'work_dir')
+      if (newWorkDir !== currentWorkDir) {
+        currentWorkDir = newWorkDir
+        setTree([])
+        setDirChildren({})
+        setExpandedDirs(new Set<string>())
+        rootPath = ''
+        setLoading(true)
+        const sendPath = newWorkDir || '.'
+        agent.send('file.list', { path: sendPath })
       }
     })
 
@@ -90,11 +116,12 @@ export function FileTree() {
     onCleanup(() => {
       unsub()
       unsubChange()
+      unsubSettings()
       unsubError()
       if (errorTid !== undefined) clearTimeout(errorTid)
     })
 
-    agent.send('file.list', { path: '.' })
+    agent.send('file.list', { path: initialSendPath })
   })
 
   const handleToggleDir = (node: TreeNode, e: MouseEvent) => {
@@ -193,7 +220,8 @@ export function FileTree() {
           title="刷新文件列表"
           onClick={() => {
             // 清空子目录缓存后，展开的目录会显示为空；立即重新请求
-            agent.send('file.list', { path: '.' })
+            const rootSendPath = currentWorkDir || '.'
+            agent.send('file.list', { path: rootSendPath })
             const expanded = expandedDirs()
             for (const path of expanded) {
               agent.send('file.list', { path })

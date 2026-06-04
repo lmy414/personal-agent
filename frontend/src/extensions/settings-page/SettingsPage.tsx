@@ -229,6 +229,28 @@ export function SettingsPage() {
                     <span style="font-size:13px;color:var(--accent);font-weight:500;">{defaultModel()}</span>
                   </span>
                 </div>
+                <div class="settings-form-row">
+                  <span class="settings-form-label">工作目录</span>
+                  <span class="settings-form-value">
+                    <input
+                      class="settings-input"
+                      type="text"
+                      placeholder="默认项目根目录"
+                      value={getSetting(entries(), 'work_dir')}
+                      style="width: 320px; text-align: left;"
+                      onBlur={(e) => {
+                        const v = e.currentTarget.value.trim()
+                        agent.setSetting('work_dir', v)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const v = e.currentTarget.value.trim()
+                          agent.setSetting('work_dir', v)
+                        }
+                      }}
+                    />
+                  </span>
+                </div>
               </div>
             </>
           )}

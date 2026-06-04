@@ -20,3 +20,4 @@ frontend/vite.config.ts.timestamp-*.mjs
 # Live2D SDK vendor files (用户自行获取)
 packages/live2d-pet/packages/desktop/src/vendor/
 packages/live2d-pet/packages/desktop/dist/vendor/
+.codegraph/

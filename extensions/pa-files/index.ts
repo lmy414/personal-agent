@@ -8,6 +8,7 @@ import { defineTool } from "@mariozechner/pi-coding-agent";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { getDB } from "../../bridge/db";
 
 // ── State ──────────────────────────────────────────────────────
 
@@ -15,16 +16,30 @@ let workspaceRoot = process.cwd();
 
 const ALLOWED_ROOTS = [process.cwd(), path.join(os.homedir(), "Documents")];
 
+/** 从 SQLite 读取用户设置的工作目录，fallback 到运行时 workspaceRoot */
+function getWorkspaceRoot(): string {
+  try {
+    const db = getDB()
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'work_dir'").get() as { value: string } | undefined
+    if (row?.value && fs.existsSync(row.value) && fs.statSync(row.value).isDirectory()) {
+      return row.value
+    }
+  } catch { /* DB 未就绪 */ }
+  return workspaceRoot
+}
+
 function isAllowedRoot(dir: string): boolean {
-  return ALLOWED_ROOTS.some((r) => {
+  const roots = [...ALLOWED_ROOTS, getWorkspaceRoot()]
+  return roots.some((r) => {
     const rel = path.relative(r, dir);
     return !rel.startsWith("..") && !path.isAbsolute(rel);
   });
 }
 
 function resolveSafe(filePath: string): string | null {
-  const target = path.resolve(workspaceRoot, filePath);
-  const rel = path.relative(workspaceRoot, target);
+  const root = getWorkspaceRoot()
+  const target = path.resolve(root, filePath);
+  const rel = path.relative(root, target);
   if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
   return target;
 }
@@ -101,12 +116,13 @@ function stripHtmlTags(html: string): string {
 const listDirTool = defineTool({
   name: "list_directory",
   label: "List Directory",
-  description: `List contents of a directory under the workspace (${workspaceRoot}). Use "." for root.`,
+  description: "List contents of a directory under the current workspace. Use \".\" for root.",
   parameters: Type.Object({
     dir_path: Type.String({ description: "Directory path relative to workspace, or '.' for root" }),
   }),
   execute: async (_id, params) => {
-    const target = params.dir_path === "." ? workspaceRoot : resolveSafe(params.dir_path);
+    const root = getWorkspaceRoot()
+    const target = params.dir_path === "." ? root : resolveSafe(params.dir_path);
     if (!target) return { content: [{ type: "text", text: "Access denied: path outside workspace" }], details: {} };
     const lines = listDir(target, 0, 3);
     return { content: [{ type: "text", text: lines.join("\n") || "(empty)" }], details: { path: target } };
@@ -116,7 +132,7 @@ const listDirTool = defineTool({
 const previewFileTool = defineTool({
   name: "preview_file",
   label: "Preview File",
-  description: `Read and preview a file under the workspace (${workspaceRoot}). Supports Markdown, HTML, code, and text files.`,
+  description: "Read and preview a file under the current workspace. Supports Markdown, HTML, code, and text files.",
   parameters: Type.Object({
     file_path: Type.String({ description: "File path relative to workspace" }),
   }),
@@ -144,7 +160,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("files", {
     description: "Browse workspace directory tree (usage: /files [subdir])",
     handler: async (args, ctx) => {
-      const target = args.trim() ? resolveSafe(args.trim()) : workspaceRoot;
+      const root = getWorkspaceRoot()
+      const target = args.trim() ? resolveSafe(args.trim()) : root;
       if (!target) { ctx.ui.notify("Path outside workspace", "warning"); return; }
       if (!fs.existsSync(target)) { ctx.ui.notify(`Not found: ${args.trim()}`, "warning"); return; }
       const stat = fs.statSync(target);
@@ -155,7 +172,7 @@ export default function (pi: ExtensionAPI) {
         return;
       }
       const lines = listDir(target, 0, 3);
-      ctx.ui.notify([`Workspace: ${workspaceRoot}`, `Path: ${path.relative(workspaceRoot, target) || "."}`, "", ...lines].join("\n"), "info");
+      ctx.ui.notify([`Workspace: ${root}`, `Path: ${path.relative(root, target) || "."}`, "", ...lines].join("\n"), "info");
     },
   });
 
@@ -176,7 +193,8 @@ export default function (pi: ExtensionAPI) {
     description: "View or change workspace root (usage: /workspace [new-path])",
     handler: async (args, ctx) => {
       if (!args.trim()) {
-        ctx.ui.notify(`Workspace: ${workspaceRoot}`, "info");
+        const root = getWorkspaceRoot()
+        ctx.ui.notify(`Workspace: ${root}`, "info");
       } else {
         const newRoot = path.resolve(args.trim());
         if (!fs.existsSync(newRoot) || !fs.statSync(newRoot).isDirectory()) {
@@ -188,7 +206,7 @@ export default function (pi: ExtensionAPI) {
           return;
         }
         workspaceRoot = newRoot;
-        ctx.ui.notify(`Workspace set to: ${workspaceRoot}`, "info");
+        ctx.ui.notify(`Workspace set to: ${newRoot}`, "info");
       }
     },
   });
