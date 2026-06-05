@@ -380,6 +380,7 @@ export function SettingsPage() {
                                   agent.send('skills.remove', {
                                     name: skill.name,
                                     source: skill.source,
+                                    dirName: skill.dirName,
                                   })
                                 }
                               }}

@@ -33,7 +33,7 @@ export type ClientMessage =
   | ClientMsg<'skills.list', {}>
   | ClientMsg<'skills.install', { zipPath: string; target: 'user' | 'project' }>
   | ClientMsg<'skills.toggle', { name: string; source: 'user' | 'project'; enabled: boolean }>
-  | ClientMsg<'skills.remove', { name: string; source: 'user' | 'project' }>
+  | ClientMsg<'skills.remove', { name: string; source: 'user' | 'project'; dirName: string }>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -125,6 +125,7 @@ export interface SkillSummary {
   source: 'user' | 'project'
   enabled: boolean
   filePath: string
+  dirName: string              // 实际文件夹名（用于删除），不受 frontmatter name 影响
 }
 
 // ========== 工具函数 ==========

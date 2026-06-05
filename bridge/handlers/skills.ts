@@ -88,6 +88,7 @@ function scanSkills(source: 'user' | 'project'): SkillSummary[] {
         source,
         enabled: !disabled.has(name),
         filePath: skillMdPath,
+        dirName: entry.name,
       })
     }
   } catch { /* 目录读取失败 */ }
@@ -243,23 +244,26 @@ export function handleSkillsToggle(msg: ClientMessage, _ws: WebSocket): void {
   broadcastSkillsState()
 }
 
-export function handleSkillsRemove(msg: ClientMessage, _ws: WebSocket): void {
-  const { name, source } = msg.payload as { name: string; source: 'user' | 'project' }
+export function handleSkillsRemove(msg: ClientMessage, ws: WebSocket): void {
+  const { dirName, source } = msg.payload as { name: string; source: 'user' | 'project'; dirName: string }
   const dir = getSkillsDir(source)
-  const skillDir = join(dir, name)
+  const skillDir = join(dir, dirName)
 
-  if (!existsSync(skillDir)) {
-    return // 已经不存在了
+  try {
+    if (existsSync(skillDir)) {
+      rmSync(skillDir, { recursive: true })
+    }
+    // 清理禁用列表
+    const disabled = readDisabledList(dir)
+    disabled.delete(dirName)
+    writeDisabledList(dir, disabled)
+    broadcastSkillsState()
+  } catch (err) {
+    ws.send(JSON.stringify({
+      type: 'error', id: msg.id, sessionId: msg.sessionId, ts: Date.now(),
+      payload: { code: 'REMOVE_FAILED', message: `删除失败: ${err}`, recoverable: true },
+    }))
   }
-
-  rmSync(skillDir, { recursive: true })
-
-  // 清理禁用列表
-  const disabled = readDisabledList(dir)
-  disabled.delete(name)
-  writeDisabledList(dir, disabled)
-
-  broadcastSkillsState()
 }
 
 // ========== 工具函数 ==========
