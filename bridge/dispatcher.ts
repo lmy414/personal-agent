@@ -10,6 +10,9 @@ import { handleSkillsList, handleSkillsInstall, handleSkillsToggle, handleSkills
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
+// 无操作消息（心跳等），不回复 error 避免噪音
+const NOOP_TYPES = new Set(['ping'])
+
 const routes: Record<string, Handler> = {
   'session.create': handleSessionCreate,
   'session.list': handleSessionList,
@@ -37,6 +40,7 @@ const routes: Record<string, Handler> = {
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {
+  if (NOOP_TYPES.has(msg.type)) return  // 心跳等静默忽略
   const handler = routes[msg.type]
   if (!handler) {
     ws.send(JSON.stringify({

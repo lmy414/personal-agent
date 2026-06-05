@@ -439,7 +439,10 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
   try {
     await session.prompt(payload.content)
   } catch (err) {
+    // 确保流式状态被清理，防止后续消息全部被 ALREADY_STREAMING 拒绝
+    try { await session.abort() } catch { /* best-effort */ }
     unsubscribe()
+    console.error(`[message] prompt failed for session ${msg.sessionId}:`, err)
     ws.send(JSON.stringify({
       type: 'error',
       id: `srv-${Date.now()}`,

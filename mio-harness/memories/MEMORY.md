@@ -7,3 +7,5 @@
 § Bridge 通过 Pi Agent SDK 管理 AI 会话，WebSocket 推流到前端
 § Live2D MCP 功能正在开发中，相关设计 spec 和实现计划已在 docs 中记录
 § Mirror 的工作目录设置为 E:\mio，不是项目根目录 D:\claude\personal-agent
+§ interactive-dashboard-builder 技能已安装，位于 .pi/skills/interactive-dashboard-builder/，20KB，Chart.js 交互式仪表板生成
+§ interactive-dashboard-builder 技能已安装，位于 bridge/.claude/skills/interactive-dashboard-builder/，20KB，Chart.js 交互式仪表板生成
