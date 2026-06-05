@@ -1,8 +1,9 @@
 import { createEffect, For, createSignal, onCleanup, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
+import type { SkillSummary } from '@bridge/protocol'
 
-type SettingsTab = 'agent'
+type SettingsTab = 'agent' | 'skills'
 
 function getSetting(entries: { key: string; value: string }[], key: string): string {
   return entries.find((e) => e.key === key)?.value ?? ''
@@ -19,11 +20,18 @@ export function SettingsPage() {
   const [expandedModelId, setExpandedModelId] = createSignal<string | null>(null)
   const [settingsTab, setSettingsTab] = createSignal<SettingsTab>('agent')
 
+  const [skills, setSkills] = createSignal<SkillSummary[]>([])
+  const [installPath, setInstallPath] = createSignal('')
+  const [installTarget, setInstallTarget] = createSignal<'user' | 'project'>('user')
+  const [installStatus, setInstallStatus] = createSignal<'idle' | 'installing' | 'ok' | 'error'>('idle')
+  const [installMsg, setInstallMsg] = createSignal('')
+
   // 打开时拉取设置 + 自动发现模型
   createEffect(() => {
     if (isSettingsOpen()) {
       agent.getSettings()
       agent.send('settings.discover-models', {})
+      agent.send('skills.list', {})
     }
   })
 
@@ -36,6 +44,32 @@ export function SettingsPage() {
     if (isSettingsOpen()) {
       window.addEventListener('keydown', handleKeyDown)
       onCleanup(() => window.removeEventListener('keydown', handleKeyDown))
+    }
+  })
+
+  // 订阅技能状态推送（实时更新）
+  createEffect(() => {
+    if (isSettingsOpen()) {
+      const handler = (msg: any) => {
+        if (msg.payload?.skills) {
+          setSkills(msg.payload.skills)
+        }
+      }
+      const unsub = agent.subscribe('skills.state', handler)
+      onCleanup(unsub)
+    }
+  })
+
+  // 订阅安装完成通知
+  createEffect(() => {
+    if (isSettingsOpen()) {
+      const handler = (msg: any) => {
+        setInstallStatus('ok')
+        setInstallMsg(`技能 "${msg.payload.name}" 安装成功`)
+        setTimeout(() => setInstallStatus('idle'), 3000)
+      }
+      const unsub = agent.subscribe('skills.installed', handler)
+      onCleanup(unsub)
     }
   })
 
@@ -95,6 +129,13 @@ export function SettingsPage() {
             onClick={() => setSettingsTab('agent')}
           >
             <span class="nav-icon">🤖</span> 智能体基础设置
+          </div>
+          <div
+            class="settings-nav-item"
+            classList={{ active: settingsTab() === 'skills' }}
+            onClick={() => setSettingsTab('skills')}
+          >
+            <span class="nav-icon">🧩</span> 技能管理
           </div>
         </div>
 
@@ -255,6 +296,131 @@ export function SettingsPage() {
                       <span style="font-size:12px;color:#4ade80;margin-left:8px;">✓ 已保存</span>
                     </Show>
                   </span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══════════ 技能管理 ══════════ */}
+          {settingsTab() === 'skills' && (
+            <>
+              <div class="settings-section">
+                <div class="settings-section-title">
+                  📦 已安装技能
+                  <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">
+                    共 {skills().length} 个 / 已启用 {skills().filter((s: SkillSummary) => s.enabled).length} 个
+                  </span>
+                </div>
+                <div class="settings-section-desc">管理已安装的技能。禁用后下次对话生效。</div>
+
+                <Show when={skills().length > 0} fallback={
+                  <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">
+                    <div style="font-size:32px;margin-bottom:8px;">📭</div>
+                    暂无已安装的技能
+                    <div style="margin-top:4px;font-size:11px;">
+                      将技能文件夹放入 ~/.claude/agent/skills/ 或项目/.claude/skills/
+                    </div>
+                  </div>
+                }>
+                  <div class="skill-list">
+                    <For each={skills()}>
+                      {(skill) => (
+                        <div class="skill-card">
+                          <div class="skill-card-body">
+                            <div class="skill-card-name">
+                              {skill.name}
+                              <span class={`skill-source-badge ${skill.source}`}>
+                                {skill.source === 'user' ? '用户' : '项目'}
+                              </span>
+                            </div>
+                            <div class="skill-card-desc">
+                              {skill.description || '(无描述)'}
+                            </div>
+                          </div>
+                          <div class="skill-card-actions">
+                            <button
+                              class={`skill-toggle${skill.enabled ? ' on' : ''}`}
+                              onClick={() => agent.send('skills.toggle', {
+                                name: skill.name,
+                                source: skill.source,
+                                enabled: !skill.enabled,
+                              })}
+                              title={skill.enabled ? '已启用，点击禁用' : '已禁用，点击启用'}
+                            >
+                              <span class="toggle-track">
+                                <span class="toggle-thumb" />
+                              </span>
+                            </button>
+                            <button
+                              class="skill-remove-btn"
+                              onClick={() => {
+                                if (window.confirm(`确定删除技能 "${skill.name}"？此操作不可撤销。`)) {
+                                  agent.send('skills.remove', {
+                                    name: skill.name,
+                                    source: skill.source,
+                                  })
+                                }
+                              }}
+                              title="删除技能"
+                            >🗑</button>
+                          </div>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </div>
+
+              <div class="settings-section">
+                <div class="settings-section-title">📥 安装技能</div>
+                <div class="settings-section-desc">输入 .zip 技能包的本地路径，选择安装目标后点击安装。</div>
+                <div class="settings-form-row">
+                  <span class="settings-form-label">技能包路径</span>
+                  <span class="settings-form-value">
+                    <input
+                      class="settings-input"
+                      type="text"
+                      placeholder="D:\downloads\my-skill.zip"
+                      value={installPath()}
+                      onInput={(e) => setInstallPath(e.currentTarget.value)}
+                      style="width: 320px; text-align: left;"
+                    />
+                  </span>
+                </div>
+                <div class="settings-form-row">
+                  <span class="settings-form-label">安装到</span>
+                  <span class="settings-form-value">
+                    <select
+                      class="settings-select"
+                      value={installTarget()}
+                      onChange={(e) => setInstallTarget(e.currentTarget.value as 'user' | 'project')}
+                    >
+                      <option value="user">用户级（~/.claude/agent/skills/）— 全局可用</option>
+                      <option value="project">项目级（.claude/skills/）— 仅当前项目</option>
+                    </select>
+                  </span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <button
+                    class="settings-btn primary"
+                    disabled={installPath().length === 0 || installStatus() === 'installing'}
+                    onClick={() => {
+                      setInstallStatus('installing')
+                      setInstallMsg('正在安装...')
+                      agent.send('skills.install', {
+                        zipPath: installPath(),
+                        target: installTarget(),
+                      })
+                    }}
+                  >
+                    {installStatus() === 'installing' ? '安装中...' : '安装'}
+                  </button>
+                  <Show when={installStatus() === 'ok'}>
+                    <span style="font-size:12px;color:#4ade80;">✓ {installMsg()}</span>
+                  </Show>
+                  <Show when={installStatus() === 'error'}>
+                    <span style="font-size:12px;color:#ef4444;">✗ {installMsg()}</span>
+                  </Show>
                 </div>
               </div>
             </>
