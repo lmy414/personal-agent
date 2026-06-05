@@ -345,6 +345,7 @@ async function main() {
   await runNodeTest('Bridge Memory 测试', 'tests/bridge-memory.test.ts')
   await runNodeTest('File Security 文件安全测试', 'tests/file-security.test.ts')
   await runNodeTest('Session Guard 会话保护测试', 'tests/session-guard.test.ts')
+  await runNodeTest('Dataflow Consistency 数据流一致性测试', 'tests/dataflow-consistency.test.ts')
 
   // Phase 4: Vite build
   await checkViteBuild()

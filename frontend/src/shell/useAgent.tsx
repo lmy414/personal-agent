@@ -125,13 +125,16 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           ws.send(JSON.stringify({ type: 'ping', id: '', sessionId: '', ts: Date.now(), payload: {} }))
         }
       }, 30000)
-      // 初始化：请求 session 列表 + 模型列表
+      // 初始化：请求 session 列表 + 模型列表 + 设置
       const initMessages = [
         JSON.stringify({
           type: 'session.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {},
         }),
         JSON.stringify({
           type: 'model.list', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {},
+        }),
+        JSON.stringify({
+          type: 'settings.get', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {},
         }),
       ]
       for (const raw of initMessages) {
