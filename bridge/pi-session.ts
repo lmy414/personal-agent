@@ -1,8 +1,11 @@
-import { createAgentSession, ModelRegistry } from '@pi/coding-agent'
+import { createAgentSession, ModelRegistry, DefaultResourceLoader } from '@pi/coding-agent'
 import type { CreateAgentSessionResult } from '@pi/coding-agent'
 import type { Model } from '@pi/ai'
+import { join } from 'path'
+import { homedir } from 'os'
 import { getDB } from './db'
 import { generateUUID } from './protocol'
+import { loadDisabledSkills } from './handlers/skills'
 
 type AgentSessionType = CreateAgentSessionResult['session']
 
@@ -78,9 +81,21 @@ export async function createPiSession(options: {
   const modelName = options.modelName ?? defaultModel
   const thinkingLevel = options.thinkingLevel ?? 'medium'
 
+  const disabledNames = loadDisabledSkills()
+  const resourceLoader = new DefaultResourceLoader({
+    cwd: process.cwd(),
+    agentDir: join(homedir(), '.claude', 'agent'),
+    skillsOverride: (base) => ({
+      ...base,
+      skills: base.skills.filter((s) => !disabledNames.has(s.name)),
+    }),
+  })
+  await resourceLoader.reload()
+
   const result = await createAgentSession({
     thinkingLevel,
     cwd: process.cwd(),
+    resourceLoader,
   })
 
   const session = result.session
