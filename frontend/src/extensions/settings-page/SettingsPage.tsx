@@ -21,6 +21,8 @@ export function SettingsPage() {
   const [settingsTab, setSettingsTab] = createSignal<SettingsTab>('agent')
 
   const [skills, setSkills] = createSignal<SkillSummary[]>([])
+  const [userSkillDir, setUserSkillDir] = createSignal('~/.pi/agent/skills/')
+  const [projectSkillDir, setProjectSkillDir] = createSignal('.pi/skills/')
   const [installPath, setInstallPath] = createSignal('')
   const [installTarget, setInstallTarget] = createSignal<'user' | 'project'>('user')
   const [installStatus, setInstallStatus] = createSignal<'idle' | 'installing' | 'ok' | 'error'>('idle')
@@ -54,6 +56,8 @@ export function SettingsPage() {
       const handler = (msg: ServerMessage) => {
         if (msg.type === 'skills.state') {
           setSkills(msg.payload.skills)
+          setUserSkillDir(msg.payload.userSkillDir)
+          setProjectSkillDir(msg.payload.projectSkillDir)
         }
       }
       const unsub = agent.subscribe('skills.state', handler)
@@ -340,7 +344,12 @@ export function SettingsPage() {
                     <div style="font-size:32px;margin-bottom:8px;">📭</div>
                     暂无已安装的技能
                     <div style="margin-top:4px;font-size:11px;">
-                      将技能文件夹放入 ~/.claude/agent/skills/ 或项目/.claude/skills/
+                      将技能文件夹放入
+                    </div>
+                    <div style="margin-top:2px;font-size:11px;">
+                      <code style="background:var(--surface);padding:2px 6px;border-radius:4px;">{userSkillDir()}</code>
+                      <span style="margin:0 6px;">或</span>
+                      <code style="background:var(--surface);padding:2px 6px;border-radius:4px;">{projectSkillDir()}</code>
                     </div>
                   </div>
                 }>
@@ -418,8 +427,8 @@ export function SettingsPage() {
                       value={installTarget()}
                       onChange={(e) => setInstallTarget(e.currentTarget.value as 'user' | 'project')}
                     >
-                      <option value="user">用户级（~/.claude/agent/skills/）— 全局可用</option>
-                      <option value="project">项目级（.claude/skills/）— 仅当前项目</option>
+                      <option value="user">用户级（{userSkillDir()}）— 全局可用</option>
+                      <option value="project">项目级（{projectSkillDir()}）— 仅当前项目</option>
                     </select>
                   </span>
                 </div>

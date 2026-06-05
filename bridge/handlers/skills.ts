@@ -8,11 +8,11 @@ import type { ClientMessage, SkillSummary } from '../protocol'
 // ========== 技能目录 ==========
 
 function getUserSkillsDir(): string {
-  return join(homedir(), '.claude', 'agent', 'skills')
+  return join(homedir(), '.pi', 'agent', 'skills')
 }
 
 function getProjectSkillsDir(): string {
-  return join(process.cwd(), '.claude', 'skills')
+  return join(process.cwd(), '.pi', 'skills')
 }
 
 function getSkillsDir(source: 'user' | 'project'): string {
@@ -127,7 +127,11 @@ function broadcastSkillsState(): void {
     id: `srv-${Date.now()}`,
     sessionId: '',
     ts: Date.now(),
-    payload: { skills: scanAllSkills() },
+    payload: {
+      skills: scanAllSkills(),
+      userSkillDir: getUserSkillsDir(),
+      projectSkillDir: getProjectSkillsDir(),
+    },
   })
 }
 

@@ -71,7 +71,7 @@ export type ServerMessage =
   | ServerMsg<'file.changed', { path: string }>
   | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
-  | ServerMsg<'skills.state', { skills: SkillSummary[] }>
+  | ServerMsg<'skills.state', { skills: SkillSummary[]; userSkillDir: string; projectSkillDir: string }>
   | ServerMsg<'skills.installed', { name: string; source: string }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>

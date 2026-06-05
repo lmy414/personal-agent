@@ -84,7 +84,7 @@ export async function createPiSession(options: {
   const disabledNames = loadDisabledSkills()
   const resourceLoader = new DefaultResourceLoader({
     cwd: process.cwd(),
-    agentDir: join(homedir(), '.claude', 'agent'),
+    agentDir: join(homedir(), '.pi', 'agent'),
     skillsOverride: (base) => ({
       ...base,
       skills: base.skills.filter((s) => !disabledNames.has(s.name)),
