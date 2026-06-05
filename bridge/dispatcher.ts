@@ -6,6 +6,7 @@ import { handleModelSwitch, handleModelList } from './handlers/model'
 import { handleFileList, handleFileRead } from './handlers/file'
 import { handleMemorySearch, handleMemoryList } from './handlers/memory'
 import { handleSettingsGet, handleSettingsSet, handleSettingsDiscoverModels } from './handlers/settings'
+import { handleSkillsList, handleSkillsInstall, handleSkillsToggle, handleSkillsRemove } from './handlers/skills'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -29,6 +30,10 @@ const routes: Record<string, Handler> = {
   'settings.get': handleSettingsGet,
   'settings.set': handleSettingsSet,
   'settings.discover-models': handleSettingsDiscoverModels,
+  'skills.list': handleSkillsList,
+  'skills.install': handleSkillsInstall,
+  'skills.toggle': handleSkillsToggle,
+  'skills.remove': handleSkillsRemove,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {

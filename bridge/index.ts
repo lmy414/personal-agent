@@ -6,6 +6,7 @@ import { dispatch } from './dispatcher'
 import { generateUUID } from './protocol'
 import { initDB, getDB } from './db'
 import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
+import { addSkillClient, removeSkillClient } from './handlers/skills'
 
 const PORT = 9229
 
@@ -65,6 +66,7 @@ startWatcher()
 
 wss.on('connection', (ws: WebSocket) => {
   addClient(ws)
+  addSkillClient(ws)
 
   ws.on('message', (raw) => {
     try {
@@ -85,6 +87,7 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     removeClient(ws)
+    removeSkillClient(ws)
   })
 
   ws.on('error', (err) => {
