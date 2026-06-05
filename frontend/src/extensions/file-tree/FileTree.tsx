@@ -72,8 +72,8 @@ export function FileTree() {
       console.log('[file-tree] normPath:', normPath, 'tree.len:', tree().length, 'rootPath:', rootPath, 'pendingRoot:', pendingRoot)
       // 若是预期的根路径响应，或 tree 为空，则替换整棵树
       if (tree().length === 0 || normPath === rootPath || normPath === pendingRoot) {
+        if (normPath === pendingRoot) pendingRoot = ''  // 仅匹配时才清除
         rootPath = normPath
-        pendingRoot = ''
         setDisplayRoot(normPath)
         setTree(entries)
       } else {
