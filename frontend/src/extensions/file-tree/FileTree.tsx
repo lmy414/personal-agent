@@ -38,6 +38,7 @@ export function FileTree() {
   // store expanded children per directory path
   const [dirChildren, setDirChildren] = createSignal<Record<string, TreeNode[]>>({})
   const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set())
+  const [displayRoot, setDisplayRoot] = createSignal('')
   let rootPath = ''
   let currentWorkDir = ''
 
@@ -67,7 +68,7 @@ export function FileTree() {
       const normPath = payload.path.replace(/\\/g, '/')
       if (tree().length === 0 || normPath === rootPath) {
         // root level
-        if (!rootPath) rootPath = normPath
+        if (!rootPath) { rootPath = normPath; setDisplayRoot(normPath) }
         setTree(entries)
       } else {
         // subdirectory — store children keyed by normalized path
@@ -97,6 +98,7 @@ export function FileTree() {
         setDirChildren({})
         setExpandedDirs(new Set<string>())
         rootPath = ''
+        setDisplayRoot(newWorkDir)
         setLoading(true)
         const sendPath = newWorkDir || '.'
         agent.send('file.list', { path: sendPath })
@@ -215,6 +217,7 @@ export function FileTree() {
   return (
     <div class="file-tree">
       <div class="file-tree-toolbar">
+        <span class="file-tree-root-path" title="当前工作目录">📁 {displayRoot() || '加载中...'}</span>
         <button
           class="file-tree-refresh-btn"
           title="刷新文件列表"

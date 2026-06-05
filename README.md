@@ -25,20 +25,20 @@ Pi 扩展层 (人格注入 + 记忆工具 + 文件工具 + MCP 桥接)
 
 ### 人格系统
 
-澪号的人格通过 `mio-harness/SOUL.md` 定义（行为规则，<1KB）。pa-mio 扩展在每次 LLM 调用前组装 6 层 System Prompt：
+澪号的人格通过 `mio-harness/SOUL.md` 定义（5 模块结构化人格，~3.3KB）。pa-mio v5 扩展在每次 LLM 调用前组装 4 层 System Prompt：
 
 ```
-Layer 0: SOUL.md                     ← 人格（实时读取，改文件立即生效）
-Layer 1: 记忆快照（MEMORY + USER）    ← <recall> 围栏，会话启动冻结
-Layer 2: 注入上下文（检索记忆+工作目录）← 每轮动态
-Layer 3: Pi 工具定义                 ← Pi 自动注入
-Layer 4: 模式指令（chat/agent）       ← 18 条正则意图分类
-Layer 5: 对话历史                    ← Pi 管理
+Layer 0: SOUL.md                         ← 人格定义，绝对顶部（实时读取，改文件立即生效）
+Layer 1: 记忆全文（MEMORY.md + USER.md）  ← 每轮实时构建，<recall> 围栏
+Layer 2: 检索记忆 + 工作目录              ← 每轮动态（关键词匹配 ≤3 条 + 工作目录感知）
+Layer 3: Pi 工具定义                      ← Pi 自动注入（含 memory_add/read 等）
+(+ Pi 底层: 对话历史)
 ```
 
-- **chat 模式**：闲聊，不需要调用工具
-- **agent 模式**：允许调用工具，完成后汇报结果
-- **思考分离**：`thinking_delta` 与 `text_delta` 分开处理，前端默认折叠
+- **SOUL.md**：实时读取，改文件立即生效
+- **记忆**：`memory_add` 写入立即在下一轮 Prompt 中可见，无需重启或新会话
+- **无意图分类**：不再用正则区分 chat/agent 模式，LLM 自行决定何时调用工具
+- **工具隔离**：`<recall>` 围栏包裹记忆，防止被当作指令
 
 ### 记忆系统
 
@@ -104,7 +104,7 @@ DEEPSEEK_API_KEY=sk-...
 
 - 桥接服务器完整实现（WebSocket 协议、消息路由、会话管理、SQLite 持久化、文件监听）
 - SolidJS 前端全套（Grid 布局 + 玻璃拟态 UI + 9 个扩展组件 + 可拖拽面板）
-- 人格系统（SOUL.md + 6 层 Prompt 组装 + 18 条正则意图分类 + 思考折叠 + 工作目录感知）
+- 人格系统（SOUL.md + 4 层 Prompt 组装 + 工作目录感知，无意图分类）
 - 记忆系统（Hermes 式 MEMORY.md/USER.md + memory_add/read 工具 + 原子写入）
 - 工作目录系统（前端面板 + 智能体 prompt + LLM 工具 三线打通）
 - 设置系统（多厂商模型管理 + 自动发现 + SQLite 持久化）

@@ -25,8 +25,8 @@ personal-agent/
 ├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
 │   ├── .pi/settings.json      ←   Pi 扩展注册（3 个扩展，绝对路径）
 │   ├── index.ts               ←   入口：WS Server + SQLite 初始化
-│   ├── protocol.ts            ←   消息类型定义（前后端共享，~130 行）
-│   ├── dispatcher.ts          ←   消息路由表（18 路由）
+│   ├── protocol.ts            ←   消息类型定义（前后端共享，~146 行）
+│   ├── dispatcher.ts          ←   消息路由表（19 路由）
 │   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
 │   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
 │   ├── watcher.ts             ←   文件监听 + 广播
@@ -74,7 +74,7 @@ personal-agent/
 │       │   └── adapters/mcp/   ←   MCP JSON-RPC 适配器（7 工具）
 │       └── src/                ←   CLI + 工具定义 + 动画引擎
 ├── mio-harness/               ← 角色数据
-│   ├── SOUL.md                ←   人格定义（6 模块：角色定义/关系性/发言风格/对话示例/禁用词，~1.5KB）
+│   ├── SOUL.md                ←   人格定义（5 模块：角色定义/关系性/发言风格/对话示例/禁用词，~3.3KB）
 │   └── memories/              ←   持久记忆（§ 分隔 Markdown）
 │       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars）
 │       └── USER.md            ←     用户画像（≤1375 chars）
@@ -314,7 +314,7 @@ CHANGELOG 条目格式：
 
 ### 人格注入（pa-mio v5）
 
-澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。结构化 6 模块：角色定义 / 关系性 / 发言风格 / 对话示例 / 禁用词。
+澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。结构化 5 模块：角色定义 / 关系性 / 发言风格 / 对话示例 / 禁用词。
 
 每次 LLM 调用时，pa-mio 组装 4 层 System Prompt：
 
