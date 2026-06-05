@@ -9,7 +9,7 @@ const __dirname = dirname(__filename)
 const PROJECT_ROOT = resolve(join(__dirname, '..', '..'))
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'])
 
-function resolveSafe(targetPath: string): string {
+export function resolveSafe(targetPath: string): string {
   // 绝对路径：验证存在即可访问（工作目录支持）
   if (isAbsolute(targetPath)) {
     const normalized = normalize(targetPath)

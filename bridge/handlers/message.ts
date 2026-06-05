@@ -117,9 +117,10 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
     const conv = db.prepare('SELECT id FROM conversations WHERE session_id = ?').get(msg.sessionId) as { id: number } | undefined
     if (conv) {
       const attsJson = payload.attachments?.length ? JSON.stringify(payload.attachments) : ''
+      const displayText = payload.displayContent || payload.content
       db.prepare(
         'INSERT INTO messages (conversation_id, message_id, role, content, attachments) VALUES (?, ?, ?, ?, ?)',
-      ).run(conv.id, `msg-user-${Date.now()}`, 'user', payload.displayContent ?? payload.content, attsJson)
+      ).run(conv.id, `msg-user-${Date.now()}`, 'user', displayText, attsJson)
     }
   } catch (e) {
     console.warn('[message] failed to persist user message:', e)

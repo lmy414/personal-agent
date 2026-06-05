@@ -32,6 +32,9 @@ const routes: Record<string, Handler> = {
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {
+  // 静默丢弃前端心跳 ping，避免返回 UNKNOWN_TYPE 干扰前端状态
+  if ((msg as any).type === 'ping') return
+
   const handler = routes[msg.type]
   if (!handler) {
     ws.send(JSON.stringify({
