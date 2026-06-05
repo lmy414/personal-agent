@@ -30,6 +30,10 @@ export type ClientMessage =
   | ClientMsg<'settings.get', {}>
   | ClientMsg<'settings.set', { key: string; value: string }>
   | ClientMsg<'settings.discover-models', {}>
+  | ClientMsg<'skills.list', {}>
+  | ClientMsg<'skills.install', { zipPath: string; target: 'user' | 'project' }>
+  | ClientMsg<'skills.toggle', { name: string; source: 'user' | 'project'; enabled: boolean }>
+  | ClientMsg<'skills.remove', { name: string; source: 'user' | 'project' }>
 
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -67,6 +71,8 @@ export type ServerMessage =
   | ServerMsg<'file.changed', { path: string }>
   | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'error', { code: string; message: string; recoverable: boolean }>
+  | ServerMsg<'skills.state', { skills: SkillSummary[] }>
+  | ServerMsg<'skills.installed', { name: string; source: string }>
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>
 
@@ -111,6 +117,14 @@ export interface MemoryEntry {
   content: string
   category: string
   importance: number
+}
+
+export interface SkillSummary {
+  name: string
+  description: string
+  source: 'user' | 'project'
+  enabled: boolean
+  filePath: string
 }
 
 // ========== 工具函数 ==========
