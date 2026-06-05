@@ -6,3 +6,4 @@
 § 前端扩展通过 registry 注册，每个扩展独立文件夹，不互相 import
 § Bridge 通过 Pi Agent SDK 管理 AI 会话，WebSocket 推流到前端
 § Live2D MCP 功能正在开发中，相关设计 spec 和实现计划已在 docs 中记录
+§ Mirror 的工作目录设置为 E:\mio，不是项目根目录 D:\claude\personal-agent

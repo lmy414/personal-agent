@@ -323,18 +323,19 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
           const db = getDB()
           const thrRow = db.prepare("SELECT value FROM settings WHERE key = 'compact_threshold'").get() as { value: string } | undefined
           const threshold = thrRow?.value ? parseInt(thrRow.value, 10) : 80
-          const ctx = session.getContextUsage()
+          let ctx = null as any
+          try { ctx = session.getContextUsage() } catch { /* activeRun 可能已清理 */ }
           const ctxTokens = ctx?.tokens ?? 0
           const ctxWindow = ctx?.contextWindow ?? 0
           if (ctxTokens > 0 && ctxWindow > 0) {
             const pct = Math.round((ctxTokens / ctxWindow) * 100)
             if (pct >= threshold) {
-              const compactFn = (session as any).compact as ((instructions?: string) => Promise<{ tokensBefore: number; summary: string }>) | undefined
-              if (typeof compactFn === 'function' && !(session as any).isStreaming) {
+              if (typeof (session as any).compact === 'function' && !(session as any).isStreaming) {
                 const before = ctxTokens
-                compactFn().then((result) => {
-                  const after = session.getContextUsage()
-                  const saved = result?.tokensBefore ?? before - (after?.tokens ?? 0)
+                ;(session as any).compact().then((result: any) => {
+                  let afterTokens = 0
+                  try { afterTokens = session.getContextUsage()?.tokens ?? 0 } catch { /* 忽略 */ }
+                  const saved = result?.tokensBefore ?? before - afterTokens
                   ws.send(JSON.stringify({
                     type: 'session.compacted',
                     id: `srv-${Date.now()}`,
@@ -342,7 +343,7 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
                     ts: Date.now(),
                     payload: {
                       tokensBefore: before,
-                      tokensAfter: after?.tokens ?? 0,
+                      tokensAfter: afterTokens,
                       tokensSaved: Math.max(0, saved),
                       contextWindow: ctxWindow,
                     },

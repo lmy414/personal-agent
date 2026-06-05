@@ -127,8 +127,14 @@ export function StatusBar() {
         {compactFeedback() && (
           <div
             class={`compact-feedback compact-feedback--${compactFeedback()!.type}`}
+            onClick={() => {
+              navigator.clipboard.writeText(compactFeedback()!.message)
+              showFeedback('success', '已复制到剪贴板')
+            }}
+            title="点击复制"
           >
-            {compactFeedback()!.message}
+            <span class="compact-feedback-text">{compactFeedback()!.message}</span>
+            <span class="compact-feedback-copy" style="font-size:10px;margin-left:6px;opacity:0.5;flex-shrink:0;">📋</span>
           </div>
         )}
         <div class="ctx-bar">

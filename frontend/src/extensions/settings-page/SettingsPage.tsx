@@ -1,4 +1,4 @@
-import { createEffect, For, createSignal, onCleanup } from 'solid-js'
+import { createEffect, For, createSignal, onCleanup, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
 
@@ -47,6 +47,7 @@ export function SettingsPage() {
   const historyRetention = () => getSetting(entries(), 'history_retention') || '100'
 
   const [modelSearch, setModelSearch] = createSignal('')
+  const [workDirSaved, setWorkDirSaved] = createSignal(false)
 
   const modelList = () => {
     const provRaw = getSetting(entries(), 'providers')
@@ -238,14 +239,21 @@ export function SettingsPage() {
                       onBlur={(e) => {
                         const v = e.currentTarget.value.trim()
                         agent.setSetting('work_dir', v)
+                        setWorkDirSaved(true)
+                        setTimeout(() => setWorkDirSaved(false), 2000)
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           const v = e.currentTarget.value.trim()
                           agent.setSetting('work_dir', v)
+                          setWorkDirSaved(true)
+                          setTimeout(() => setWorkDirSaved(false), 2000)
                         }
                       }}
                     />
+                    <Show when={workDirSaved()}>
+                      <span style="font-size:12px;color:#4ade80;margin-left:8px;">✓ 已保存</span>
+                    </Show>
                   </span>
                 </div>
               </div>

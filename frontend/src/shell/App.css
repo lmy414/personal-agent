@@ -511,6 +511,19 @@ html, body, #root {
   font-size: 11px; text-align: center;
   padding: 3px 0;
   animation: compact-feedback-in 0.25s ease;
+  user-select: text;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+  gap: 4px;
+}
+.compact-feedback-text {
+  user-select: text;
+}
+.compact-feedback-copy {
+  user-select: none;
+}
+.compact-feedback:hover .compact-feedback-copy {
+  opacity: 1 !important;
 }
 .compact-feedback--success { color: #4ade80; }
 .compact-feedback--error   { color: #f87171; }
@@ -728,8 +741,14 @@ html, body, #root {
   padding: 6px 4px;
 }
 .file-tree-toolbar {
-  display: flex; justify-content: flex-end;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 2px 4px; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  gap: 4px;
+}
+.file-tree-root-path {
+  font-size: 10px; color: var(--text-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;
+  padding: 0 4px;
 }
 .file-tree-refresh-btn {
   background: none; border: none; color: var(--text-muted);

@@ -51,15 +51,14 @@
 
 ## 二、已完成系统
 
-### 2.1 人格系统 (pa-mio v4) ✅
+### 2.1 人格系统 (pa-mio v5) ✅
 
 | 维度 | 说明 |
 |------|------|
-| 人格定义 | `mio-harness/SOUL.md`，~800 chars，行为规则式 |
-| Prompt 组装 | 6 层: SOUL → 记忆快照 → 检索上下文 → 工作目录 → Pi 工具 → 模式指令 |
-| 意图分类 | 18 条中文正则 → chat（闲聊免工具）/ agent（可调工具）双模式 |
-| 思考分离 | `thinking_delta` 与 `text_delta` 分开，前端默认折叠 |
-| 热更新 | SOUL.md 改文件立即生效，记忆快照在新会话后更新 |
+| 人格定义 | `mio-harness/SOUL.md`，~3.3KB，5 模块结构化（角色定义/关系性/发言风格/对话示例/禁用词） |
+| Prompt 组装 | 4 层: SOUL → 记忆全文 → 检索记忆 + 工作目录 → Pi 工具（+ Pi 底层对话历史） |
+| 工具调用 | 无意图分类，LLM 自行决定何时调用工具 |
+| 热更新 | SOUL.md 改文件立即生效，memory_add 写入下轮 Prompt 可见 |
 | 工作目录感知 | `<recall>` 围栏注入当前 `work_dir`，智能体自然感知 |
 
 ### 2.2 记忆系统 (Hermes 风格) ✅
@@ -68,7 +67,7 @@
 |------|------|
 | 文件存储 | `mio-harness/memories/MEMORY.md` (≤2200 chars) + `USER.md` (≤1375 chars) |
 | 条目格式 | `§ 声明式事实` |
-| 写入 | `memory_add(target, content)` → 原子写入 (tempfile + fsync + rename) |
+| 写入 | `memory_add(target, content)` → 原子写入 + 下轮 Prompt 立即可见 |
 | 读取 | `memory_read(target)` → 返回全文 |
 | 安全 | 写入前扫描 prompt injection 模式 |
 
@@ -118,7 +117,7 @@
 |---|---------|------|------|------|
 | 1 | `top-menu` | top-menu/ | —（App.tsx 直接渲染） | 顶部菜单栏 |
 | 2 | `settings-page` | settings-page/ | —（App.tsx 直接渲染） | 全屏设置覆盖层（模型/参数/工作目录） |
-| 3 | `chat-renderer` | chat-renderer/ | center | 消息气泡渲染 + 思考折叠 |
+| 3 | `chat-renderer` | chat-renderer/ | center | 消息气泡渲染 + 思考折叠（5 组件：ChatRenderer/MessageBubble/ThinkingBlock/ChatInput/Avatar） |
 | 4 | `session-panel` | session-panel/ | left-top | 会话列表 + 切换 |
 | 5 | `file-tree` | file-tree/ | right-tab | 文件树浏览（工作目录感知） |
 | 6 | `tool-panel` | tool-panel/ | left-middle | 工具调用状态 |
@@ -128,7 +127,7 @@
 
 ---
 
-## 四、Bridge 路由表（18 路由 + 7 handler）
+## 四、Bridge 路由表（19 路由 + 7 handler）
 
 | 消息类型 | Handler | 说明 |
 |----------|---------|------|
@@ -137,7 +136,6 @@
 | `model.switch/list` | model.ts | 模型切换/列表 |
 | `file.list/read` | file.ts | 文件列表/读取（支持工作目录） |
 | `memory.search/list` | memory.ts | 记忆搜索/列表 |
-| `memory.add/read` | memory-store.ts | Bridge 侧记忆读写 |
 | `settings.get/set/discover-models` | settings.ts | 设置 CRUD + 模型发现 |
 
 ---
@@ -146,11 +144,11 @@
 
 | 文件 | 说明 |
 |------|------|
-| `shell/useAgent.tsx` | 全局状态管理 + WebSocket 连接 + 逐字渲染泵 |
-| `shell/App.tsx` | 壳组件：Grid 布局 + 面板拖拽 + 扩展渲染 |
-| `shell/App.css` | 玻璃拟态 UI 全样式 |
-| `shell/settings-signal.ts` | 设置页面开关全局信号 |
-| `registry.ts` | 扩展注册表（Slot-based 插件系统） |
+| `frontend/src/shell/useAgent.tsx` | 全局状态管理 + WebSocket 连接 + 逐字渲染泵 |
+| `frontend/src/shell/App.tsx` | 壳组件：Grid 布局 + 面板拖拽 + 扩展渲染 |
+| `frontend/src/shell/App.css` | 玻璃拟态 UI 全样式 |
+| `frontend/src/shell/settings-signal.ts` | 设置页面开关全局信号 |
+| `frontend/src/registry.ts` | 扩展注册表（Slot-based 插件系统） |
 
 ---
 

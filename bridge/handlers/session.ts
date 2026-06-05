@@ -316,27 +316,26 @@ export async function handleSessionCompact(msg: ClientMessage, ws: WebSocket): P
     return
   }
 
-  // 检查 compact 方法是否存在
-  const compactFn = (session as any).compact as ((instructions?: string) => Promise<{ tokensBefore: number; summary: string }>) | undefined
-  if (typeof compactFn !== 'function') {
-    ws.send(JSON.stringify({
-      type: 'error',
-      id: `srv-${Date.now()}`,
-      sessionId: msg.sessionId,
-      ts: Date.now(),
-      payload: { code: 'COMPACTION_NOT_SUPPORTED', message: '当前模型不支持上下文压缩', recoverable: true },
-    }))
-    return
-  }
-
   try {
-    const before = session.getContextUsage()
+    let before
+    try { before = session.getContextUsage() } catch { before = null }
     const beforeTokens = before?.tokens ?? 0
-    const result = await compactFn()
+    if (beforeTokens === 0 && (before?.contextWindow ?? 0) === 0) {
+      // 上下文信息不可用（activeRun 可能已清理），跳过压缩
+      ws.send(JSON.stringify({
+        type: 'session.compacted',
+        id: `srv-${Date.now()}`,
+        sessionId: msg.sessionId,
+        ts: Date.now(),
+        payload: { tokensBefore: 0, tokensAfter: 0, tokensSaved: 0, contextWindow: 0 },
+      }))
+      return
+    }
+    const result = await (session as any).compact()
     // 优先用 compact() 返回值里的 tokensBefore（更精确），fallback 到调用前的值
     const actualBefore = result?.tokensBefore ?? beforeTokens
-    const after = session.getContextUsage()
-    const afterTokens = after?.tokens ?? 0
+    let afterTokens = 0
+    try { afterTokens = session.getContextUsage()?.tokens ?? 0 } catch { /* 忽略 */ }
     const tokensSaved = actualBefore - afterTokens
     ws.send(JSON.stringify({
       type: 'session.compacted',
@@ -347,7 +346,7 @@ export async function handleSessionCompact(msg: ClientMessage, ws: WebSocket): P
         tokensBefore: actualBefore,
         tokensAfter: afterTokens,
         tokensSaved: Math.max(0, tokensSaved),
-        contextWindow: after?.contextWindow ?? (session as any).model?.contextWindow ?? 0,
+        contextWindow: (session as any).model?.contextWindow ?? 0,
       },
     }))
   } catch (err) {
