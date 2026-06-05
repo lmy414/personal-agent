@@ -30,6 +30,7 @@ function resolveSafe(targetPath: string): string {
 export function handleFileList(msg: ClientMessage, ws: WebSocket): void {
   const payload = msg.payload as { path?: string }
   const rawPath = payload.path ?? '.'
+  console.log('[file] list request path:', rawPath)
   try {
     const safePath = resolveSafe(rawPath)
     const entries = readdirSync(safePath).map((name) => {

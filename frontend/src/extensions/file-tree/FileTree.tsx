@@ -92,7 +92,9 @@ export function FileTree() {
     const unsubSettings = agent.subscribe('settings.state', (_msg: ServerMessage) => {
       const entries = (_msg.payload as { entries: { key: string; value: string }[] }).entries
       const newWorkDir = getSettingFromList(entries, 'work_dir')
+      console.log('[file-tree] settings.state received, work_dir:', newWorkDir, 'current:', currentWorkDir)
       if (newWorkDir !== currentWorkDir) {
+        console.log('[file-tree] work_dir changed, sending file.list for:', newWorkDir)
         currentWorkDir = newWorkDir
         setTree([])
         setDirChildren({})
