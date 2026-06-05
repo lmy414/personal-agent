@@ -47,7 +47,7 @@ personal-agent/
 │   │   │   └── settings-signal.ts ← 设置页面开关信号
 │   │   ├── registry.ts        ←   扩展注册表（Slot-based 插件系统）
 │   │   └── extensions/        ←   9 个扩展组件，每个一个文件夹
-│   │       ├── chat-renderer/ ←     消息气泡渲染 + 思考折叠
+│   │       ├── chat-renderer/ ←     消息气泡渲染 + 思考折叠（5 组件：ChatRenderer/MessageBubble/ThinkingBlock/ChatInput/Avatar）
 │   │       ├── session-panel/ ←     会话列表 + 切换
 │   │       ├── file-tree/     ←     文件树浏览（支持工作目录切换）
 │   │       ├── tool-panel/    ←     工具调用状态
@@ -60,7 +60,7 @@ personal-agent/
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
 ├── extensions/                ← Pi 扩展（由 bridge/.pi/settings.json 注册）
-│   ├── pa-mio/index.ts        ←   人格注入 v4（6 层 Prompt + 意图分类 + 记忆工具）
+│   ├── pa-mio/index.ts        ←   人格注入 v5（4 层 Prompt，无意图分类，LLM 自行决定工具调用）
 │   ├── pa-files/index.ts      ←   文件浏览/预览工具（动态工作目录感知）
 │   ├── pa-mcp/index.ts        ←   通用 MCP 客户端桥接（任何 MCP server → Pi 工具）
 │   └── shared/memory-store.ts ←   记忆读写核心（§ 文件操作 + 原子写入）
@@ -74,7 +74,7 @@ personal-agent/
 │       │   └── adapters/mcp/   ←   MCP JSON-RPC 适配器（7 工具）
 │       └── src/                ←   CLI + 工具定义 + 动画引擎
 ├── mio-harness/               ← 角色数据
-│   ├── SOUL.md                ←   人格定义（行为规则，~800 chars）
+│   ├── SOUL.md                ←   人格定义（6 模块：角色定义/关系性/发言风格/对话示例/禁用词，~1.5KB）
 │   └── memories/              ←   持久记忆（§ 分隔 Markdown）
 │       ├── MEMORY.md          ←     环境/项目记忆（≤2200 chars）
 │       └── USER.md            ←     用户画像（≤1375 chars）
@@ -312,25 +312,24 @@ CHANGELOG 条目格式：
 
 ## 人格与记忆系统
 
-### 人格注入（pa-mio）
+### 人格注入（pa-mio v5）
 
-澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。单个文件，行为规则，<1KB。
+澪号的人格通过 **SOUL.md**（`mio-harness/SOUL.md`）定义。结构化 6 模块：角色定义 / 关系性 / 发言风格 / 对话示例 / 禁用词。
 
-每次 LLM 调用时，pa-mio 组装 5 层 System Prompt：
+每次 LLM 调用时，pa-mio 组装 4 层 System Prompt：
 
 ```
-Layer 0: SOUL.md                        ← 人格定义，绝对顶部（实时读取，改文件立即生效）
-Layer 1: 记忆快照（MEMORY.md + USER.md） ← 会话启动冻结，<recall> 围栏
-Layer 2: 注入上下文（检索记忆 + 工作目录）← 每轮动态
-Layer 3: Pi 工具定义                     ← Pi 自动注入（含 memory_add/read 等）
-Layer 4: 模式指令（chat/agent）          ← 18 条正则意图分类，chat 免工具 / agent 可调工具
-Layer 5: 对话历史                        ← Pi 管理
+Layer 0: SOUL.md                         ← 人格定义，绝对顶部（实时读取，改文件立即生效）
+Layer 1: 记忆全文（MEMORY.md + USER.md）  ← 每轮实时构建，<recall> 围栏
+Layer 2: 检索记忆 + 工作目录              ← 每轮动态（关键词匹配 ≤3 条 + 工作目录感知）
+Layer 3: Pi 工具定义                      ← Pi 自动注入（含 memory_add/read 等）
+(+ Pi 底层: 对话历史)
 ```
 
 - **SOUL.md**：实时读取，改文件立即生效
-- **记忆快照**：会话启动冻结，中途写入不更新快照（保护 prefix cache），下次会话可见
+- **记忆**：`memory_add` 写入立即在下一轮 Prompt 中可见，无需重启或新会话
+- **无意图分类**：不再用正则区分 chat/agent 模式，LLM 自行决定何时调用工具
 - **工具隔离**：`<recall>` 围栏包裹记忆，防止被当作指令
-- **思考分离**：`thinking_delta` 与 `text_delta` 分开处理，前端默认折叠
 
 ### 记忆系统（Hermes 风格）
 

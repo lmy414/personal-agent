@@ -45,6 +45,70 @@
 - **验证**: `npm run check` 全过；设置页输入路径 → 文件面板自动切换；智能体回复确认工作目录
 - **Commit**: `4f49282`
 
+### 聊天面板 v2：游戏风格气泡 + Avatar + 组件化重构
+
+- **原因**: 当前消息面板手写样式与逻辑耦合（ChatRenderer.tsx ~340 行单文件），emoji 图标缺少统一体系，气泡风格过于平淡。用户要求参考 Momotalk 架构 + Galaxy 组件库 + Lucide 图标，对消息面板进行组件化升级。
+- **改动**: 8 文件。
+  - 新建 `Avatar.tsx`：idle/thinking/speaking 三态头像（渐变底色 + 脉冲动画 + 光晕）
+  - 新建 `MessageBubble.tsx`：游戏风格气泡组件（20px 圆角 + 渐变底色 + inner glow + backdrop-blur），集成 Avatar
+  - 新建 `ThinkingBlock.tsx`：思考过程折叠块，Lucide ChevronRight 图标
+  - 新建 `ChatInput.tsx`：底部输入栏（Paperclip 附件按钮 + textarea + Send 圆形发送按钮）
+  - 重构 `ChatRenderer.tsx`：使用上述组件，保留所有原有逻辑（拖放/附件/流式 Markdown）
+  - `App.css`：新增 25 个 CSS Token（气泡系统/动画/Avatar/间距），重写 .msg-* / .chat-* 段
+  - `package.json`：新增 `lucide-solid` 依赖
+- **影响**: 消息面板视觉（气泡风格、间距、对齐方式）、交互（输入栏三按钮）、代码可维护性（5 组件替代单文件）
+- **验证**: TypeScript 编译零错误（前端自建代码），Vite build 成功（CSS 32KB / JS 105KB gzip）
+- **Commit**: `20a2439`
+
+### 移除意图分类：pa-mio v4 → v5
+
+- **原因**: 意图分类（18 条正则）人为将用户消息分为 chat/agent 双模式——chat 禁止调工具，agent 允许调工具。实际运行中正则误分类频繁（"看了个电影" vs "查看文件"），且 ChatInstruction 的"不要调用工具"与 DeepSeek 自身判断冲突。统一让 LLM 自己决定何时用工具。
+- **改动**: 3 文件。
+  - `extensions/pa-mio/index.ts`：删除 `AGENT_PATTERNS` 数组（18 条正则）、`classifyIntent()` 函数、`CHAT_INSTRUCTION` / `AGENT_INSTRUCTION` 常量、Layer 4 模式切换逻辑。Prompt 组装简化为 4 层：SOUL.md → 记忆全文 → 检索记忆 + 工作目录 → 工具定义。
+  - `tests/intent-classify.test.ts`：删除（211 行，18 条正则的完整测试）
+  - `tests/run-all.ts`：移除 intent-classify 测试引用
+- **影响**: 每轮 system prompt 组装逻辑、LLM 工具调用触发时机（不再有 chat 模式限制）
+- **验证**: `npm run check` 全过（22/22），bridge 自建代码无错误
+- **Commit**: `e859577`
+
+### SOUL.md 人设重构：结构化六模块
+
+- **原因**: 旧 SOUL.md 是一段无组织的短文（349 chars），缺少角色背景、对话示例、禁用词列表。新结构参考 Hermes 风格的设计 spec，定义 6 个标准化模块。
+- **改动**: 1 文件。
+  - `mio-harness/SOUL.md`：重写为 6 区块——角色定义（我是谁，性格）、关系性（和 Mirror 的关系）、发言风格（短句/不叠甲/hhh/禁用客服语气/工具不定义我）、对话示例（日常问候/技术讨论/闲聊吐槽三条）、禁用词（6 类禁止）。1456 chars。
+  - `tests/run-all.ts`：SOUL.md 大小限制 <1KB → <5KB
+- **影响**: 澪号的人格一致性、LLM 的对话风格遵循
+- **验证**: `npm run check` 全过
+- **Commit**: `e859577`
+
+### 项目文档：路线图 + UI 升级计划 + 性能方案评估
+
+- **原因**: 需求梳理——未来计划（5 大模块）、UI 升级实施计划、性能检查方案评估
+- **改动**: 3 文件。
+  - 新建 `docs/roadmap.md`：5 大模块（性能/UI/记忆/人格/文件编辑）× P0-P3 优先级 + 版本规划
+  - 新建 `docs/superpowers/plans/ui-upgrade-plan.md`：聊天面板 v2 实施计划（Momotalk + Galaxy + Lucide 方案）
+  - 新建 `docs/performance-check-plan.md`：自动化性能检查方案（已评估为过度设计，待精简）
+- **影响**: 项目规划可追溯性
+- **Commit**: 未提交（新建草稿）
+
+### 桌面一键启动脚本
+
+- **原因**: 用户要求桌面快捷方式启动澪号
+- **改动**: 新建 `C:\Users\Mirror\Desktop\澪号.bat`，`cd` 到项目目录执行 `npm run dev`
+- **Commit**: 未提交（本地文件）
+
+- **原因**: 文件管理面板硬编码项目根目录，智能体无法感知用户自定义工作目录，导致路径分裂（前端看一处、LLM 工具看另一处）。
+- **改动**: 6 文件。
+  - `bridge/handlers/file.ts`：`resolveSafe` 新增绝对路径分支（`isAbsolute` → `existsSync` → 放行）
+  - `frontend/.../SettingsPage.tsx`：新增"工作目录"输入框，`onBlur`/`Enter` 提交
+  - `frontend/.../FileTree.tsx`：读取 `work_dir` 设置 → 订阅 `settings.state` → 自动切换根目录 + 刷新
+  - `extensions/pa-files/index.ts`：`getWorkspaceRoot()` 动态读 SQLite，工具操作指向正确目录
+  - `extensions/pa-mio/index.ts`：Layer 2.5 `<recall>` 围栏注入工作目录描述 → 智能体感知
+  - `.gitignore`：新增 `.codegraph/`
+- **影响**: 文件浏览、LLM 工具调用（`list_directory`/`preview_file`）、system prompt 上下文
+- **验证**: `npm run check` 全过；设置页输入路径 → 文件面板自动切换；智能体回复确认工作目录
+- **Commit**: `4f49282`
+
 ---
 
 ## 2026-06-03
