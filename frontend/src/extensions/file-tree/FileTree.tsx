@@ -41,12 +41,14 @@ export function FileTree() {
   const [displayRoot, setDisplayRoot] = createSignal('')
   let rootPath = ''
   let currentWorkDir = ''
+  let pendingRoot = ''  // 跟踪预期的根路径，解决初始响应竞态
 
   onMount(() => {
     // 读取工作目录设置作为根路径
     const settingsEntries = agent.settings()
     currentWorkDir = getSettingFromList(settingsEntries, 'work_dir')
     const initialSendPath = currentWorkDir || '.'
+    if (currentWorkDir) pendingRoot = currentWorkDir
 
     const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
       const payload = msg.payload as { path: string; entries: FileEntry[] }
@@ -67,10 +69,12 @@ export function FileTree() {
 
       // 路径归一化：bridge 返回 \ 但 tree node.path 用 /，统一 key
       const normPath = payload.path.replace(/\\/g, '/')
-      console.log('[file-tree] normPath:', normPath, 'tree.len:', tree().length, 'rootPath:', rootPath)
-      if (tree().length === 0 || normPath === rootPath) {
-        // root level
-        if (!rootPath) { rootPath = normPath; setDisplayRoot(normPath) }
+      console.log('[file-tree] normPath:', normPath, 'tree.len:', tree().length, 'rootPath:', rootPath, 'pendingRoot:', pendingRoot)
+      // 若是预期的根路径响应，或 tree 为空，则替换整棵树
+      if (tree().length === 0 || normPath === rootPath || normPath === pendingRoot) {
+        rootPath = normPath
+        pendingRoot = ''
+        setDisplayRoot(normPath)
         setTree(entries)
       } else {
         // subdirectory — store children keyed by normalized path
@@ -98,6 +102,7 @@ export function FileTree() {
       if (newWorkDir !== currentWorkDir) {
         console.log('[file-tree] work_dir changed, sending file.list for:', newWorkDir)
         currentWorkDir = newWorkDir
+        pendingRoot = newWorkDir
         setTree([])
         setDirChildren({})
         setExpandedDirs(new Set<string>())
