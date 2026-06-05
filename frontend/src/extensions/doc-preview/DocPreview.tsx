@@ -90,16 +90,17 @@ export function DocPreview() {
   }
 
   return (
-    <>
+    <div style="display:flex;flex-direction:column;height:100%;">
       <Show when={filePath()}>
         <div
           style={{
             'font-size': '11px',
             color: 'var(--text-muted)',
-            'margin-bottom': '8px',
+            'margin-bottom': '4px',
             'white-space': 'nowrap',
             overflow: 'hidden',
             'text-overflow': 'ellipsis',
+            'flex-shrink': '0',
           }}
         >
           {fileName()}
@@ -107,7 +108,7 @@ export function DocPreview() {
       </Show>
 
       <Show when={isMarkdown() || isHtml()}>
-        <div class="view-toggle">
+        <div class="view-toggle" style="flex-shrink:0;">
           <button
             class="view-toggle-btn"
             classList={{ active: viewMode() === 'rendered' }}
@@ -141,28 +142,30 @@ export function DocPreview() {
             </div>
           }
         >
-          <Show when={imageSrc()}>
-            <img
-              src={imageSrc()}
-              alt={fileName()}
-              style="max-width:100%;border-radius:6px;"
-            />
-          </Show>
-          <Show when={!imageSrc() && viewMode() === 'rendered' && !isHtml()}>
-            <div class="preview-rendered" innerHTML={safeMarkdown(content())} />
-          </Show>
-          <Show when={!imageSrc() && viewMode() === 'rendered' && isHtml()}>
-            <iframe
-              srcdoc={content()}
-              sandbox="allow-same-origin"
-              style="width:100%;height:100%;border:none;border-radius:6px;min-height:300px;"
-            />
-          </Show>
-          <Show when={!imageSrc() && viewMode() === 'source'}>
-            <pre class="preview-source">{content()}</pre>
-          </Show>
+          <div style="flex:1;min-height:0;overflow:hidden;">
+            <Show when={imageSrc()}>
+              <img
+                src={imageSrc()}
+                alt={fileName()}
+                style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;"
+              />
+            </Show>
+            <Show when={!imageSrc() && viewMode() === 'rendered' && !isHtml()}>
+              <div class="preview-rendered" innerHTML={safeMarkdown(content())} />
+            </Show>
+            <Show when={!imageSrc() && viewMode() === 'rendered' && isHtml()}>
+              <iframe
+                srcdoc={content()}
+                sandbox="allow-same-origin"
+                style="width:100%;height:100%;border:none;border-radius:6px;"
+              />
+            </Show>
+            <Show when={!imageSrc() && viewMode() === 'source'}>
+              <pre class="preview-source">{content()}</pre>
+            </Show>
+          </div>
         </Show>
       </Show>
-    </>
+    </div>
   )
 }
