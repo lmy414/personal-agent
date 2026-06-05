@@ -2,6 +2,13 @@ import { createContext, createSignal, onCleanup, useContext, type Component, typ
 import { createStore } from 'solid-js/store'
 import type { ServerMessage, StatusPayload, SessionInfo } from '@bridge/protocol'
 
+// ========== 常量 ==========
+
+const WS_URL = 'ws://localhost:9229'
+const HEARTBEAT_INTERVAL = 30000
+const RECONNECT_BASE_DELAY = 3000
+const MAX_RECONNECT_DELAY = 30000
+
 // ========== 全局状态类型 ==========
 
 export interface ToolCallEntry {
@@ -113,7 +120,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   }
 
   const connect = () => {
-    ws = new WebSocket('ws://localhost:9229')
+    ws = new WebSocket(WS_URL)
 
     ws.onopen = () => {
       setConnected(true)
@@ -124,7 +131,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping', id: '', sessionId: '', ts: Date.now(), payload: {} }))
         }
-      }, 30000)
+      }, HEARTBEAT_INTERVAL)
       // 初始化：请求 session 列表 + 模型列表 + 设置
       const initMessages = [
         JSON.stringify({
@@ -156,7 +163,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       setConnected(false)
       if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null }
       if (reconnectTimer) clearTimeout(reconnectTimer)
-      const delay = Math.min(3000 * Math.pow(2, reconnectAttempts), 30000)
+      const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY)
       reconnectAttempts++
       reconnectTimer = setTimeout(connect, delay)
     }

@@ -146,7 +146,6 @@ async function checkFileIntegrity() {
     'frontend/tsconfig.json',
     'extensions/pa-mio/index.ts',
     'extensions/pa-files/index.ts',
-    'extensions/pa-live2d/index.ts',
     'extensions/shared/memory-store.ts',
     'mio-harness/SOUL.md',
     'mio-harness/memories/MEMORY.md',

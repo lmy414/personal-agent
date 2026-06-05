@@ -94,8 +94,6 @@ describe('Protocol — ServerMessage 类型覆盖', () => {
       ['file.changed', { path: 'f.ts' }],
       ['settings.state', { entries: [{ key: 'k', value: 'v' }] }],
       ['error', { code: 'E1', message: 'msg', recoverable: true }],
-      ['live2d.control', { tool: 'expression', args: { name: 'smile' } }],
-      ['live2d.result', { text: 'done' }],
     ]
     for (const [type, payload] of types) {
       const env = createEnvelope(type as any, SID, payload)

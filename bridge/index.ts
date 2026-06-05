@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { dispatch } from './dispatcher'
 import { generateUUID } from './protocol'
 import { initDB, getDB } from './db'
-import { startWatcher, stopWatcher, addClient, removeClient, broadcastToAll } from './watcher'
+import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
 
 const PORT = 9229
 
@@ -29,6 +29,7 @@ if (settingsCount === 0) {
     ['thinking_level', 'medium'],
     ['compact_threshold', '80'],
     ['history_retention', '100'],
+    ['work_dir', ''],
     ['providers', JSON.stringify([{ id: 'deepseek', name: 'DeepSeek', apiKey: '', active: true }])],
   ]
   const insert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')

@@ -32,41 +32,6 @@ html, body, #root {
 ::-webkit-scrollbar-corner { background: transparent; }
 * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 
-/* ====== 底层：场景 + 立绘 ====== */
-.scene-layer { position: fixed; inset: 0; z-index: 0; }
-.scene-bg {
-  width: 100%; height: 100%;
-  background: radial-gradient(ellipse at 60% 80%, #1a1040 0%, #0a0a18 50%, #050510 100%);
-}
-.scene-room {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 70%;
-  background: linear-gradient(to top, rgba(20,15,40,0.85) 0%, transparent 100%);
-}
-.scene-room::before {
-  content: ""; position: absolute; bottom: 0; left: 8%; right: 8%; height: 55%;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 4%, transparent 96%, rgba(255,255,255,0.02) 100%),
-    radial-gradient(ellipse at 28% 28%, rgba(139,156,240,0.05) 0%, transparent 55%),
-    radial-gradient(circle at 72% 48%, rgba(255,200,150,0.03) 0%, transparent 35%);
-  border: 1px solid rgba(255,255,255,0.03);
-  border-radius: 4px;
-}
-.character-sprite {
-  position: absolute;
-  bottom: 0; right: 6%;
-  height: 88vh;
-  opacity: 0.08;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(139,156,240,0.35) 0%, rgba(139,156,240,0.08) 40%, transparent 100%);
-  width: 320px;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
-}
-.character-sprite::after {
-  content: "澪"; position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
-  font-size: 130px; color: rgba(139,156,240,0.10);
-}
-
 /* ====== Grid 覆盖层 ====== */
 .overlay {
   position: fixed; inset: 0; z-index: 20;
@@ -519,21 +484,6 @@ html, body, #root {
 }
 .status-spacer { flex: 1; }
 
-/* 模型切换 */
-.model-select {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 6px;
-  color: var(--text-primary); font-size: 12px;
-  padding: 5px 8px; outline: none;
-  cursor: pointer; max-width: 150px;
-  font-family: inherit;
-}
-.model-select:focus { border-color: rgba(139,156,240,0.3); }
-.model-select option {
-  background: #1a1a2e; color: var(--text-primary);
-}
-
 /* 上下文用量条 */
 .ctx-bar-wrap {
   padding: 2px 16px 8px;
@@ -721,12 +671,47 @@ html, body, #root {
   :root { --left-col: 280px; --gap: 8px; --margin: 8px; }
 }
 
-/* ====== 消息动画 ====== */
-@keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ====== 紧凑按钮（StatusBar compact-btn） ====== */
+.compact-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 6px;
+  padding: 0;
+  line-height: 1;
 }
-.message-enter { animation: msgIn 0.3s ease; }
+.compact-btn:disabled { color: var(--text-muted); cursor: default; }
+
+/* ====== 删除按钮（SessionPanel del-btn） ====== */
+.del-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.del-btn:hover { color: #f87171; }
+
+/* ====== 子会话工具栏 ====== */
+.sub-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+/* ====== 持久 Tab 内容容器 ====== */
+.tab-content-persist {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 
 /* ====== 文件树状态 ====== */
 .file-tree-empty {

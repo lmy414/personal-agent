@@ -45,8 +45,6 @@ export interface MemoryStore {
   userEntries: string[]
   memoryCharLimit: number
   userCharLimit: number
-  _memorySnapshot: string
-  _userSnapshot: string
 }
 
 // ── 工厂函数 ──────────────────────────────────────────────
@@ -65,17 +63,11 @@ export function createMemoryStore(
   const memoryEntries = readFileAsEntries(memPath)
   const userEntries = readFileAsEntries(userPath)
 
-  // 冻结快照（会话启动时拍）
-  const _memorySnapshot = joinEntries(memoryEntries)
-  const _userSnapshot = joinEntries(userEntries)
-
   return {
     memoryEntries,
     userEntries,
     memoryCharLimit,
     userCharLimit,
-    _memorySnapshot,
-    _userSnapshot,
   }
 }
 
@@ -89,15 +81,6 @@ function readFileAsEntries(filePath: string): string[] {
     return splitEntries(raw)
   } catch {
     return []
-  }
-}
-
-function readFileRaw(filePath: string): string {
-  try {
-    if (!fs.existsSync(filePath)) return ''
-    return fs.readFileSync(filePath, 'utf-8').trim()
-  } catch {
-    return ''
   }
 }
 

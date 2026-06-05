@@ -35,11 +35,8 @@ export function SettingsPage() {
   createEffect(() => {
     if (isSettingsOpen()) {
       window.addEventListener('keydown', handleKeyDown)
+      onCleanup(() => window.removeEventListener('keydown', handleKeyDown))
     }
-  })
-
-  onCleanup(() => {
-    window.removeEventListener('keydown', handleKeyDown)
   })
 
   // ── 派生值 ──
