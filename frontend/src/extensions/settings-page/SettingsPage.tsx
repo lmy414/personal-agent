@@ -1,7 +1,7 @@
 import { createEffect, For, createSignal, onCleanup, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
-import type { SkillSummary } from '@bridge/protocol'
+import type { ServerMessage, SkillSummary } from '@bridge/protocol'
 
 type SettingsTab = 'agent' | 'skills'
 
@@ -25,6 +25,7 @@ export function SettingsPage() {
   const [installTarget, setInstallTarget] = createSignal<'user' | 'project'>('user')
   const [installStatus, setInstallStatus] = createSignal<'idle' | 'installing' | 'ok' | 'error'>('idle')
   const [installMsg, setInstallMsg] = createSignal('')
+  let installTimer: ReturnType<typeof setTimeout> | undefined
 
   // 打开时拉取设置 + 自动发现模型
   createEffect(() => {
@@ -50,8 +51,8 @@ export function SettingsPage() {
   // 订阅技能状态推送（实时更新）
   createEffect(() => {
     if (isSettingsOpen()) {
-      const handler = (msg: any) => {
-        if (msg.payload?.skills) {
+      const handler = (msg: ServerMessage) => {
+        if (msg.type === 'skills.state') {
           setSkills(msg.payload.skills)
         }
       }
@@ -63,12 +64,33 @@ export function SettingsPage() {
   // 订阅安装完成通知
   createEffect(() => {
     if (isSettingsOpen()) {
-      const handler = (msg: any) => {
-        setInstallStatus('ok')
-        setInstallMsg(`技能 "${msg.payload.name}" 安装成功`)
-        setTimeout(() => setInstallStatus('idle'), 3000)
+      const handler = (msg: ServerMessage) => {
+        if (msg.type === 'skills.installed') {
+          setInstallStatus('ok')
+          setInstallMsg(`技能 "${msg.payload.name}" 安装成功`)
+          if (installTimer) clearTimeout(installTimer)
+          installTimer = setTimeout(() => setInstallStatus('idle'), 3000)
+        }
       }
       const unsub = agent.subscribe('skills.installed', handler)
+      onCleanup(() => {
+        unsub()
+        if (installTimer) clearTimeout(installTimer)
+      })
+    }
+  })
+
+  // 订阅安装错误
+  createEffect(() => {
+    if (isSettingsOpen()) {
+      const handler = (msg: ServerMessage) => {
+        if (msg.type === 'error' && installStatus() === 'installing') {
+          setInstallStatus('error')
+          setInstallMsg(msg.payload.message || '安装失败')
+          setTimeout(() => setInstallStatus('idle'), 5000)
+        }
+      }
+      const unsub = agent.subscribe('error', handler)
       onCleanup(unsub)
     }
   })
