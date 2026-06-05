@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js'
+import { createSignal, For, Show, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { ToolCallEntry } from '@/shell/useAgent'
 
@@ -74,11 +74,18 @@ export function ToolPanel() {
   const hasRunning = () => toolCalls().some((t: ToolCallEntry) => t.status === 'running')
   const canCancel = () => isStreaming() || hasRunning()
 
+  let cancelToastTimer: ReturnType<typeof setTimeout> | null = null
+
   const handleCancel = () => {
     cancelMessage()
     setCancelled(true)
-    setTimeout(() => setCancelled(false), 2100)
+    if (cancelToastTimer) clearTimeout(cancelToastTimer)
+    cancelToastTimer = setTimeout(() => setCancelled(false), 2100)
   }
+
+  onCleanup(() => {
+    if (cancelToastTimer) clearTimeout(cancelToastTimer)
+  })
 
   return (
     <div class="glass-panel tool-panel">

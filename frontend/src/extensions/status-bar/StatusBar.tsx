@@ -26,8 +26,8 @@ export function StatusBar() {
     feedbackTimer = setTimeout(() => setCompactFeedback(null), 4000)
   }
 
-  // 订阅 compaction 结果
-  subscribe('session.compacted', (msg) => {
+  // 订阅 compaction 结果 + 错误
+  const unsubCompacted = subscribe('session.compacted', (msg) => {
     const p = msg.payload as { tokensBefore: number; tokensAfter: number; tokensSaved: number }
     const saved = p.tokensSaved ?? (p.tokensBefore - p.tokensAfter)
     if (saved > 0) {
@@ -37,7 +37,7 @@ export function StatusBar() {
     }
   })
 
-  subscribe('error', (msg) => {
+  const unsubError = subscribe('error', (msg) => {
     const p = msg.payload as { code: string; message: string }
     if (p.code === 'COMPACTION_FAILED' || p.code === 'COMPACTION_NOT_SUPPORTED' || p.code === 'BUSY') {
       showFeedback('error', p.message)
@@ -48,6 +48,8 @@ export function StatusBar() {
   onCleanup(() => {
     clearInterval(timer)
     if (feedbackTimer) clearTimeout(feedbackTimer)
+    unsubCompacted()
+    unsubError()
   })
 
   const contextPercent = () => {

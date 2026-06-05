@@ -145,7 +145,6 @@ async function checkFileIntegrity() {
     'frontend/tsconfig.json',
     'extensions/pa-mio/index.ts',
     'extensions/pa-files/index.ts',
-    // 'extensions/pa-live2d/index.ts', // 已移除，见 docs/code-audit-report-2026-06-05.md
     'extensions/shared/memory-store.ts',
     'mio-harness/SOUL.md',
     'mio-harness/memories/MEMORY.md',

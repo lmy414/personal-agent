@@ -91,7 +91,6 @@ describe('Dispatcher — 未知消息处理', () => {
       'session.renamed', 'session.deleted',
       'compaction', 'session.compacted', 'file.changed',
       'settings.state', 'error',
-      'live2d.control', 'live2d.result',
     ]
     for (const t of serverOnlyTypes) {
       assert.ok(!known[t] || validOverlap.has(t), `服务端类型 "${t}" 不应能被客户端发送`)
