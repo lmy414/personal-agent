@@ -50,6 +50,7 @@ export function FileTree() {
 
     const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
       const payload = msg.payload as { path: string; entries: FileEntry[] }
+      console.log('[file-tree] file.list received, path:', payload.path, 'entries:', payload.entries.length)
       const entries: TreeNode[] = payload.entries
         .filter((e) => !e.name.startsWith('.') || e.name === '.gitignore')
         .map((e) => {
@@ -66,6 +67,7 @@ export function FileTree() {
 
       // 路径归一化：bridge 返回 \ 但 tree node.path 用 /，统一 key
       const normPath = payload.path.replace(/\\/g, '/')
+      console.log('[file-tree] normPath:', normPath, 'tree.len:', tree().length, 'rootPath:', rootPath)
       if (tree().length === 0 || normPath === rootPath) {
         // root level
         if (!rootPath) { rootPath = normPath; setDisplayRoot(normPath) }
