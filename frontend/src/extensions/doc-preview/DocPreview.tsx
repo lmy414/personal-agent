@@ -6,6 +6,7 @@ import type { ServerMessage } from '@bridge/protocol'
 marked.setOptions({ breaks: true, gfm: true })
 
 const MARKDOWN_EXTS = new Set(['md', 'mdx'])
+const HTML_EXTS = new Set(['html', 'htm'])
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'])
 
 type PreviewMode = 'rendered' | 'source'
@@ -27,6 +28,7 @@ export function DocPreview() {
   const [imageSrc, setImageSrc] = createSignal('')
   const [loading, setLoading] = createSignal(false)
   const [isMarkdown, setIsMarkdown] = createSignal(false)
+  const [isHtml, setIsHtml] = createSignal(false)
 
   onMount(() => {
     const unsub = agent.subscribe('file.content', (msg: ServerMessage) => {
@@ -62,9 +64,15 @@ export function DocPreview() {
         setImageSrc('')
         if (MARKDOWN_EXTS.has(ext)) {
           setIsMarkdown(true)
+          setIsHtml(false)
+          setViewMode('rendered')
+        } else if (HTML_EXTS.has(ext)) {
+          setIsMarkdown(false)
+          setIsHtml(true)
           setViewMode('rendered')
         } else {
           setIsMarkdown(false)
+          setIsHtml(false)
           setViewMode('source')
         }
       }
@@ -98,7 +106,7 @@ export function DocPreview() {
         </div>
       </Show>
 
-      <Show when={isMarkdown()}>
+      <Show when={isMarkdown() || isHtml()}>
         <div class="view-toggle">
           <button
             class="view-toggle-btn"
@@ -140,8 +148,15 @@ export function DocPreview() {
               style="max-width:100%;border-radius:6px;"
             />
           </Show>
-          <Show when={!imageSrc() && viewMode() === 'rendered'}>
+          <Show when={!imageSrc() && viewMode() === 'rendered' && !isHtml()}>
             <div class="preview-rendered" innerHTML={safeMarkdown(content())} />
+          </Show>
+          <Show when={!imageSrc() && viewMode() === 'rendered' && isHtml()}>
+            <iframe
+              srcdoc={content()}
+              sandbox="allow-same-origin"
+              style="width:100%;height:100%;border:none;border-radius:6px;min-height:300px;"
+            />
           </Show>
           <Show when={!imageSrc() && viewMode() === 'source'}>
             <pre class="preview-source">{content()}</pre>
