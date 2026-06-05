@@ -47,7 +47,7 @@ export function FileTree() {
     // 读取工作目录设置作为根路径
     const settingsEntries = agent.settings()
     currentWorkDir = getSettingFromList(settingsEntries, 'work_dir')
-    const initialSendPath = currentWorkDir || '.'
+    // 仅当已有工作目录时才发初始请求，否则等 settings.state 订阅触发
     if (currentWorkDir) pendingRoot = currentWorkDir
 
     const unsub = agent.subscribe('file.list', (msg: ServerMessage) => {
@@ -132,7 +132,12 @@ export function FileTree() {
       if (errorTid !== undefined) clearTimeout(errorTid)
     })
 
-    agent.send('file.list', { path: initialSendPath })
+    // 仅当已有工作目录时才发初始请求，否则等 settings.state 订阅触发
+    if (currentWorkDir) {
+      agent.send('file.list', { path: currentWorkDir })
+    } else {
+      setLoading(false)
+    }
   })
 
   const handleToggleDir = (node: TreeNode, e: MouseEvent) => {

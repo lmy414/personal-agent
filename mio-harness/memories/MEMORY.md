@@ -9,3 +9,5 @@
 § Mirror 的工作目录设置为 E:\mio，不是项目根目录 D:\claude\personal-agent
 § interactive-dashboard-builder 技能已安装，位于 .pi/skills/interactive-dashboard-builder/，20KB，Chart.js 交互式仪表板生成
 § interactive-dashboard-builder 技能已安装，位于 bridge/.claude/skills/interactive-dashboard-builder/，20KB，Chart.js 交互式仪表板生成
+§ skill-creator 技能已升级到新版本（2026-02-27 版），位于 bridge/.pi/skills/skill-creator/
+§ interactive-dashboard-builder 技能已移动到 bridge/.pi/skills/ 下，与 skill-creator 统一管理
