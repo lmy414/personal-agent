@@ -17,10 +17,10 @@ function loadPanelState(): { w: number; visible: boolean } {
     const w = localStorage.getItem(STORAGE_KEY_W)
     const v = localStorage.getItem(STORAGE_KEY_V)
     return {
-      w: w ? parseInt(w) : 320,
+      w: w ? parseInt(w) : 400,
       visible: v !== null ? v === '1' : true,
     }
-  } catch { return { w: 320, visible: true } }
+  } catch { return { w: 400, visible: true } }
 }
 
 function savePanelState(w: number, visible: boolean): void {
@@ -57,7 +57,7 @@ export function App() {
 
     const onMove = (ev: MouseEvent) => {
       const w = startW - (ev.clientX - startX)
-      const clamped = Math.max(0, Math.min(640, w))
+      const clamped = Math.max(0, Math.min(900, w))
       setRightPanelW(clamped)
 
       if (clamped < 120 && w < 120) {
@@ -81,9 +81,9 @@ export function App() {
   }
 
   const handleExpandClick = () => {
-    setRightPanelW(320)
+    setRightPanelW(400)
     setPanelVisible(true)
-    savePanelState(320, true)
+    savePanelState(400, true)
   }
 
   const effectiveWidth = () => panelVisible() ? rightPanelW() : 0
