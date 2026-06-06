@@ -1,0 +1,28 @@
+.progress-bar-wrap {
+  padding: 2px 16px 8px;
+}
+.progress-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.progress-bar-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+.progress-bar-fill.warn {
+  background: #f4a236;
+}
+.progress-bar-fill.danger {
+  background: #f87171;
+}

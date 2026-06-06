@@ -1,0 +1,23 @@
+.spinner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  transition: background 0.3s;
+}
+.spinner-dot.inactive {
+  background: rgba(255, 255, 255, 0.15);
+}
+.spinner-dot.running {
+  animation: spinner-pulse 1.5s ease-in-out infinite;
+  background: rgba(139, 156, 240, 0.8);
+}
+.spinner-dot.size-md {
+  width: 8px;
+  height: 8px;
+}
+
+@keyframes spinner-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
