@@ -133,6 +133,17 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
 
   const unsubscribe = session.subscribe((event: any) => {
     switch (event.type) {
+      case 'agent_start': {
+        ws.send(JSON.stringify({
+          type: 'agent.start',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: {},
+        }))
+        break
+      }
+
       case 'turn_start': {
         turnIndex = Date.now()
         ws.send(JSON.stringify({
@@ -299,6 +310,22 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
 
       case 'agent_end': {
         unsubscribe()
+
+        // 检测 agent/turn 级别错误
+        if (event.error) {
+          ws.send(JSON.stringify({
+            type: 'turn.error',
+            id: `srv-${Date.now()}`,
+            sessionId: msg.sessionId,
+            ts: Date.now(),
+            payload: {
+              code: event.error.code ?? 'AGENT_ERROR',
+              message: event.error.message ?? 'Agent execution error',
+              recoverable: true,
+            },
+          }))
+        }
+
         ws.send(JSON.stringify({
           type: 'turn.end',
           id: `srv-${Date.now()}`,
@@ -432,6 +459,21 @@ export async function handleMessageSend(msg: ClientMessage, ws: WebSocket): Prom
         } catch {
           // getSessionStats may throw if no session file is configured
         }
+        break
+      }
+
+      case 'error': {
+        ws.send(JSON.stringify({
+          type: 'turn.error',
+          id: `srv-${Date.now()}`,
+          sessionId: msg.sessionId,
+          ts: Date.now(),
+          payload: {
+            code: event.code ?? 'PI_ERROR',
+            message: event.message ?? 'Unknown Pi error',
+            recoverable: true,
+          },
+        }))
         break
       }
     }

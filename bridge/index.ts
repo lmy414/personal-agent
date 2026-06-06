@@ -7,6 +7,7 @@ import { generateUUID } from './protocol'
 import { initDB, getDB } from './db'
 import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
 import { addSkillClient, removeSkillClient } from './handlers/skills'
+import { discoverAgents, addAgentClient, removeAgentClient } from './handlers/agent'
 
 const PORT = 9229
 
@@ -56,6 +57,14 @@ if (!existsSync(piSettingsPath)) {
   console.log('[bridge] .pi/settings.json generated with', 3, 'extensions')
 }
 
+// 启动时触发 Agent 自动发现（从 providers 配置生成默认 Agent）
+try {
+  const agentCount = discoverAgents().length
+  console.log(`[bridge] agents initialized: ${agentCount} total`)
+} catch (err) {
+  console.warn('[bridge] agent discovery failed:', err)
+}
+
 // Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
 
 const wss = new WebSocketServer({ port: PORT })
@@ -67,6 +76,7 @@ startWatcher()
 wss.on('connection', (ws: WebSocket) => {
   addClient(ws)
   addSkillClient(ws)
+  addAgentClient(ws)
 
   ws.on('message', (raw) => {
     try {
@@ -88,6 +98,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('close', () => {
     removeClient(ws)
     removeSkillClient(ws)
+    removeAgentClient(ws)
   })
 
   ws.on('error', (err) => {

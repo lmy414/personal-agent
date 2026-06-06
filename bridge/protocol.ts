@@ -9,24 +9,32 @@ export interface MessageEnvelope<T extends string = string, P = unknown> {
 }
 
 // ========== 客户端 → 服务端 ==========
-// 共 27 条，覆盖 Pi Agent + Harness 全部可调用方法
+// 共 35 条，覆盖 Pi Agent + Harness 全部可调用方法 + 多智能体管理
 
 export type ClientMessage =
+  // ── 智能体管理 (6) — 多智能体架构核心 ──
+  | ClientMsg<'agent.list', {}>
+  | ClientMsg<'agent.create', { name: string; provider: string; modelId: string; avatarColor?: string; roleDescription?: string }>
+  | ClientMsg<'agent.update', { agentId: string; name?: string; avatarColor?: string; roleDescription?: string }>
+  | ClientMsg<'agent.delete', { agentId: string }>
+  | ClientMsg<'agent.switch', { agentId: string }>
+  | ClientMsg<'agent.set_default', { agentId: string }>
+
   // ── 会话管理 (7) ──
-  | ClientMsg<'session.create', { model?: string; thinkingLevel?: ThinkingLevel }>
-  | ClientMsg<'session.list', {}>
+  | ClientMsg<'session.create', { model?: string; thinkingLevel?: ThinkingLevel; agentId?: string }>
+  | ClientMsg<'session.list', { agentId?: string }>
   | ClientMsg<'session.switch', { sessionId: string }>
   | ClientMsg<'session.delete', { sessionId: string }>
   | ClientMsg<'session.rename', { sessionId: string; title: string }>
   | ClientMsg<'session.history', { sessionId: string }>
   | ClientMsg<'session.state', {}>
 
-  // ── 对话控制 (3) — Agent 核心方法 ──
+  // ── 对话控制 (3) — session 级对话操作 ──
   | ClientMsg<'agent.prompt', { content: string; displayContent?: string; attachments?: AttachmentMeta[]; images?: ImageContent[] }>
   | ClientMsg<'agent.abort', {}>
   | ClientMsg<'agent.compact', {}>
 
-  // ── 配置控制 (4) — Agent 配置方法 ──
+  // ── 配置控制 (4) — Agent/Session 配置 ──
   | ClientMsg<'model.set', { modelId: string }>
   | ClientMsg<'model.list', {}>
   | ClientMsg<'thinking.set', { level: ThinkingLevel }>
@@ -58,11 +66,18 @@ export type ClientMessage =
 type ClientMsg<T extends string, P> = MessageEnvelope<T, P>
 
 // ========== 服务端 → 客户端 ==========
-// 共 28 条，完整映射 Pi AgentEvent + AgentHarnessEvent
+// 共 36 条，完整映射 Pi AgentEvent + AgentHarnessEvent + 多智能体事件
 
 export type ServerMessage =
-  // ── 会话 (4) ──
-  | ServerMsg<'session.created', { sessionId: string; model: string; thinkingLevel: string; createdAt: number }>
+  // ── 智能体 (5) — 多智能体架构事件 ──
+  | ServerMsg<'agent.list', { agents: AgentInfo[] }>
+  | ServerMsg<'agent.created', { agent: AgentInfo }>
+  | ServerMsg<'agent.updated', { agent: AgentInfo }>
+  | ServerMsg<'agent.deleted', { agentId: string }>
+  | ServerMsg<'agent.default_changed', { agentId: string }>
+
+  // ── 会话 (6) ──
+  | ServerMsg<'session.created', { sessionId: string; model: string; thinkingLevel: string; createdAt: number; agentId?: string }>
   | ServerMsg<'session.list', { sessions: SessionInfo[] }>
   | ServerMsg<'session.renamed', { sessionId: string; title: string }>
   | ServerMsg<'session.deleted', { sessionId: string }>
@@ -71,7 +86,7 @@ export type ServerMessage =
       messages: { messageId: string; role: 'user' | 'assistant'; content: string; partial: boolean; attachments?: AttachmentMeta[] }[]
       toolCalls: ToolCallRecord[]
     }>
-  | ServerMsg<'session.state', { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number; tokens?: number; cost?: number }>
+  | ServerMsg<'session.state', { model: string; thinkingLevel: string; contextUsed: number; contextMax: number; roundCount: number; tokens?: number; cost?: number; agentId?: string }>
 
   // ── Agent 生命周期 (5) — Pi AgentEvent 直接映射 ──
   | ServerMsg<'agent.start', {}>
@@ -112,7 +127,7 @@ export type ServerMessage =
   | ServerMsg<'skills.state', { skills: SkillSummary[]; userSkillDir: string; projectSkillDir: string }>
   | ServerMsg<'skills.installed', { name: string; source: string }>
 
-  // ── 压缩事件 (2) — Pi session_compact / session_before_compact ──
+  // ── 压缩事件 (1) — Pi session_compact / session_before_compact ──
   | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }>
 
   // ── 系统 (1) ──
@@ -131,11 +146,24 @@ export interface ImageContent {
   source: { type: 'base64'; media_type: string; data: string } | { type: 'url'; url: string }
 }
 
+export interface AgentInfo {
+  id: string
+  name: string
+  provider: string
+  modelId: string
+  avatarColor: string
+  roleDescription: string
+  isDefault: boolean
+  createdAt: number
+  sessionCount: number
+}
+
 export interface SessionInfo {
   id: string
   title: string
   lastActive: number
   roundCount: number
+  agentId?: string
 }
 
 export interface TokenUsage {

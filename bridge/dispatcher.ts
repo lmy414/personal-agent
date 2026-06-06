@@ -3,10 +3,13 @@ import type { ClientMessage } from './protocol'
 import { handleSessionCreate, handleSessionList, handleSessionSwitch, handleSessionDelete, handleSessionHistory, handleSessionRename, handleSessionState, handleSessionCompact } from './handlers/session'
 import { handleMessageSend, handleMessageCancel } from './handlers/message'
 import { handleModelSwitch, handleModelList } from './handlers/model'
-import { handleFileList, handleFileRead } from './handlers/file'
+import { handleFileList, handleFileRead, handleFileWrite } from './handlers/file'
 import { handleMemorySearch, handleMemoryList } from './handlers/memory'
 import { handleSettingsGet, handleSettingsSet, handleSettingsDiscoverModels } from './handlers/settings'
 import { handleSkillsList, handleSkillsInstall, handleSkillsToggle, handleSkillsRemove } from './handlers/skills'
+import { handleAgentList, handleAgentCreate, handleAgentUpdate, handleAgentDelete, handleAgentSwitch, handleAgentSetDefault } from './handlers/agent'
+import { handleThinkingSet } from './handlers/thinking'
+import { handleToolsSet } from './handlers/tools'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -14,22 +17,44 @@ type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 const NOOP_TYPES = new Set(['ping'])
 
 const routes: Record<string, Handler> = {
+  // ── 智能体管理 ──
+  'agent.list': handleAgentList,
+  'agent.create': handleAgentCreate,
+  'agent.update': handleAgentUpdate,
+  'agent.delete': handleAgentDelete,
+  'agent.switch': handleAgentSwitch,
+  'agent.set_default': handleAgentSetDefault,
+
+  // ── 会话管理 ──
   'session.create': handleSessionCreate,
   'session.list': handleSessionList,
   'session.switch': handleSessionSwitch,
   'session.delete': handleSessionDelete,
-  'agent.prompt': handleMessageSend,
-  'agent.abort': handleMessageCancel,
-  'model.set': handleModelSwitch,
-  'model.list': handleModelList,
-  'file.list': handleFileList,
-  'file.read': handleFileRead,
-  'memory.search': handleMemorySearch,
-  'memory.list': handleMemoryList,
   'session.history': handleSessionHistory,
   'session.rename': handleSessionRename,
   'session.state': handleSessionState,
   'agent.compact': handleSessionCompact,
+
+  // ── 对话控制 ──
+  'agent.prompt': handleMessageSend,
+  'agent.abort': handleMessageCancel,
+
+  // ── 模型 & 配置 ──
+  'model.set': handleModelSwitch,
+  'model.list': handleModelList,
+  'thinking.set': handleThinkingSet,
+  'tools.set': handleToolsSet,
+
+  // ── 文件系统 ──
+  'file.list': handleFileList,
+  'file.read': handleFileRead,
+  'file.write': handleFileWrite,
+
+  // ── 记忆 ──
+  'memory.search': handleMemorySearch,
+  'memory.list': handleMemoryList,
+
+  // ── 设置 & 技能 ──
   'settings.get': handleSettingsGet,
   'settings.set': handleSettingsSet,
   'settings.discover': handleSettingsDiscoverModels,

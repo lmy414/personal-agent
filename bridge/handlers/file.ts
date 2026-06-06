@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws'
 import type { ClientMessage } from '../protocol'
-import { readdirSync, statSync, readFileSync, existsSync } from 'fs'
+import { readdirSync, statSync, readFileSync, writeFileSync, existsSync } from 'fs'
 import { join, resolve, normalize, relative, dirname, isAbsolute } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -54,6 +54,33 @@ export function handleFileList(msg: ClientMessage, ws: WebSocket): void {
       sessionId: msg.sessionId,
       ts: Date.now(),
       payload: { path: safePath, entries },
+    }))
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { code: 'FILE_ERROR', message, recoverable: true },
+    }))
+  }
+}
+
+export function handleFileWrite(msg: ClientMessage, ws: WebSocket): void {
+  const payload = msg.payload as { path: string; content: string; encoding?: 'utf8' | 'base64' }
+  try {
+    const safePath = resolveSafe(payload.path)
+    const encoding = payload.encoding ?? 'utf8'
+    writeFileSync(safePath, payload.content, encoding === 'base64' ? { encoding: 'base64' } : 'utf-8')
+    console.log('[file] write:', safePath)
+
+    ws.send(JSON.stringify({
+      type: 'file.content',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { path: safePath, content: payload.content, encoding },
     }))
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

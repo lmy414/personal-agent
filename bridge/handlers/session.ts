@@ -14,16 +14,23 @@ import { getDB } from '../db'
 // ── session.create（已有，加 SQLite 持久化）────────────────────
 
 export async function handleSessionCreate(msg: ClientMessage, ws: WebSocket): Promise<void> {
-  const payload = (msg.payload ?? {}) as { model?: string; thinkingLevel?: 'low' | 'medium' | 'high' }
+  const payload = (msg.payload ?? {}) as { model?: string; thinkingLevel?: 'low' | 'medium' | 'high'; agentId?: string }
   const result = await createPiSession({
     modelName: payload.model,
     thinkingLevel: payload.thinkingLevel,
+    agentId: payload.agentId,
   })
 
   const db = getDB()
   db.prepare(
-    'INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, ?)',
-  ).run(result.sessionId, `新会话 ${new Date().toLocaleDateString('zh-CN')}`)
+    payload.agentId
+      ? 'INSERT OR IGNORE INTO conversations (session_id, title, agent_id) VALUES (?, ?, ?)'
+      : 'INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, ?)',
+  ).run(
+    result.sessionId,
+    `新会话 ${new Date().toLocaleDateString('zh-CN')}`,
+    ...(payload.agentId ? [payload.agentId] : []),
+  )
 
   ws.send(JSON.stringify({
     type: 'session.created',
@@ -35,6 +42,7 @@ export async function handleSessionCreate(msg: ClientMessage, ws: WebSocket): Pr
       model: result.model,
       thinkingLevel: result.thinkingLevel,
       createdAt: Date.now(),
+      agentId: payload.agentId,
     },
   }))
 }

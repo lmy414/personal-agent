@@ -21,10 +21,22 @@ export function initDB(): Database.Database {
   db.pragma('foreign_keys = ON')
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS agents (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      avatar_color TEXT DEFAULT '#0066FF',
+      role_description TEXT DEFAULT '',
+      is_default INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL DEFAULT 'New Chat',
       session_id TEXT UNIQUE,
+      agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL,
       session_file TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -76,6 +88,8 @@ export function initDB(): Database.Database {
   try { db.exec("ALTER TABLE messages ADD COLUMN message_id TEXT DEFAULT ''") } catch { /* 列已存在 */ }
   // 迁移：附件元数据持久化
   try { db.exec("ALTER TABLE messages ADD COLUMN attachments TEXT DEFAULT ''") } catch { /* 列已存在 */ }
+  // 迁移：多智能体 — conversations 加 agent_id 列
+  try { db.exec('ALTER TABLE conversations ADD COLUMN agent_id TEXT REFERENCES agents(id) ON DELETE SET NULL') } catch { /* 列已存在 */ }
 
   return db
 }

@@ -19,6 +19,7 @@ export interface PiSessionMeta {
   createdAt: number
   roundCount: number
   contextWindow: number
+  agentId?: string
 }
 
 interface SessionEntry {
@@ -70,7 +71,8 @@ export async function createPiSession(options: {
   modelName?: string
   thinkingLevel?: 'low' | 'medium' | 'high'
   sessionId?: string
-}): Promise<{ sessionId: string; model: string; thinkingLevel: string }> {
+  agentId?: string
+}): Promise<{ sessionId: string; model: string; thinkingLevel: string; agentId?: string }> {
   // 从 settings 读取用户配置的默认模型，fallback 到 deepseek-v4-pro
   let defaultModel = 'deepseek-v4-pro'
   try {
@@ -134,6 +136,7 @@ export async function createPiSession(options: {
     createdAt: Date.now(),
     roundCount: restoredRoundCount,
     contextWindow,
+    agentId: options.agentId,
   }
 
   sessions.set(sessionId, { session, meta })
@@ -143,9 +146,9 @@ export async function createPiSession(options: {
     cachedRegistry = session.modelRegistry
   }
 
-  console.log(`[pi-session] created session ${sessionId} with model ${meta.modelName}`)
+  console.log(`[pi-session] created session ${sessionId} with model ${meta.modelName}${options.agentId ? ` for agent ${options.agentId}` : ''}`)
 
-  return { sessionId, model: meta.modelName, thinkingLevel: meta.thinkingLevel }
+  return { sessionId, model: meta.modelName, thinkingLevel: meta.thinkingLevel, agentId: options.agentId }
 }
 
 export function getPiSession(sessionId: string): AgentSessionType | undefined {

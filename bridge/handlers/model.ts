@@ -28,6 +28,7 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
     return
   }
 
+  const previousModelId = session.model?.id
   try {
     const model = resolveModel(msg.sessionId, payload.modelId)
     await session.setModel(model)
@@ -39,6 +40,19 @@ export async function handleModelSwitch(msg: ClientMessage, ws: WebSocket): Prom
   } catch (err) {
     console.warn(`[model] failed to switch model:`, err)
   }
+
+  // 广播 state.model 变更
+  ws.send(JSON.stringify({
+    type: 'state.model',
+    id: `srv-${Date.now()}`,
+    sessionId: msg.sessionId,
+    ts: Date.now(),
+    payload: {
+      modelId: payload.modelId,
+      provider: (session.model as any)?.provider ?? '',
+      previousModelId,
+    },
+  }))
 
   // P1-04: 返回真实数据
   const ctx = session.getContextUsage()

@@ -1,6 +1,6 @@
 import { createContext, createSignal, onCleanup, useContext, type Component, type JSX } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import type { ServerMessage, StatusPayload, SessionInfo } from '@bridge/protocol'
+import type { ServerMessage, StatusPayload, SessionInfo, AgentInfo } from '@bridge/protocol'
 
 // ========== 常量 ==========
 
@@ -67,6 +67,12 @@ export interface AgentContextValue {
   settings: () => { key: string; value: string }[]
   getSettings: () => void
   setSetting: (key: string, value: string) => void
+  agents: () => AgentInfo[]
+  switchAgent: (agentId: string) => void
+  createAgent: (name: string, provider: string, modelId: string, opts?: { avatarColor?: string; roleDescription?: string }) => void
+  updateAgent: (agentId: string, updates: { name?: string; avatarColor?: string; roleDescription?: string }) => void
+  deleteAgent: (agentId: string) => void
+  setDefaultAgent: (agentId: string) => void
 }
 
 // ========== Context ==========
@@ -84,6 +90,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [currentSessionId, setCurrentSessionId] = createSignal(props.sessionId)
   const [isSettingsOpen, setIsSettingsOpen] = createSignal(false)
   const [settings, setSettings] = createSignal<{ key: string; value: string }[]>([])
+  const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [status, setStatus] = createStore<StatusPayload>({
     tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0,
   })
@@ -490,6 +497,76 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         setSettings((msg.payload as { entries: { key: string; value: string }[] }).entries)
         break
 
+      // ── 智能体事件 ──
+
+      case 'agent.list': {
+        const agents = (msg.payload as { agents: import('@bridge/protocol').AgentInfo[] }).agents
+        setAgents(agents)
+        break
+      }
+
+      case 'agent.created': {
+        const agent = (msg.payload as { agent: import('@bridge/protocol').AgentInfo }).agent
+        setAgents((prev) => {
+          if (prev.some((a) => a.id === agent.id)) return prev
+          return [...prev, agent]
+        })
+        break
+      }
+
+      case 'agent.updated': {
+        const agent = (msg.payload as { agent: import('@bridge/protocol').AgentInfo }).agent
+        setAgents((prev) => prev.map((a) => (a.id === agent.id ? agent : a)))
+        break
+      }
+
+      case 'agent.deleted': {
+        const agentId = (msg.payload as { agentId: string }).agentId
+        setAgents((prev) => prev.filter((a) => a.id !== agentId))
+        break
+      }
+
+      case 'agent.default_changed': {
+        const agentId = (msg.payload as { agentId: string }).agentId
+        setAgents((prev) => prev.map((a) => ({ ...a, isDefault: a.id === agentId })))
+        break
+      }
+
+      // ── 状态同步 ──
+
+      case 'state.model':
+        setStatus('model', (msg.payload as { modelId: string }).modelId)
+        break
+
+      case 'state.thinking':
+        // thinking level 变更暂不更新 UI（status bar 不展示 thinking level）
+        break
+
+      case 'state.tools':
+        // tools 变更暂不更新 UI
+        break
+
+      case 'turn.error': {
+        const p = msg.payload as { code: string; message: string; recoverable: boolean }
+        console.error('[turn error]', p.code, p.message)
+        setIsStreaming(false)
+        break
+      }
+
+      // ── 记忆 ──
+
+      case 'memory.results':
+      case 'memory.list':
+        // 记忆结果由 memory 扩展通过 subscribe 消费，此处不处理
+        break
+
+      // ── 文件 ──
+
+      case 'file.list':
+      case 'file.changed':
+        // 文件列表/变更由 file-tree 扩展通过 subscribe 消费
+        break
+
       case 'error':
         console.error('[bridge error]', msg.payload?.code, msg.payload?.message)
         setIsStreaming(false)
@@ -610,6 +687,14 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const getSettings = () => send('settings.get', {})
   const setSetting = (key: string, value: string) => send('settings.set', { key, value })
 
+  const switchAgent = (agentId: string) => send('agent.switch', { agentId })
+  const createAgent = (name: string, provider: string, modelId: string, opts?: { avatarColor?: string; roleDescription?: string }) =>
+    send('agent.create', { name, provider, modelId, ...opts })
+  const updateAgent = (agentId: string, updates: { name?: string; avatarColor?: string; roleDescription?: string }) =>
+    send('agent.update', { agentId, ...updates })
+  const deleteAgent = (agentId: string) => send('agent.delete', { agentId })
+  const setDefaultAgent = (agentId: string) => send('agent.set_default', { agentId })
+
   // ========== 扩展消息订阅 ==========
 
   const msgListeners = new Map<ServerMessage['type'], Set<(msg: ServerMessage) => void>>()
@@ -656,6 +741,12 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     settings,
     getSettings,
     setSetting,
+    agents,
+    switchAgent,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    setDefaultAgent,
   }
 
   return (
