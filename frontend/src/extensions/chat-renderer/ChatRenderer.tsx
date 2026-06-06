@@ -234,13 +234,6 @@ export function ChatRenderer() {
       </div>
 
       <div class="chat-messages" ref={scrollRef}>
-        {/* 思考过程 — 放在消息区域顶部 */}
-        <Show when={agent.isStreaming() && currentThinking()}>
-          <ThinkingBlock steps={currentThinking().length}>
-            {currentThinking()}
-          </ThinkingBlock>
-        </Show>
-
         <Show
           when={visibleMessages().length > 0}
           fallback={
@@ -286,6 +279,15 @@ export function ChatRenderer() {
           </For>
         </Show>
       </div>
+
+      {/* 思考面板 — 消息区下方，输入区上方 */}
+      <Show when={agent.isStreaming() && currentThinking()}>
+        <div class="thinking-panel">
+          <ThinkingBlock steps={currentThinking().length}>
+            {currentThinking()}
+          </ThinkingBlock>
+        </div>
+      </Show>
 
       {/* attachment badges */}
       <Show when={attachments().length > 0}>

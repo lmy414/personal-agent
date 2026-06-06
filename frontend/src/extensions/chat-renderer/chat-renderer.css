@@ -30,32 +30,50 @@
   min-height: 0;
 }
 
-/* ── MomoTalk 消息块 ── */
-.msg-block {
+/* ── MomoTalk 消息行 ── */
+.msg-row {
   display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.msg-row--left {
+  justify-content: flex-start;
+}
+.msg-row--right {
+  justify-content: flex-end;
   max-width: 85%;
-  margin-bottom: 8px;
-}
-.msg-block--assistant {
-  align-self: flex-start;
-  flex-direction: column;
-}
-.msg-block--user {
   align-self: flex-end;
 }
 
-/* 发送者（头像 + 名字） */
-.msg-sender {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  padding-left: 2px;
+/* 头像占位（保持宽度，隐藏时不塌缩） */
+.msg-avatar-slot {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
+
+/* 气泡列 */
+.msg-bubble-col {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+.msg-bubble-col--left { align-items: flex-start; }
+.msg-bubble-col--right { align-items: flex-end; }
+
 .msg-sender-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
+  margin-bottom: 2px;
+  padding-left: 2px;
+}
+
+/* 思考面板（消息区与输入区之间） */
+.thinking-panel {
+  padding: 6px 16px;
+  border-top: 1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 
 /* ── 思考过程块 ─────────────────────────────────── */
