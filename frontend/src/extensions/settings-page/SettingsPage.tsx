@@ -60,6 +60,25 @@ export function SettingsPage() {
   // 文件过滤器
   const [newFilterExt, setNewFilterExt] = createSignal('')
 
+  // 外观设置 → 即时应用到 DOM
+  function applyVisualSettings(entries: { key: string; value: string }[]) {
+    const get = (k: string) => entries.find((e) => e.key === k)?.value ?? ''
+    const root = document.documentElement
+    const bg = get('bg_color')
+    root.style.setProperty('--app-bg', bg || '#0a0a12')
+    const bgImg = get('bg_image')
+    if (bgImg) {
+      root.style.setProperty('--app-bg-image', `url(file://${bgImg.replace(/\\/g, '/')})`)
+    } else {
+      root.style.setProperty('--app-bg-image', 'none')
+    }
+    const opacity = get('glass_opacity')
+    if (opacity) root.style.setProperty('--glass-opacity', String(parseInt(opacity) / 100))
+  }
+
+  // 设置变更时实时生效
+  createEffect(() => applyVisualSettings(agent.settings()))
+
   // 打开时拉取设置
   createEffect(() => {
     if (isSettingsOpen()) {
