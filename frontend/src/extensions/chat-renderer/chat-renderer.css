@@ -159,17 +159,45 @@
   transition: border-color 0.2s;
   user-select: text;
 }
-.chat-input:focus { border-color: rgba(139,156,240,0.3); }
-.chat-input::placeholder { color: rgba(255,255,255,0.20); }
-.send-btn {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: none; background: rgba(139,156,240,0.15);
-  color: var(--accent); font-size: 16px;
-  cursor: pointer; flex-shrink: 0;
-  transition: background 0.15s;
-  display: flex; align-items: center; justify-content: center;
+.chat-input:focus {
+  border-color: rgba(139,156,240,0.45);
+  box-shadow: 0 0 0 2px rgba(139,156,240,0.12);
 }
-.send-btn:hover { background: rgba(139,156,240,0.25); }
+.chat-input::placeholder { color: rgba(255,255,255,0.20); }
+.chat-send-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, rgba(139,156,240,0.4), rgba(167,139,250,0.25));
+  color: #fff;
+  cursor: pointer; flex-shrink: 0;
+  transition: all 0.25s var(--ease-out);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(139,156,240,0.2);
+}
+.chat-send-btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 4px 16px rgba(139,156,240,0.35);
+  transform: scale(1.05);
+}
+.chat-send-btn:disabled {
+  opacity: 0.3; cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+
+/* 附件按钮 */
+.chat-attach-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  cursor: pointer; flex-shrink: 0;
+  transition: all 0.2s var(--ease-out);
+}
+.chat-attach-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.chat-attach-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 /* ====== 附件徽章 ====== */
 .chat-attachments {
@@ -179,9 +207,14 @@
 .chat-attachment-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; color: var(--accent);
-  background: rgba(139,156,240,0.10);
-  border: 1px solid rgba(139,156,240,0.15);
-  border-radius: 6px; padding: 2px 6px 2px 8px;
+  background: linear-gradient(135deg, rgba(139,156,240,0.12), rgba(167,139,250,0.08));
+  border: 1px solid rgba(139,156,240,0.18);
+  border-radius: 6px; padding: 3px 8px 3px 8px;
+  transition: all 0.2s var(--ease-out);
+}
+.chat-attachment-badge:hover {
+  border-color: rgba(139,156,240,0.3);
+  background: linear-gradient(135deg, rgba(139,156,240,0.18), rgba(167,139,250,0.12));
 }
 .chat-attachment-remove {
   border: none; background: none;

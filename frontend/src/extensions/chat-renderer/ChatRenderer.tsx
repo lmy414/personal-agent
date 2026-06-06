@@ -7,6 +7,7 @@ import { MessageBubble } from './MessageBubble'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ChatInput } from './ChatInput'
 import type { AvatarStatus } from './Avatar'
+import { Paperclip, Image } from 'lucide-solid'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -257,7 +258,7 @@ export function ChatRenderer() {
                           <For each={msg.attachments}>
                             {(att) => (
                               <span class="chat-attachment-badge">
-                                {att.isImage ? '🖼️' : '📎'} {att.name}
+                                {att.isImage ? <Image size={12} /> : <Paperclip size={12} />} {att.name}
                               </span>
                             )}
                           </For>
@@ -282,7 +283,7 @@ export function ChatRenderer() {
           <For each={attachments()}>
             {(att) => (
               <span class="chat-attachment-badge">
-                📎 {att.name}
+                <Paperclip size={12} /> {att.name}
                 <button class="chat-attachment-remove" onClick={() => removeAttachment(att.path)}>
                   ×
                 </button>

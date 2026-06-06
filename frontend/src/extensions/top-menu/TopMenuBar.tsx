@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js'
 import { setIsSettingsOpen } from '@/shell/settings-signal'
+import { Settings, Wind } from 'lucide-solid'
 import './top-menu.css'
 
 export function TopMenuBar() {
@@ -24,11 +25,11 @@ export function TopMenuBar() {
       </div>
       <div class="top-menu-bar" classList={{ open: menuOpen() }}>
         <button class="top-menu-item" onClick={handleOpenSettings}>
-          <span class="menu-icon">⚙</span>
+          <Settings size={18} class="menu-icon-svg" />
           <span class="menu-label">设置</span>
         </button>
         <button class="top-menu-item" onClick={() => { setIsSettingsOpen(false); setMenuOpen(false) }}>
-          <span class="menu-icon">🎐</span>
+          <Wind size={18} class="menu-icon-svg" />
           <span class="menu-label">主会话</span>
         </button>
       </div>

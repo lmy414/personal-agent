@@ -10,3 +10,5 @@
 .top-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
 .top-menu-item .menu-icon { font-size: 20px; line-height: 1; }
 .top-menu-item .menu-label { font-size: 11px; letter-spacing: 0.5px; }
+.menu-icon-svg { color: var(--text-secondary); transition: color 0.15s; }
+.top-menu-item:hover .menu-icon-svg { color: var(--text-primary); }

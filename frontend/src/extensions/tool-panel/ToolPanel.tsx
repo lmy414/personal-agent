@@ -1,6 +1,7 @@
 import { createSignal, For, Show, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { ToolCallEntry } from '@/shell/useAgent'
+import { FileText, Pencil, Search, Terminal, FolderOpen, Wrench, Check, CircleStop } from 'lucide-solid'
 import './tool-panel.css'
 
 function formatDuration(ms: number): string {
@@ -8,14 +9,19 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
-const ICON_MAP: Record<string, string> = {
-  read: '📖',
-  write: '✏',
-  edit: '✏',
-  grep: '🔍',
-  bash: '⚙',
-  find: '🔍',
-  ls: '📂',
+const ICON_MAP: Record<string, () => any> = {
+  read: () => FileText,
+  write: () => Pencil,
+  edit: () => Pencil,
+  grep: () => Search,
+  bash: () => Terminal,
+  find: () => Search,
+  ls: () => FolderOpen,
+}
+
+function ToolIcon(props: { name: string }) {
+  const Icon = (ICON_MAP[props.name] ?? (() => Wrench))()
+  return <Icon size={12} />
 }
 
 function summarizeInput(toolName: string, input: Record<string, unknown>): string {
@@ -40,7 +46,7 @@ function ToolEntry(props: { tool: ToolCallEntry }) {
   const statusText = () => {
     if (props.tool.status === 'running') return '执行中'
     if (props.tool.status === 'error') return '失败'
-    return `✓ ${formatDuration(props.tool.duration)}`
+    return <span style="display:inline-flex;align-items:center;gap:2px;"><Check size={10} /> {formatDuration(props.tool.duration)}</span>
   }
 
   return (
@@ -52,7 +58,7 @@ function ToolEntry(props: { tool: ToolCallEntry }) {
       }}
       onClick={() => setExpanded(!expanded())}
     >
-      <div class="tool-icon">{ICON_MAP[props.tool.toolName] ?? '🔧'}</div>
+      <div class="tool-icon"><ToolIcon name={props.tool.toolName} /></div>
       <div class="tool-info">
         <div class="tool-name">{props.tool.toolName}</div>
         <div class="tool-detail">{summarizeInput(props.tool.toolName, props.tool.input)}</div>
@@ -96,7 +102,7 @@ export function ToolPanel() {
         <span class="tool-count">{toolCalls().length} 条记录</span>
         <Show when={canCancel()}>
           <button class="cancel-btn" onClick={handleCancel} title="中断AI输出">
-            ⏹ 中断
+            <CircleStop size={12} /> 中断
           </button>
         </Show>
         <Show when={cancelled()}>

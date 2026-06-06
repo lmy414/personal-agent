@@ -1,5 +1,6 @@
 import { createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { Clipboard } from 'lucide-solid'
 import './status-bar.css'
 
 function formatTime(date: Date): string {
@@ -135,7 +136,7 @@ export function StatusBar() {
             title="点击复制"
           >
             <span class="compact-feedback-text">{compactFeedback()!.message}</span>
-            <span class="compact-feedback-copy" style="font-size:10px;margin-left:6px;opacity:0.5;flex-shrink:0;">📋</span>
+            <span class="compact-feedback-copy" style="margin-left:6px;opacity:0.5;flex-shrink:0;"><Clipboard size={12} /></span>
           </div>
         )}
         <div class="ctx-bar">
