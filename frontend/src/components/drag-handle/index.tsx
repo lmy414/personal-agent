@@ -20,9 +20,9 @@ export function DragHandle(props: DragHandleProps) {
 
     const onMove = (ev: MouseEvent) => {
       if ((props.axis ?? 'x') === 'x') {
-        props.onDrag(startX - ev.clientX)
+        props.onDrag(ev.clientX - startX)
       } else {
-        props.onDrag(startY - ev.clientY)
+        props.onDrag(ev.clientY - startY)
       }
     }
 

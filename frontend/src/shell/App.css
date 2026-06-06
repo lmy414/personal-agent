@@ -32,6 +32,15 @@ html, body, #root {
 ::-webkit-scrollbar-corner { background: transparent; }
 * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 
+/* ====== 玻璃拟态面板（全局共享类，扩展直接用 class="glass-panel"） ====== */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+}
+
 /* ====== Grid 覆盖层 ====== */
 .overlay {
   position: fixed; inset: 0; z-index: 20;
