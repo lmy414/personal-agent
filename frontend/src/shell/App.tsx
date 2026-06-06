@@ -2,6 +2,7 @@ import { createSignal, For, onMount, onCleanup } from 'solid-js'
 import { registry, type Extension } from '@/registry'
 import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
 import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
+import { MiniNav } from '@/extensions/mini-nav/MiniNav'
 import './App.css'
 
 function renderExtension(ext: Extension) {
@@ -94,9 +95,13 @@ export function App() {
       <div
         class="overlay"
         style={{
-          'grid-template-columns': `var(--left-col) 1fr ${effectiveWidth()}px`,
+          'grid-template-columns': `52px var(--left-col) 1fr ${effectiveWidth()}px`,
         }}
       >
+        <div class="overlay-nav-left">
+          <MiniNav />
+        </div>
+
         <div class="overlay-left-top">
           <For each={registry.getBySlot('left-top')}>{renderExtension}</For>
         </div>

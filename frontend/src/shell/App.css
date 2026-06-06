@@ -96,13 +96,14 @@ html, body, #root {
 .overlay > * { pointer-events: auto; }
 
 /* 网格区域分配 */
-.overlay-left-top    { grid-column: 1; grid-row: 1; min-height: 0; overflow: hidden; }
-.overlay-left-bottom { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+.overlay-nav-left    { grid-column: 1; grid-row: 1 / 4; min-height: 0; overflow: hidden; }
+.overlay-left-top    { grid-column: 2; grid-row: 1; min-height: 0; overflow: hidden; }
+.overlay-left-bottom { grid-column: 2; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
 .overlay-left-bottom > .glass-panel { flex: 1; min-height: 0; }
-.overlay-left-status { grid-column: 1; grid-row: 3; }
-.overlay-center-main { grid-column: 2; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
+.overlay-left-status { grid-column: 2; grid-row: 3; }
+.overlay-center-main { grid-column: 3; grid-row: 1 / 4; min-height: 0; display: flex; flex-direction: column;
                        margin-left: 8px; }
-.overlay-right-panel { grid-column: 3; grid-row: 1 / 4; min-height: 0; overflow: visible; }
+.overlay-right-panel { grid-column: 4; grid-row: 1 / 4; min-height: 0; overflow: visible; }
 
 /* ====== 顶部菜单栏：圆角梯形 ====== */
 .top-menu-toggle {
