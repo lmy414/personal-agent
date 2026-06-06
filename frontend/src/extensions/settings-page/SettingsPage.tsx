@@ -166,8 +166,12 @@ export function SettingsPage() {
     const all = fileFilters()
     const q = filterSearch().toLowerCase()
     const filtered = q ? all.filter((f) => f.ext.includes(q)) : all
-    // enabled 置顶
-    return [...filtered].sort((a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0))
+    return [...filtered].sort((a, b) => Number(b.enabled) - Number(a.enabled))
+  }
+
+  // 模型排序：已启用置顶
+  const sortedModels = () => {
+    return [...modelList()].sort((a, b) => Number(b.enabled) - Number(a.enabled))
   }
 
   const toggleFilter = (ext: string) => {
@@ -262,7 +266,7 @@ export function SettingsPage() {
                   <table class="model-table">
                     <thead><tr><th>默认</th><th>模型</th><th>厂商</th><th>上下文</th><th>状态</th></tr></thead>
                     <tbody>
-                      <For each={modelList()}>
+                      <For each={sortedModels()}>
                         {(m) => {
                           const isDefault = m.id === defaultModel()
                           const isExpanded = expandedModelId() === m.id
@@ -343,25 +347,13 @@ export function SettingsPage() {
             <>
               <div class="settings-section">
                 <div class="settings-section-title"><Palette size={16} class="section-icon" /> 角色头像</div>
-                <div class="settings-section-desc">设置聊天区域 AI 角色的头像。支持字符或本地图片路径。</div>
-                <div class="settings-form-row">
-                  <span class="settings-form-label">头像字符</span>
-                  <span class="settings-form-value">
-                    <input
-                      class="settings-input settings-input--wide"
-                      type="text" placeholder="🎐"
-                      value={getSetting(entries(), 'avatar_char') || '🎐'}
-                      onBlur={(e) => agent.setSetting('avatar_char', e.currentTarget.value || '🎐')}
-                      onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('avatar_char', e.currentTarget.value || '🎐') }}
-                    />
-                  </span>
-                </div>
+                <div class="settings-section-desc">设置聊天区域 AI 角色显示的头像。支持本地图片路径。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">头像图片</span>
                   <span class="settings-form-value">
                     <input
                       class="settings-input settings-input--wide"
-                      type="text" placeholder="D:\pictures\avatar.png（留空使用字符）"
+                      type="text" placeholder="D:\pictures\avatar.png（留空使用默认字符）"
                       value={getSetting(entries(), 'avatar_image')}
                       onBlur={(e) => agent.setSetting('avatar_image', e.currentTarget.value.trim())}
                       onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('avatar_image', e.currentTarget.value.trim()) }}
