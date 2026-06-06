@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-07
+
+### 协议标准化 + 多智能体架构 — 35 client / 36 server 消息全实现
+
+- **原因**: protocol.ts 27 条 ClientMessage 中 3 条缺失 handler，31 条 ServerMessage 中 6 条从未发送、6 条发送但前端未消费；新 UI 设计要求多智能体（Agent）架构；handler 代码缺乏统一规范
+- **改动**: 13 文件（3 新建，10 修改）
+  - **protocol.ts**: 35 ClientMessage（+6 agent.*）+ 36 ServerMessage（+5 agent.*），新增 AgentInfo 共享类型，SessionInfo 扩展 agentId，修正过时注释
+  - **新增 handlers/agent.ts**: Agent CRUD + 从 providers 自动发现 + 多客户端广播
+  - **新增 handlers/thinking.ts + handlers/tools.ts**: `thinking.set` / `tools.set` 接线 Pi API
+  - **handlers/file.ts**: 补齐 `file.write` handler（安全路径校验 + 磁盘写入）
+  - **handlers/message.ts**: 接线 `agent.start` + `turn.error` + Pi `error` 事件
+  - **handlers/model.ts**: 接线 `state.model` 广播
+  - **db.ts**: 新增 agents 表 + conversations.agent_id 迁移
+  - **pi-session.ts + index.ts**: agentId 穿透全链路 + 启动时自动发现 agents
+  - **dispatcher.ts**: 注册 9 条新路由（6 agent.* + thinking.set + tools.set + file.write）
+  - **useAgent.tsx**: 新增 agents 信号 + Agent CRUD 方法，处理全部新增 ServerMessage
+- **影响**: 前后端协议 100% 实现；多智能体后端就绪；前后端可基于标准化协议独立并行施工
+- **验证**: `npx tsc --noEmit` 通过（bridge 0 errors + frontend 0 errors），bridge 启动正常
+- **Commit**: `2f47661`
+
+---
+
 ## 2026-06-06
 
 ### 前端组件库提取 — 9 通用组件 + CSS 模块化
