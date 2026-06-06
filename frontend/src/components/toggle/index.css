@@ -1,32 +1,46 @@
 .toggle {
-  width: 34px;
-  height: 20px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.10);
-  border: none;
-  cursor: pointer;
+  --toggle-size: 5.5px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 6.25em;
+  height: 3.125em;
+  background: linear-gradient(to right, #efefef 50%, #2a2a2a 50%) no-repeat;
+  background-size: 205%;
+  background-position: 0;
+  transition: 0.4s;
+  border-radius: 99em;
   position: relative;
-  transition: background 0.2s;
-  flex-shrink: 0;
+  cursor: pointer;
+  font-size: var(--toggle-size);
+  border: none;
   padding: 0;
+  flex-shrink: 0;
 }
-.toggle.on {
-  background: rgba(139, 156, 240, 0.35);
-}
-.toggle::after {
+
+.toggle::before {
   content: "";
+  width: 2.25em;
+  height: 2.25em;
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: 0.438em;
+  left: 0.438em;
+  background: linear-gradient(to right, #efefef 50%, #2a2a2a 50%) no-repeat;
+  background-size: 205%;
+  background-position: 100%;
   border-radius: 50%;
-  background: white;
-  transition: transform 0.2s;
+  transition: 0.4s;
 }
-.toggle.on::after {
-  transform: translateX(14px);
+
+.toggle.on::before {
+  left: calc(100% - 2.25em - 0.438em);
+  background-position: 0;
 }
+
+.toggle.on {
+  background-position: 100%;
+}
+
 .toggle:disabled {
   opacity: 0.4;
   cursor: not-allowed;
