@@ -34,20 +34,10 @@ export function ChatRenderer() {
   const [content, setContent] = createSignal('')
   const [attachments, setAttachments] = createSignal<Attachment[]>([])
   const [dragOver, setDragOver] = createSignal(false)
-  const [thinkingOpen, setThinkingOpen] = createSignal<Set<string>>(new Set())
   let scrollRef!: HTMLDivElement
   let textareaRef!: HTMLTextAreaElement
   const pendingPaths = new Set<string>()
   let unsubFile: (() => void) | null = null
-
-  const toggleThinking = (msgId: string) => {
-    setThinkingOpen((prev) => {
-      const next = new Set(prev)
-      if (next.has(msgId)) next.delete(msgId)
-      else next.add(msgId)
-      return next
-    })
-  }
 
   // Avatar status: idle (default), thinking (streaming + no content), speaking (streaming + content)
   const avatarStatus = (): AvatarStatus => {
@@ -238,7 +228,7 @@ export function ChatRenderer() {
               const showAvatar = shouldShowAvatar(idx(), visibleMessages())
               const isLast = () => idx() === visibleMessages().length - 1
 
-              const thinking = (isLast() && isAssistant && (msg as any).thinking)
+              const thinking = (isAssistant && (msg as any).thinking)
                 ? (msg as any).thinking as string
                 : undefined
 
