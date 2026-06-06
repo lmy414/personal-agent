@@ -158,8 +158,17 @@ export function SettingsPage() {
   const enabledSkillCount = () => skills().filter((s) => s.enabled).length
 
   // 文件过滤
+  const [filterSearch, setFilterSearch] = createSignal('')
   const fileFilters = () => parseFilters(getSetting(entries(), 'file_filters'))
   const setFilters = (list: FilterEntry[]) => agent.setSetting('file_filters', JSON.stringify(list))
+
+  const sortedFilters = () => {
+    const all = fileFilters()
+    const q = filterSearch().toLowerCase()
+    const filtered = q ? all.filter((f) => f.ext.includes(q)) : all
+    // enabled 置顶
+    return [...filtered].sort((a, b) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0))
+  }
 
   const toggleFilter = (ext: string) => {
     const next = fileFilters().map((f) => f.ext === ext ? { ...f, enabled: !f.enabled } : f)
@@ -174,6 +183,27 @@ export function SettingsPage() {
   }
   const removeFilter = (ext: string) => {
     setFilters(fileFilters().filter((f) => f.ext !== ext))
+  }
+
+  // 预设配置
+  const applyPreset = (name: string) => {
+    const presets: Record<string, FilterEntry[]> = {
+      'web': [
+        { ext: 'js', enabled: true }, { ext: 'ts', enabled: true }, { ext: 'jsx', enabled: true }, { ext: 'tsx', enabled: true },
+        { ext: 'json', enabled: true }, { ext: 'css', enabled: true }, { ext: 'html', enabled: true }, { ext: 'md', enabled: true },
+        { ext: 'vue', enabled: true }, { ext: 'svelte', enabled: true },
+      ],
+      'python': [
+        { ext: 'py', enabled: true }, { ext: 'ipynb', enabled: true }, { ext: 'json', enabled: true }, { ext: 'md', enabled: true },
+        { ext: 'toml', enabled: true }, { ext: 'yaml', enabled: true }, { ext: 'cfg', enabled: true }, { ext: 'txt', enabled: true },
+      ],
+      'godot': [
+        { ext: 'gd', enabled: true }, { ext: 'tscn', enabled: true }, { ext: 'tres', enabled: true },
+        { ext: 'gdshader', enabled: true }, { ext: 'import', enabled: true }, { ext: 'json', enabled: true },
+      ],
+      'all': [...DEFAULT_FILTERS],
+    }
+    setFilters(presets[name] ?? [...DEFAULT_FILTERS])
   }
 
   return (
@@ -354,14 +384,21 @@ export function SettingsPage() {
 
               <div class="settings-section">
                 <div class="settings-section-title"><Palette size={16} class="section-icon" /> 主界面背景</div>
-                <div class="settings-section-desc">设置主界面背景。支持 CSS 颜色值或本地图片路径。</div>
+                <div class="settings-section-desc">设置主界面背景。支持色盘选取或本地图片路径。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">背景颜色</span>
                   <span class="settings-form-value">
                     <input
-                      class="settings-input settings-input--wide"
+                      class="color-swatch"
+                      type="color"
+                      value={getSetting(entries(), 'bg_color') || '#0a0a12'}
+                      onInput={(e) => agent.setSetting('bg_color', e.currentTarget.value)}
+                    />
+                    <input
+                      class="settings-input"
                       type="text" placeholder="#0a0a12"
                       value={getSetting(entries(), 'bg_color') || '#0a0a12'}
+                      style="width:100px;text-align:left;font-family:monospace;"
                       onBlur={(e) => agent.setSetting('bg_color', e.currentTarget.value || '#0a0a12')}
                       onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('bg_color', e.currentTarget.value || '#0a0a12') }}
                     />
@@ -428,11 +465,28 @@ export function SettingsPage() {
                   控制文件面板中显示的后缀格式。关闭的类型将不在文件树中出现。
                 </div>
 
-                {/* 已配置的过滤列表 — 竖向排布 */}
+                {/* 预设 */}
+                <div class="filter-presets">
+                  <span class="preset-label">预设：</span>
+                  <button class="preset-chip" onClick={() => applyPreset('web')}>Web</button>
+                  <button class="preset-chip" onClick={() => applyPreset('python')}>Python</button>
+                  <button class="preset-chip" onClick={() => applyPreset('godot')}>Godot</button>
+                  <button class="preset-chip" onClick={() => applyPreset('all')}>全部</button>
+                </div>
+
+                {/* 搜索 */}
+                <GlassInput
+                  type="search"
+                  placeholder="搜索后缀..."
+                  value={filterSearch()}
+                  onInput={setFilterSearch}
+                />
+
+                {/* 过滤列表 — enabled 置顶 */}
                 <div class="filter-list">
-                  <For each={fileFilters()}>
+                  <For each={sortedFilters()}>
                     {(f) => (
-                      <div class="filter-row">
+                      <div class="filter-row" classList={{ 'filter-row--off': !f.enabled }}>
                         <span class="filter-row-ext">.{f.ext}</span>
                         <Toggle checked={f.enabled} onChange={() => toggleFilter(f.ext)} />
                         <button class="filter-row-remove" onClick={() => removeFilter(f.ext)} title="删除">

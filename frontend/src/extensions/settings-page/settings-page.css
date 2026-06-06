@@ -349,6 +349,35 @@
   transition: all 0.15s;
 }
 .filter-row-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+/* 色盘 */
+.color-swatch {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer; padding: 0;
+  background: transparent;
+}
+.color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.color-swatch::-webkit-color-swatch { border-radius: 6px; border: none; }
+
+/* 预设按钮 */
+.filter-presets {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+}
+.preset-label {
+  font-size: 11px; color: var(--text-muted); margin-right: 2px;
+}
+.preset-chip {
+  padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03); color: var(--text-secondary);
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.preset-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(139,156,240,0.08); }
+
+/* disabled 过滤行 */
+.filter-row--off { opacity: 0.45; }
+.filter-row--off:hover { opacity: 0.7; }
+
 .filter-add-row {
   display: flex; align-items: center; gap: 8px; margin-top: 6px;
 }
