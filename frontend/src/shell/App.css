@@ -1,6 +1,7 @@
 /* ====== CSS Variables ====== */
 :root {
-  --glass-bg: rgba(15, 15, 25, 0.50);
+  --glass-opacity: 0.45;
+  --glass-bg: rgba(15, 15, 25, var(--glass-opacity));
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-blur: blur(16px) saturate(140%);
   --glass-opacity: 0.45;
@@ -41,7 +42,11 @@ html, body, #root {
   width: 100%; height: 100%;
   overflow: hidden;
   font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
-  background: #0a0a12;
+  background: var(--app-bg, #0a0a12);
+  background-image: var(--app-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: var(--text-primary);
   user-select: none;
 }

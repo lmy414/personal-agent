@@ -1,4 +1,4 @@
-import { createContext, createSignal, onCleanup, useContext, type Component, type JSX } from 'solid-js'
+import { createContext, createEffect, createSignal, onCleanup, useContext, type Component, type JSX } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import type { ServerMessage, StatusPayload, SessionInfo } from '@bridge/protocol'
 
@@ -626,6 +626,30 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       if (set?.size === 0) msgListeners.delete(type)
     }
   }
+
+  // 外观设置 → CSS 变量
+  createEffect(() => {
+    const s = settings()
+    const get = (k: string) => s.find((e) => e.key === k)?.value ?? ''
+    const root = document.documentElement
+
+    // 背景
+    const bg = get('bg_color')
+    if (bg) root.style.setProperty('--app-bg', bg)
+    const bgImg = get('bg_image')
+    if (bgImg) {
+      root.style.setProperty('--app-bg-image', `url(file://${bgImg.replace(/\\/g, '/')})`)
+    } else {
+      root.style.setProperty('--app-bg-image', 'none')
+    }
+
+    // 透明度
+    const opacity = get('glass_opacity')
+    if (opacity) {
+      const pct = parseInt(opacity) / 100
+      root.style.setProperty('--glass-opacity', String(pct))
+    }
+  })
 
   connect()
 

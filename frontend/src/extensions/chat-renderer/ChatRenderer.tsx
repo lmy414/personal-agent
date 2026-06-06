@@ -183,6 +183,9 @@ export function ChatRenderer() {
     setAttachments((prev) => prev.filter((a) => a.path !== path))
   }
 
+  const getS = (key: string) => agent.settings().find((e) => e.key === key)?.value ?? ''
+  const avatarName = () => getS('avatar_name') || '澪'
+  const avatarImage = () => getS('avatar_image')
   const visibleMessages = () => agent.messages().filter((m) => m.content || m.partial)
 
   /** 同角色连续消息中，仅第一条显示头像 */
@@ -194,7 +197,7 @@ export function ChatRenderer() {
   return (
     <div class="glass-panel chat-panel" style="flex:1">
       <div class="chat-header">
-        <span>澪号</span>
+        <span>{avatarName()}</span>
         <span class="chat-subtitle">
           ·{' '}
           {agent.isStreaming() ? (
@@ -237,6 +240,8 @@ export function ChatRenderer() {
                   role={msg.role as 'user' | 'assistant'}
                   showAvatar={showAvatar}
                   avatarStatus={isLast() ? avatarStatus() : 'idle'}
+                  avatarLabel={avatarName()}
+                  avatarImage={avatarImage()}
                   thinking={thinking}
                 >
                   {msg.role === 'user' && hasAttachments ? (

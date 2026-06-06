@@ -9,7 +9,8 @@ interface MessageBubbleProps {
   children: JSX.Element
   showAvatar: boolean
   avatarStatus?: AvatarStatus
-  /** 思考内容（仅 assistant 流式时传入） */
+  avatarLabel: string
+  avatarImage?: string
   thinking?: string
 }
 
@@ -20,14 +21,15 @@ export const MessageBubble: Component<MessageBubbleProps> = (props) => {
     <div class={`msg-row ${isAssistant ? 'msg-row--left' : 'msg-row--right'}`}>
       {isAssistant && (
         <div class="msg-avatar-slot">
-          {props.showAvatar && <Avatar label="澪" status={props.avatarStatus} size={32} />}
+          {props.showAvatar && (
+            <Avatar label={props.avatarLabel} imagePath={props.avatarImage} status={props.avatarStatus} size={32} />
+          )}
         </div>
       )}
 
       <div class={`msg-bubble-col ${isAssistant ? 'msg-bubble-col--left' : 'msg-bubble-col--right'}`}>
-        {isAssistant && props.showAvatar && <span class="msg-sender-name">澪</span>}
+        {isAssistant && props.showAvatar && <span class="msg-sender-name">{props.avatarLabel}</span>}
 
-        {/* 思考过程 — 名字下面、气泡上面 */}
         <Show when={isAssistant && props.thinking}>
           <ThinkingBlock steps={props.thinking!.length}>
             {props.thinking!}

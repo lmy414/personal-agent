@@ -8,6 +8,8 @@ export function SessionPanel() {
   const [searchQuery, setSearchQuery] = createSignal('')
   const [deleteTarget, setDeleteTarget] = createSignal<string | null>(null)
 
+  const getS = (key: string) => agent.settings().find((e) => e.key === key)?.value ?? ''
+  const avatarName = () => getS('avatar_name') || '澪'
   const mainSession = () => agent.sessions().find((s) => s.title === '澪')
   const subSessions = () => {
     const q = searchQuery().toLowerCase()
@@ -38,9 +40,9 @@ export function SessionPanel() {
         }}
         style={{ cursor: 'pointer' }}
       >
-        <div class="avatar">🎐</div>
+        <div class="avatar">{avatarName()[0] || '?'}</div>
         <div class="meta">
-          <div class="title">澪</div>
+          <div class="title">{avatarName()}</div>
           <div class="time">
             最后活跃{' '}
             {new Date(mainSession()?.lastActive ?? 0).toLocaleTimeString('zh-CN', {
