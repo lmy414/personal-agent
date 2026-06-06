@@ -324,33 +324,55 @@
   font-size: 12px; color: #ef4444;
 }
 
-/* 文件过滤网格 */
-.filter-grid {
-  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+/* 文件过滤列表 — 竖向排布 */
+.filter-list {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
+  max-height: 280px; overflow-y: auto;
 }
-.filter-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px 4px 12px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+.filter-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
   border-radius: 8px;
-  font-size: 12px;
   transition: border-color 0.2s;
 }
-.filter-chip:hover { border-color: rgba(255,255,255,0.12); }
-.filter-chip-ext {
-  color: var(--text-primary); font-family: "Cascadia Code", "Fira Code", monospace;
-  min-width: 40px;
+.filter-row:hover { border-color: rgba(255,255,255,0.1); }
+.filter-row-ext {
+  flex: 1; font-size: 13px; color: var(--text-primary);
+  font-family: "Cascadia Code", "Fira Code", monospace;
 }
-.filter-chip-remove {
+.filter-row-remove {
   background: none; border: none; color: var(--text-muted); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; border-radius: 3px; padding: 0;
+  width: 22px; height: 22px; border-radius: 4px; padding: 0;
   transition: all 0.15s;
 }
-.filter-chip-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.filter-row-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
 .filter-add-row {
   display: flex; align-items: center; gap: 8px; margin-top: 6px;
+}
+
+/* 透明度滑动条 */
+.opacity-slider {
+  flex: 1;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, rgba(255,255,255,0.05), rgba(139,156,240,0.4));
+  outline: none; cursor: pointer;
+}
+.opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.opacity-value {
+  font-size: 12px; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px; text-align: right;
 }
 
 .settings-btn {

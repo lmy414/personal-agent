@@ -313,17 +313,28 @@ export function SettingsPage() {
             <>
               <div class="settings-section">
                 <div class="settings-section-title"><Palette size={16} class="section-icon" /> 角色头像</div>
-                <div class="settings-section-desc">设置聊天区域中 AI 角色显示的头像字符。</div>
+                <div class="settings-section-desc">设置聊天区域 AI 角色的头像。支持字符或本地图片路径。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">头像字符</span>
                   <span class="settings-form-value">
                     <input
                       class="settings-input settings-input--wide"
-                      type="text"
-                      placeholder="🎐"
+                      type="text" placeholder="🎐"
                       value={getSetting(entries(), 'avatar_char') || '🎐'}
                       onBlur={(e) => agent.setSetting('avatar_char', e.currentTarget.value || '🎐')}
                       onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('avatar_char', e.currentTarget.value || '🎐') }}
+                    />
+                  </span>
+                </div>
+                <div class="settings-form-row">
+                  <span class="settings-form-label">头像图片</span>
+                  <span class="settings-form-value">
+                    <input
+                      class="settings-input settings-input--wide"
+                      type="text" placeholder="D:\pictures\avatar.png（留空使用字符）"
+                      value={getSetting(entries(), 'avatar_image')}
+                      onBlur={(e) => agent.setSetting('avatar_image', e.currentTarget.value.trim())}
+                      onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('avatar_image', e.currentTarget.value.trim()) }}
                     />
                   </span>
                 </div>
@@ -332,8 +343,7 @@ export function SettingsPage() {
                   <span class="settings-form-value">
                     <input
                       class="settings-input settings-input--wide"
-                      type="text"
-                      placeholder="澪"
+                      type="text" placeholder="澪"
                       value={getSetting(entries(), 'avatar_name') || '澪'}
                       onBlur={(e) => agent.setSetting('avatar_name', e.currentTarget.value || '澪')}
                       onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('avatar_name', e.currentTarget.value || '澪') }}
@@ -344,17 +354,28 @@ export function SettingsPage() {
 
               <div class="settings-section">
                 <div class="settings-section-title"><Palette size={16} class="section-icon" /> 主界面背景</div>
-                <div class="settings-section-desc">设置主界面的背景颜色（CSS 颜色值）。</div>
+                <div class="settings-section-desc">设置主界面背景。支持 CSS 颜色值或本地图片路径。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">背景颜色</span>
                   <span class="settings-form-value">
                     <input
                       class="settings-input settings-input--wide"
-                      type="text"
-                      placeholder="#0a0a12"
+                      type="text" placeholder="#0a0a12"
                       value={getSetting(entries(), 'bg_color') || '#0a0a12'}
                       onBlur={(e) => agent.setSetting('bg_color', e.currentTarget.value || '#0a0a12')}
                       onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('bg_color', e.currentTarget.value || '#0a0a12') }}
+                    />
+                  </span>
+                </div>
+                <div class="settings-form-row">
+                  <span class="settings-form-label">背景图片</span>
+                  <span class="settings-form-value">
+                    <input
+                      class="settings-input settings-input--wide"
+                      type="text" placeholder="D:\wallpapers\bg.png（留空使用纯色）"
+                      value={getSetting(entries(), 'bg_image')}
+                      onBlur={(e) => agent.setSetting('bg_image', e.currentTarget.value.trim())}
+                      onKeyDown={(e) => { if (e.key === 'Enter') agent.setSetting('bg_image', e.currentTarget.value.trim()) }}
                     />
                   </span>
                 </div>
@@ -362,17 +383,17 @@ export function SettingsPage() {
 
               <div class="settings-section">
                 <div class="settings-section-title"><Sliders size={16} class="section-icon" /> 透明度</div>
-                <div class="settings-section-desc">调整玻璃拟态面板的透明度（0.1 = 最透明，0.9 = 最不透明）。</div>
+                <div class="settings-section-desc">调整玻璃拟态面板的透明度。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">面板透明度</span>
-                  <span class="settings-form-value">
+                  <span class="settings-form-value" style="flex:1; gap:12px;">
                     <input
-                      class="settings-input"
-                      type="number" min="10" max="90" step="5" inputmode="numeric"
+                      class="opacity-slider"
+                      type="range" min="10" max="90" step="5"
                       value={getSetting(entries(), 'glass_opacity') || '45'}
-                      onChange={(e) => agent.setSetting('glass_opacity', e.currentTarget.value)}
+                      onInput={(e) => agent.setSetting('glass_opacity', e.currentTarget.value)}
                     />
-                    <span class="settings-input-unit">%</span>
+                    <span class="opacity-value">{getSetting(entries(), 'glass_opacity') || '45'}%</span>
                   </span>
                 </div>
               </div>
@@ -407,15 +428,15 @@ export function SettingsPage() {
                   控制文件面板中显示的后缀格式。关闭的类型将不在文件树中出现。
                 </div>
 
-                {/* 已配置的过滤列表 */}
-                <div class="filter-grid">
+                {/* 已配置的过滤列表 — 竖向排布 */}
+                <div class="filter-list">
                   <For each={fileFilters()}>
                     {(f) => (
-                      <div class="filter-chip">
-                        <span class="filter-chip-ext">.{f.ext}</span>
+                      <div class="filter-row">
+                        <span class="filter-row-ext">.{f.ext}</span>
                         <Toggle checked={f.enabled} onChange={() => toggleFilter(f.ext)} />
-                        <button class="filter-chip-remove" onClick={() => removeFilter(f.ext)} title="删除规则">
-                          <X size={10} />
+                        <button class="filter-row-remove" onClick={() => removeFilter(f.ext)} title="删除">
+                          <X size={12} />
                         </button>
                       </div>
                     )}
