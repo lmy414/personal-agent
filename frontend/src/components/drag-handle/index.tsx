@@ -1,5 +1,3 @@
-import './index.css'
-
 export interface DragHandleProps {
   onDrag: (deltaX: number) => void
   onDragEnd?: () => void
@@ -7,13 +5,14 @@ export interface DragHandleProps {
   axis?: 'x' | 'y'
 }
 
+const HANDLE_STYLE =
+  'position:absolute;left:-5px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:10'
+
 export function DragHandle(props: DragHandleProps) {
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault()
     const startX = e.clientX
     const startY = e.clientY
-    const handle = e.currentTarget as HTMLElement
-    handle.classList.add('dragging')
     document.body.style.userSelect = 'none'
     document.body.style.cursor =
       (props.axis ?? 'x') === 'x' ? 'col-resize' : 'row-resize'
@@ -27,7 +26,6 @@ export function DragHandle(props: DragHandleProps) {
     }
 
     const onUp = () => {
-      handle.classList.remove('dragging')
       document.body.style.userSelect = ''
       document.body.style.cursor = ''
       document.removeEventListener('mousemove', onMove)
@@ -41,7 +39,7 @@ export function DragHandle(props: DragHandleProps) {
 
   return (
     <div
-      class="drag-handle"
+      style={HANDLE_STYLE}
       onMouseDown={handleMouseDown}
       onDblClick={props.onDoubleClick}
     />
