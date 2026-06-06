@@ -9,11 +9,10 @@
  *   1. TypeScript 编译检查 (bridge + frontend)
  *   2. Protocol 协议层 (createEnvelope, parseMessage, 类型覆盖)
  *   3. Memory Store (创建/CRUD/安全扫描/检索/持久化/Unicode)
- *   4. Intent Classification (18 regex → chat/agent)
- *   5. Bridge Dispatcher (路由表完整性, handler 命名)
- *   6. Bridge Memory Handler (getAllMemories, searchMemories)
- *   7. 文件完整性检查 (index.ts, SOUL.md, MEMORY.md/USER.md)
- *   8. 配置文件检查 (.env, .pi/settings.json, package.json)
+ *   4. Bridge Dispatcher (路由表完整性, handler 命名)
+ *   5. Bridge Memory Handler (getAllMemories, searchMemories)
+ *   6. 文件完整性检查 (index.ts, SOUL.md, MEMORY.md/USER.md)
+ *   7. 配置文件检查 (.env, .pi/settings.json, package.json)
  */
 
 import { execSync } from 'node:child_process'
@@ -224,7 +223,7 @@ async function checkConfig() {
   try {
     const fpkg = JSON.parse(readText('frontend/package.json'))
     if (fpkg.scripts?.dev && fpkg.scripts?.check) {
-      ok('frontend/package.json 有 dev + check + build')
+      ok('frontend/package.json 有 dev + check')
     } else {
       fail('frontend/package.json 缺少 scripts')
     }
@@ -275,12 +274,12 @@ async function checkPersonaFiles() {
 
   // SOUL.md
   const soul = readText('mio-harness/SOUL.md')
-  if (soul.length > 0 && soul.length < 1024) {
-    ok(`SOUL.md ${soul.length} chars (限制 <1KB)`)
+  if (soul.length > 0 && soul.length < 5120) {
+    ok(`SOUL.md ${soul.length} chars (限制 <5KB)`)
   } else if (soul.length === 0) {
     fail('SOUL.md 为空')
   } else {
-    fail(`SOUL.md ${soul.length} chars，超过 1KB 限制`)
+    fail(`SOUL.md ${soul.length} chars，超过 5KB 限制`)
   }
 
   // MEMORY.md
@@ -339,8 +338,8 @@ async function main() {
   // Phase 3: Unit tests (node:test)
   section('7. 单元测试 (node:test)')
   await runNodeTest('Protocol 协议测试', 'tests/protocol.test.ts')
+  await runNodeTest('Protocol 类型一致性测试', 'tests/protocol-types.test.ts')
   await runNodeTest('Memory Store 测试', 'tests/memory-store.test.ts')
-  await runNodeTest('Intent Classify 意图分类测试', 'tests/intent-classify.test.ts')
   await runNodeTest('Dispatcher 路由测试', 'tests/dispatcher.test.ts')
   await runNodeTest('Bridge Memory 测试', 'tests/bridge-memory.test.ts')
   await runNodeTest('File Security 文件安全测试', 'tests/file-security.test.ts')

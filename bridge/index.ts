@@ -97,10 +97,17 @@ wss.on('connection', (ws: WebSocket) => {
 
 function shutdown() {
   stopWatcher()
-  wss.close()
-  try { db.close() } catch { /* already closed */ }
-  console.log('[bridge] shutdown complete')
-  process.exit(0)
+  // 优雅关闭：先关闭 WebSocket，再关闭 DB，最后退出
+  wss.close(() => {
+    try { db.close() } catch { /* already closed */ }
+    console.log('[bridge] shutdown complete')
+    process.exit(0)
+  })
+  // 超时强制退出（防止 wss.close 因长连接挂起）
+  setTimeout(() => {
+    try { db.close() } catch { /* already closed */ }
+    process.exit(1)
+  }, 5000)
 }
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)

@@ -3,13 +3,35 @@
   --glass-bg: rgba(15, 15, 25, 0.50);
   --glass-border: rgba(255, 255, 255, 0.06);
   --glass-blur: blur(16px) saturate(140%);
+  --glass-opacity: 0.45;
   --text-primary: rgba(255, 255, 255, 0.90);
   --text-secondary: rgba(255, 255, 255, 0.50);
   --text-muted: rgba(255, 255, 255, 0.25);
   --accent: #8b9cf0;
+  --accent-secondary: #a78bfa;
   --gap: 6px;
   --margin: 12px;
   --left-col: 400px;
+  /* 气泡系统 */
+  --bubble-user-bg: linear-gradient(135deg, rgba(139,156,240,0.22), rgba(167,139,250,0.15));
+  --bubble-user-border: rgba(139,156,240,0.16);
+  --bubble-ai-bg: rgba(255,255,255,0.04);
+  --bubble-ai-border: rgba(255,255,255,0.06);
+  --bubble-radius: 18px;
+  --bubble-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  --bubble-glow: inset 0 1px 0 rgba(255,255,255,0.04);
+  /* 动画 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  /* Avatar */
+  --avatar-size: 24px;
+  --avatar-glow-color: rgba(139,156,240,0.2);
+  /* 间距 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 }
 
 /* ====== Reset ====== */

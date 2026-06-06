@@ -41,6 +41,7 @@ const routes: Record<string, Handler> = {
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {
   if (NOOP_TYPES.has(msg.type)) return  // 心跳等静默忽略
+
   const handler = routes[msg.type]
   if (!handler) {
     ws.send(JSON.stringify({

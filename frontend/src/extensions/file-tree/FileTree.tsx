@@ -70,7 +70,6 @@ export function FileTree() {
 
       // 路径归一化：bridge 返回 \ 但 tree node.path 用 /，统一 key
       const normPath = payload.path.replace(/\\/g, '/')
-      console.log('[file-tree] normPath:', normPath, 'tree.len:', tree().length, 'rootPath:', rootPath, 'pendingRoot:', pendingRoot)
       // 若是预期的根路径响应，或 tree 为空，则替换整棵树
       if (tree().length === 0 || normPath === rootPath || normPath === pendingRoot) {
         if (normPath === pendingRoot) pendingRoot = ''  // 仅匹配时才清除

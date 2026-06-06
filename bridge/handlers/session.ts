@@ -169,7 +169,8 @@ export function handleSessionHistory(msg: ClientMessage, ws: WebSocket): void {
     FROM tool_calls
     WHERE session_id = ?
     ORDER BY id ASC
-  `).all(payload.sessionId) as {
+    LIMIT ?
+  `).all(payload.sessionId, retention) as {
     tool_call_id: string; tool_name: string; input: string; output: string; status: string; duration: number
   }[]
 

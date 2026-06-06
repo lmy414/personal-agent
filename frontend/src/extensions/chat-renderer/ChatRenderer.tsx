@@ -3,6 +3,10 @@ import { useAgent } from '@/shell/useAgent'
 import { marked } from 'marked'
 import type { ServerMessage } from '@bridge/protocol'
 import './chat-renderer.css'
+import { MessageBubble } from './MessageBubble'
+import { ThinkingBlock } from './ThinkingBlock'
+import { ChatInput } from './ChatInput'
+import type { AvatarStatus } from './Avatar'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -45,8 +49,14 @@ export function ChatRenderer() {
     })
   }
 
-  const isMainSession = () => {
-    return agent.sessions().find((s) => s.title === '澪')?.id === agent.sessionId()
+  // Avatar status: idle (default), thinking (streaming + no content), speaking (streaming + content)
+  const avatarStatus = (): AvatarStatus => {
+    if (!agent.isStreaming()) return 'idle'
+    const msgs = agent.messages()
+    const last = msgs[msgs.length - 1]
+    if (last?.role === 'assistant' && last.partial && !last.content) return 'thinking'
+    if (last?.role === 'assistant' && last.partial) return 'speaking'
+    return 'idle'
   }
 
   createEffect(() => {
@@ -62,7 +72,6 @@ export function ChatRenderer() {
     if (unsubFile) unsubFile()
     unsubFile = agent.subscribe('file.content', (msg: ServerMessage) => {
       const payload = msg.payload as { path: string; content: string; language?: string; encoding?: string }
-      // 路径归一化：bridge 返回 \ (Windows) 但 pendingPaths 用 / (FileTree)
       const normPath = payload.path.replace(/\\/g, '/')
       if (!pendingPaths.has(normPath) && !pendingPaths.has(payload.path)) return
       const name = payload.path.split(/[\\/]/).pop() ?? payload.path
@@ -81,14 +90,14 @@ export function ChatRenderer() {
     unsubFile?.()
   })
 
-  const handleSend = () => {
-    const text = content().trim()
+  const handleSend = (text?: string) => {
+    const txt = text ?? content().trim()
     const atts = attachments()
-    if (!text && atts.length === 0) return
+    if (!txt && atts.length === 0) return
 
     if (atts.length > 0) {
       const badges = atts.map((a) => `[📎 ${a.name}]`).join(' ')
-      const displayText = text || '请帮我分析这些文件'
+      const displayText = txt || '请帮我分析这些文件'
 
       const fileBlocks = atts.map((a) => {
         const ext = a.name.split('.').pop() ?? ''
@@ -97,8 +106,8 @@ export function ChatRenderer() {
         return `\`\`\`${ext} ${a.name}\n${a.content}\n\`\`\``
       }).join('\n\n')
 
-      const fullText = text
-        ? `${text}\n\n[Attached files:]\n${fileBlocks}`
+      const fullText = txt
+        ? `${txt}\n\n[Attached files:]\n${fileBlocks}`
         : `请帮我分析这些文件:\n${fileBlocks}`
 
       const attsMeta = atts.map((a) => {
@@ -107,27 +116,14 @@ export function ChatRenderer() {
       })
       agent.sendMessage(fullText, displayText + ' ' + badges, attsMeta)
       setAttachments([])
-    } else {
-      agent.sendMessage(text)
+    } else if (txt) {
+      agent.sendMessage(txt)
     }
 
     setContent('')
     if (textareaRef) {
       textareaRef.style.height = 'auto'
     }
-  }
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
-  const handleInput = () => {
-    const el = textareaRef
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
   }
 
   const handleDragOver = (e: DragEvent) => {
@@ -148,17 +144,14 @@ export function ChatRenderer() {
     e.stopPropagation()
     setDragOver(false)
 
-    // try internal FileTree drag first (custom data)
     const path = e.dataTransfer?.getData('application/x-file-path')
 
-    // OS file drop (File objects from file explorer)
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0]
       const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
       const isImage = IMAGE_EXTS.has(ext)
 
       if (isImage) {
-        // Images: read as data URL
         const reader = new FileReader()
         reader.onload = () => {
           setAttachments((prev) => {
@@ -169,7 +162,6 @@ export function ChatRenderer() {
         }
         reader.readAsDataURL(file)
       } else if (file.type.startsWith('text/') || file.type === '' || file.type === 'application/json') {
-        // Text/JSON: read as text
         const reader = new FileReader()
         reader.onload = () => {
           setAttachments((prev) => {
@@ -180,7 +172,6 @@ export function ChatRenderer() {
         }
         reader.readAsText(file)
       } else {
-        // Binary/unreadable: attach as reference only (no content)
         setAttachments((prev) => {
           if (prev.some((a) => a.name === file.name)) return prev
           return [...prev, { path: file.name, name: file.name, content: `[Binary file: ${file.name}]` }]
@@ -192,7 +183,6 @@ export function ChatRenderer() {
 
     if (!path) return
 
-    // internal FileTree drag: read via bridge
     pendingPaths.add(path)
     const ext = path.split('.').pop()?.toLowerCase() ?? ''
     const isImage = IMAGE_EXTS.has(ext)
@@ -202,6 +192,8 @@ export function ChatRenderer() {
   const removeAttachment = (path: string) => {
     setAttachments((prev) => prev.filter((a) => a.path !== path))
   }
+
+  const visibleMessages = () => agent.messages().filter((m) => m.content || m.partial)
 
   return (
     <div class="glass-panel chat-panel" style="flex:1">
@@ -223,78 +215,63 @@ export function ChatRenderer() {
           {agent.connected() ? '就绪' : '断连'}
         </span>
       </div>
+
       <div class="chat-messages" ref={scrollRef}>
         <Show
-          when={agent.messages().some((m) => m.content || m.partial)}
+          when={visibleMessages().length > 0}
           fallback={
             <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">
               向澪发送消息开始对话
             </div>
           }
         >
-          <For each={agent.messages().filter((m) => m.content || m.partial)}>
+          <For each={visibleMessages()}>
             {(msg, idx) => {
-              const isLast = () => idx() === agent.messages().filter((m) => m.content || m.partial).length - 1
               const isAssistant = msg.role === 'assistant'
               const hasAttachments = msg.attachments?.length
               const hasThinking = !!(msg as any).thinking
               const thinkingExpanded = () => thinkingOpen().has(msg.messageId)
+              const isLast = () => idx() === visibleMessages().length - 1
 
               return (
-              <div class={`msg ${msg.role}`} classList={{ 'message-enter': isLast() && msg.partial }}>
-                {/* 思考过程（assistant，有 thinking 时显示） */}
-                {isAssistant && hasThinking && (
-                  <div class="thinking-block">
-                    <button
-                      class="thinking-toggle"
-                      onClick={() => toggleThinking(msg.messageId)}
+                <div style={isAssistant ? 'display:flex;flex-direction:column;align-items:flex-start;' : ''}>
+                  {/* 思考过程 */}
+                  {isAssistant && hasThinking && (
+                    <ThinkingBlock
+                      steps={(msg as any).thinking?.length ?? 0}
                     >
-                      <span class="thinking-arrow">{thinkingExpanded() ? '▼' : '▶'}</span>
-                      <span class="thinking-label">
-                        {msg.partial ? '思考中...' : '思考过程'}
-                      </span>
-                      {!msg.partial && (
-                        <span class="thinking-count">
-                          {(msg as any).thinking.length} 字
-                        </span>
-                      )}
-                    </button>
-                    {thinkingExpanded() && (
-                      <div class="thinking-content">
-                        {(msg as any).thinking}
-                      </div>
-                    )}
-                  </div>
-                )}
+                      {(msg as any).thinking}
+                    </ThinkingBlock>
+                  )}
 
-                {/* 用户消息 + 附件：展开附件徽章 */}
-                {msg.role === 'user' && hasAttachments ? (
-                  <div class="msg-bubble">
-                    <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
-                      <For each={msg.attachments}>
-                        {(att) => (
-                          <span class="chat-attachment-badge">
-                            {att.isImage ? '🖼️' : '📎'} {att.name}
-                          </span>
-                        )}
-                      </For>
-                    </div>
-                  </div>
-                ) : isAssistant && msg.content && !msg.partial && !hasAttachments ? (
-                  /* 已完成的 assistant 消息 → 渲染 markdown（仅一次） */
-                  <div
-                    class="msg-bubble"
-                    innerHTML={renderMarkdownStable(msg.messageId, msg.content)}
-                  />
-                ) : (
-                  /* 流式中的消息 / 纯文本 → textContent，不触发 markdown 解析 */
-                  <div class="msg-bubble">
-                    {msg.content || (msg.partial ? '...' : '')}
-                  </div>
-                )}
-              </div>
-            )}}
+                  {/* 消息气泡 */}
+                  <MessageBubble
+                    role={msg.role as 'user' | 'assistant'}
+                    avatarLabel={msg.role === 'assistant' ? '澪' : 'U'}
+                    avatarStatus={isLast() ? avatarStatus() : 'idle'}
+                  >
+                    {msg.role === 'user' && hasAttachments ? (
+                      <>
+                        <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                          <For each={msg.attachments}>
+                            {(att) => (
+                              <span class="chat-attachment-badge">
+                                {att.isImage ? '🖼️' : '📎'} {att.name}
+                              </span>
+                            )}
+                          </For>
+                        </div>
+                      </>
+                    ) : isAssistant && msg.content && !msg.partial && !hasAttachments ? (
+                      <div innerHTML={renderMarkdownStable(msg.messageId, msg.content)} />
+                    ) : (
+                      <>{msg.content || (msg.partial ? '...' : '')}</>
+                    )}
+                  </MessageBubble>
+                </div>
+              )
+            }}
           </For>
         </Show>
       </div>
@@ -306,10 +283,7 @@ export function ChatRenderer() {
             {(att) => (
               <span class="chat-attachment-badge">
                 📎 {att.name}
-                <button
-                  class="chat-attachment-remove"
-                  onClick={() => removeAttachment(att.path)}
-                >
+                <button class="chat-attachment-remove" onClick={() => removeAttachment(att.path)}>
                   ×
                 </button>
               </span>
@@ -319,22 +293,17 @@ export function ChatRenderer() {
       </Show>
 
       <div
-        class="chat-input-area"
         classList={{ 'drop-target': dragOver() }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <textarea
-          ref={textareaRef}
-          class="chat-input"
+        <ChatInput
+          onSend={handleSend}
+          onAttach={() => { /* future: file picker dialog */ }}
+          disabled={!agent.connected()}
           placeholder={attachments().length > 0 ? '输入消息或直接发送引用文件...' : '输入消息...'}
-          rows="1"
-          value={content()}
-          onInput={(e) => { setContent(e.currentTarget.value); handleInput() }}
-          onKeyDown={handleKeyDown}
         />
-        <button class="send-btn" onClick={handleSend}>↑</button>
       </div>
     </div>
   )
