@@ -124,6 +124,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
     ws.onopen = () => {
       setConnected(true)
+      setIsStreaming(false)
       reconnectAttempts = 0
       // 心跳：每 30s 发送 ping 防止静默断线
       if (heartbeatTimer) clearInterval(heartbeatTimer)
@@ -459,7 +460,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           partial: m.partial ?? false,
           attachments: m.attachments ?? undefined,
         })) as MessageEntry[]
-        const tcs = (msg.payload.toolCalls ?? []) as ToolCallEntry[]
+        const tcs = ((msg.payload.toolCalls ?? []) as ToolCallEntry[]).map((t) =>
+          t.status === 'running' ? { ...t, status: 'error' as const, output: t.output + '\n[会话中断]' } : t
+        )
         sessionMessages.set(sid, msgs)
         sessionToolCalls.set(sid, tcs)
         if (currentSessionId() === sid) {
