@@ -324,6 +324,35 @@
   font-size: 12px; color: #ef4444;
 }
 
+/* 文件过滤网格 */
+.filter-grid {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.filter-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  font-size: 12px;
+  transition: border-color 0.2s;
+}
+.filter-chip:hover { border-color: rgba(255,255,255,0.12); }
+.filter-chip-ext {
+  color: var(--text-primary); font-family: "Cascadia Code", "Fira Code", monospace;
+  min-width: 40px;
+}
+.filter-chip-remove {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 3px; padding: 0;
+  transition: all 0.15s;
+}
+.filter-chip-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.filter-add-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+}
+
 .settings-btn {
   display: inline-flex;
   align-items: center;
