@@ -196,6 +196,22 @@ export function ChatRenderer() {
 
   const visibleMessages = () => agent.messages().filter((m) => m.content || m.partial)
 
+  /** 同角色连续消息中，仅第一条显示头像 */
+  const shouldShowAvatar = (idx: number, msgs: ReturnType<typeof visibleMessages>) => {
+    if (idx === 0) return true
+    return msgs[idx].role !== msgs[idx - 1].role
+  }
+
+  /** 聚合当前 assistant 消息的思考内容（仅取最新一条） */
+  const currentThinking = () => {
+    const msgs = visibleMessages()
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const t = (msgs[i] as any).thinking as string | undefined
+      if (t && msgs[i].role === 'assistant') return t
+    }
+    return ''
+  }
+
   return (
     <div class="glass-panel chat-panel" style="flex:1">
       <div class="chat-header">
@@ -218,10 +234,17 @@ export function ChatRenderer() {
       </div>
 
       <div class="chat-messages" ref={scrollRef}>
+        {/* 思考过程 — 放在消息区域顶部 */}
+        <Show when={agent.isStreaming() && currentThinking()}>
+          <ThinkingBlock steps={currentThinking().length}>
+            {currentThinking()}
+          </ThinkingBlock>
+        </Show>
+
         <Show
           when={visibleMessages().length > 0}
           fallback={
-            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;">
+            <div class="chat-empty">
               向澪发送消息开始对话
             </div>
           }
@@ -230,47 +253,34 @@ export function ChatRenderer() {
             {(msg, idx) => {
               const isAssistant = msg.role === 'assistant'
               const hasAttachments = msg.attachments?.length
-              const hasThinking = !!(msg as any).thinking
-              const thinkingExpanded = () => thinkingOpen().has(msg.messageId)
+              const showAvatar = shouldShowAvatar(idx(), visibleMessages())
               const isLast = () => idx() === visibleMessages().length - 1
 
               return (
-                <div style={isAssistant ? 'display:flex;flex-direction:column;align-items:flex-start;' : ''}>
-                  {/* 思考过程 */}
-                  {isAssistant && hasThinking && (
-                    <ThinkingBlock
-                      steps={(msg as any).thinking?.length ?? 0}
-                    >
-                      {(msg as any).thinking}
-                    </ThinkingBlock>
+                <MessageBubble
+                  role={msg.role as 'user' | 'assistant'}
+                  showAvatar={showAvatar}
+                  avatarStatus={isLast() ? avatarStatus() : 'idle'}
+                >
+                  {msg.role === 'user' && hasAttachments ? (
+                    <>
+                      <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
+                      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+                        <For each={msg.attachments}>
+                          {(att) => (
+                            <span class="chat-attachment-badge">
+                              {att.isImage ? <Image size={12} /> : <Paperclip size={12} />} {att.name}
+                            </span>
+                          )}
+                        </For>
+                      </div>
+                    </>
+                  ) : isAssistant && msg.content && !msg.partial && !hasAttachments ? (
+                    <div innerHTML={renderMarkdownStable(msg.messageId, msg.content)} />
+                  ) : (
+                    <>{msg.content || (msg.partial ? '...' : '')}</>
                   )}
-
-                  {/* 消息气泡 */}
-                  <MessageBubble
-                    role={msg.role as 'user' | 'assistant'}
-                    avatarLabel={msg.role === 'assistant' ? '澪' : 'U'}
-                    avatarStatus={isLast() ? avatarStatus() : 'idle'}
-                  >
-                    {msg.role === 'user' && hasAttachments ? (
-                      <>
-                        <span>{(msg.content ?? '').split(/\[Attached files[:\]]/)[0].trim() || '请帮我分析这些文件'}</span>
-                        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
-                          <For each={msg.attachments}>
-                            {(att) => (
-                              <span class="chat-attachment-badge">
-                                {att.isImage ? <Image size={12} /> : <Paperclip size={12} />} {att.name}
-                              </span>
-                            )}
-                          </For>
-                        </div>
-                      </>
-                    ) : isAssistant && msg.content && !msg.partial && !hasAttachments ? (
-                      <div innerHTML={renderMarkdownStable(msg.messageId, msg.content)} />
-                    ) : (
-                      <>{msg.content || (msg.partial ? '...' : '')}</>
-                    )}
-                  </MessageBubble>
-                </div>
+                </MessageBubble>
               )
             }}
           </For>
