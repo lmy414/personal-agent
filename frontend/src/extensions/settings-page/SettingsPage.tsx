@@ -1,6 +1,9 @@
 import { createEffect, For, createSignal, onCleanup, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
+import { Toggle } from '@/components/toggle'
+import { GlassInput } from '@/components/glass-input'
+import { Settings, Bot, Puzzle, Cpu, List, Sliders, PackageOpen, Download, Box, Star, Plus, ArrowLeft, Check, Trash2 } from 'lucide-solid'
 import './settings-page.css'
 import type { ServerMessage, SkillSummary } from '@bridge/protocol'
 
@@ -139,12 +142,15 @@ export function SettingsPage() {
   }
 
   const modelCount = () => modelList().length
+  const enabledSkillCount = () => skills().filter((s) => s.enabled).length
 
   return (
     <div class="settings-page" classList={{ open: isSettingsOpen() }}>
       <div class="settings-page-header">
-        <button class="settings-back-btn" onClick={() => setIsSettingsOpen(false)} title="返回">←</button>
-        <span style="font-size:18px;">⚙</span>
+        <button class="settings-back-btn" onClick={() => setIsSettingsOpen(false)} title="返回">
+          <ArrowLeft size={18} />
+        </button>
+        <Settings size={20} class="settings-header-icon" />
         <span class="settings-page-title">设置</span>
         <span class="settings-page-subtitle">配置智能体行为和模型接入</span>
       </div>
@@ -155,14 +161,14 @@ export function SettingsPage() {
             classList={{ active: settingsTab() === 'agent' }}
             onClick={() => setSettingsTab('agent')}
           >
-            <span class="nav-icon">🤖</span> 智能体基础设置
+            <Bot size={16} class="nav-icon-svg" /> 智能体基础设置
           </div>
           <div
             class="settings-nav-item"
             classList={{ active: settingsTab() === 'skills' }}
             onClick={() => setSettingsTab('skills')}
           >
-            <span class="nav-icon">🧩</span> 技能管理
+            <Puzzle size={16} class="nav-icon-svg" /> 技能管理
           </div>
         </div>
 
@@ -171,37 +177,36 @@ export function SettingsPage() {
           {settingsTab() === 'agent' && (
             <>
               <div class="settings-section">
-                <div class="settings-section-title">🔌 已配置厂商</div>
+                <div class="settings-section-title">
+                  <Cpu size={16} class="section-icon" /> 已配置厂商
+                </div>
                 <div class="settings-section-desc">当前已接入的模型厂商。新对话将使用默认模型创建。</div>
                 <div class="provider-grid">
                   <div class="provider-card">
-                    <div class="provider-icon">🟢</div>
+                    <div class="provider-icon"><Cpu size={20} /></div>
                     <div class="provider-info">
                       <div class="provider-name">DeepSeek</div>
                       <div class="provider-status">V3 / V4 Pro / R1</div>
                     </div>
-                    <span class="provider-check">✓</span>
+                    <span class="provider-check"><Check size={14} /></span>
                   </div>
                 </div>
                 <button class="provider-add-btn" title="后续版本支持接入更多厂商">
-                  <span style="font-size:16px;">+</span> 新增配置（即将推出）
+                  <Plus size={16} /> 新增配置（即将推出）
                 </button>
               </div>
 
               <div class="settings-section">
                 <div class="settings-section-title">
-                  📋 已接入模型
-                  <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">
-                    共 {modelCount()} 个
-                  </span>
+                  <List size={16} class="section-icon" /> 已接入模型
+                  <span class="settings-section-badge">共 {modelCount()} 个</span>
                 </div>
                 <div class="settings-section-desc">点击行展开独立参数，★ 设为默认。</div>
-                <input
-                  class="settings-model-search"
-                  type="text"
+                <GlassInput
+                  type="search"
                   placeholder="搜索模型..."
                   value={modelSearch()}
-                  onInput={(e) => setModelSearch(e.currentTarget.value)}
+                  onInput={setModelSearch}
                 />
                 <div class="model-table-wrap">
                   <table class="model-table">
@@ -221,7 +226,9 @@ export function SettingsPage() {
                                     class={`model-default-star${isDefault ? '' : ' inactive'}`}
                                     onClick={() => agent.setSetting('default_model', m.id)}
                                     title={isDefault ? '当前默认' : '设为默认'}
-                                  >★</span>
+                                  >
+                                    <Star size={14} fill={isDefault ? 'var(--accent)' : 'none'} />
+                                  </span>
                                 </td>
                                 <td class="model-name">{m.name}</td>
                                 <td class="model-provider">{m.provider}</td>
@@ -245,7 +252,10 @@ export function SettingsPage() {
                                     </div>
                                     <div class="model-param">
                                       <span class="model-param-label">启用</span>
-                                      <button class={`model-toggle${m.enabled ? ' on' : ''}`} onClick={(e) => { e.stopPropagation() }} />
+                                      <Toggle
+                                        checked={m.enabled}
+                                        onChange={() => {}}
+                                      />
                                     </div>
                                   </div>
                                 </td>
@@ -260,7 +270,9 @@ export function SettingsPage() {
               </div>
 
               <div class="settings-section">
-                <div class="settings-section-title">⚙ 默认参数</div>
+                <div class="settings-section-title">
+                  <Sliders size={16} class="section-icon" /> 默认参数
+                </div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">思考强度</span>
                   <span class="settings-form-value">
@@ -275,6 +287,7 @@ export function SettingsPage() {
                   <span class="settings-form-label">压缩阈值</span>
                   <span class="settings-form-value">
                     <input class="settings-input" type="number" min="50" max="95"
+                      inputmode="numeric"
                       value={compactThreshold()}
                       onChange={(e) => agent.setSetting('compact_threshold', e.currentTarget.value)} />
                     <span class="settings-input-unit">%</span>
@@ -284,6 +297,7 @@ export function SettingsPage() {
                   <span class="settings-form-label">历史保留</span>
                   <span class="settings-form-value">
                     <input class="settings-input" type="number" min="10" max="500"
+                      inputmode="numeric"
                       value={historyRetention()}
                       onChange={(e) => agent.setSetting('history_retention', e.currentTarget.value)} />
                     <span class="settings-input-unit">条</span>
@@ -292,18 +306,17 @@ export function SettingsPage() {
                 <div class="settings-form-row">
                   <span class="settings-form-label">默认模型</span>
                   <span class="settings-form-value">
-                    <span style="font-size:13px;color:var(--accent);font-weight:500;">{defaultModel()}</span>
+                    <span class="settings-current-model">{defaultModel()}</span>
                   </span>
                 </div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">工作目录</span>
                   <span class="settings-form-value">
                     <input
-                      class="settings-input"
+                      class="settings-input settings-input--wide"
                       type="text"
                       placeholder="默认项目根目录"
                       value={getSetting(entries(), 'work_dir')}
-                      style="width: 320px; text-align: left;"
                       onBlur={(e) => {
                         const v = e.currentTarget.value.trim()
                         agent.setSetting('work_dir', v)
@@ -320,7 +333,7 @@ export function SettingsPage() {
                       }}
                     />
                     <Show when={workDirSaved()}>
-                      <span style="font-size:12px;color:#4ade80;margin-left:8px;">✓ 已保存</span>
+                      <span class="save-feedback"><Check size={14} /> 已保存</span>
                     </Show>
                   </span>
                 </div>
@@ -333,25 +346,20 @@ export function SettingsPage() {
             <>
               <div class="settings-section">
                 <div class="settings-section-title">
-                  📦 已安装技能
-                  <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">
-                    共 {skills().length} 个 / 已启用 {skills().filter((s: SkillSummary) => s.enabled).length} 个
-                  </span>
+                  <PackageOpen size={16} class="section-icon" /> 已安装技能
+                  <span class="settings-section-badge">共 {skills().length} 个 / 已启用 {enabledSkillCount()} 个</span>
                 </div>
                 <div class="settings-section-desc">管理已安装的技能。禁用后下次对话生效。</div>
 
                 <Show when={skills().length > 0} fallback={
-                  <div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">
-                    <div style="font-size:32px;margin-bottom:8px;">📭</div>
-                    暂无已安装的技能
-                    <div style="margin-top:4px;font-size:11px;">
-                      将技能文件夹放入
-                    </div>
-                    <div style="margin-top:2px;font-size:11px;">
-                      <code style="background:var(--surface);padding:2px 6px;border-radius:4px;">{userSkillDir()}</code>
-                      <span style="margin:0 6px;">或</span>
-                      <code style="background:var(--surface);padding:2px 6px;border-radius:4px;">{projectSkillDir()}</code>
-                    </div>
+                  <div class="skill-empty">
+                    <Box size={36} class="skill-empty-icon" />
+                    <span>暂无已安装的技能</span>
+                    <span class="skill-empty-hint">
+                      将技能文件夹放入&nbsp;
+                      <code>{userSkillDir()}</code>&nbsp;或&nbsp;
+                      <code>{projectSkillDir()}</code>
+                    </span>
                   </div>
                 }>
                   <div class="skill-list">
@@ -370,19 +378,14 @@ export function SettingsPage() {
                             </div>
                           </div>
                           <div class="skill-card-actions">
-                            <button
-                              class={`skill-toggle${skill.enabled ? ' on' : ''}`}
-                              onClick={() => agent.send('skills.toggle', {
+                            <Toggle
+                              checked={skill.enabled}
+                              onChange={(checked) => agent.send('skills.toggle', {
                                 name: skill.name,
                                 source: skill.source,
-                                enabled: !skill.enabled,
+                                enabled: checked,
                               })}
-                              title={skill.enabled ? '已启用，点击禁用' : '已禁用，点击启用'}
-                            >
-                              <span class="toggle-track">
-                                <span class="toggle-thumb" />
-                              </span>
-                            </button>
+                            />
                             <button
                               class="skill-remove-btn"
                               onClick={() => {
@@ -395,7 +398,9 @@ export function SettingsPage() {
                                 }
                               }}
                               title="删除技能"
-                            >🗑</button>
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
                       )}
@@ -405,18 +410,18 @@ export function SettingsPage() {
               </div>
 
               <div class="settings-section">
-                <div class="settings-section-title">📥 安装技能</div>
+                <div class="settings-section-title">
+                  <Download size={16} class="section-icon" /> 安装技能
+                </div>
                 <div class="settings-section-desc">输入 .zip 技能包的本地路径，选择安装目标后点击安装。</div>
                 <div class="settings-form-row">
                   <span class="settings-form-label">技能包路径</span>
                   <span class="settings-form-value">
-                    <input
-                      class="settings-input"
-                      type="text"
+                    <GlassInput
                       placeholder="D:\downloads\my-skill.zip"
                       value={installPath()}
-                      onInput={(e) => setInstallPath(e.currentTarget.value)}
-                      style="width: 320px; text-align: left;"
+                      onInput={setInstallPath}
+                      style="min-width:320px"
                     />
                   </span>
                 </div>
@@ -433,7 +438,7 @@ export function SettingsPage() {
                     </select>
                   </span>
                 </div>
-                <div style="display:flex;align-items:center;gap:12px;">
+                <div class="install-action-row">
                   <button
                     class="settings-btn primary"
                     disabled={installPath().length === 0 || installStatus() === 'installing'}
@@ -449,10 +454,10 @@ export function SettingsPage() {
                     {installStatus() === 'installing' ? '安装中...' : '安装'}
                   </button>
                   <Show when={installStatus() === 'ok'}>
-                    <span style="font-size:12px;color:#4ade80;">✓ {installMsg()}</span>
+                    <span class="install-ok"><Check size={14} /> {installMsg()}</span>
                   </Show>
                   <Show when={installStatus() === 'error'}>
-                    <span style="font-size:12px;color:#ef4444;">✗ {installMsg()}</span>
+                    <span class="install-error">{installMsg()}</span>
                   </Show>
                 </div>
               </div>
