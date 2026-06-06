@@ -1,0 +1,94 @@
+/* ====== 右侧展开面板 ====== */
+.right-panel {
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%;
+  min-width: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.right-panel-header {
+  padding: 0;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--glass-border);
+}
+.right-panel-tab {
+  flex: 1; padding: 8px 0;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-muted); text-align: center;
+  cursor: pointer; user-select: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.right-panel-tab:hover { color: var(--text-secondary); }
+.right-panel-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+.right-panel-close {
+  width: 28px; height: 28px; border-radius: 4px;
+  border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0; margin-right: 4px;
+}
+.right-panel-close:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.right-panel-body {
+  flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding: 10px 14px;
+  min-height: 0; word-break: break-all;
+}
+.right-panel-body .tab-content { display: none; }
+.right-panel-body .tab-content.active { display: block; }
+
+/* 视图切换按钮组 */
+.view-toggle {
+  display: flex; gap: 2px; margin-bottom: 10px;
+  background: rgba(255,255,255,0.04); border-radius: 6px;
+  padding: 2px;
+}
+.view-toggle-btn {
+  flex: 1; padding: 4px 0; font-size: 11px;
+  text-align: center; border-radius: 4px;
+  cursor: pointer; user-select: none;
+  color: var(--text-muted); border: none;
+  background: transparent;
+  transition: all 0.15s;
+}
+.view-toggle-btn.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.tab-content-persist {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 展开标签 */
+.expand-tab {
+  position: fixed;
+  right: 0; top: 45%;
+  z-index: 35;
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 8px 10px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: var(--text-secondary); font-size: 11px;
+  cursor: pointer; user-select: none;
+  writing-mode: vertical-lr;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+.expand-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.08);
+  padding-right: 12px;
+}
+.expand-tab.hidden { opacity: 0; pointer-events: none; }

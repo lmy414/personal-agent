@@ -1,0 +1,12 @@
+/* ====== 顶部菜单项 ====== */
+.top-menu-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 22px; border-radius: 12px;
+  cursor: pointer; user-select: none;
+  color: var(--text-secondary); font-size: 12px;
+  transition: all 0.18s;
+  background: transparent; border: none; font-family: inherit;
+}
+.top-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+.top-menu-item .menu-icon { font-size: 20px; line-height: 1; }
+.top-menu-item .menu-label { font-size: 11px; letter-spacing: 0.5px; }

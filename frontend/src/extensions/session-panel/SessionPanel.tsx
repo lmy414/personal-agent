@@ -1,5 +1,6 @@
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import './session-panel.css'
 
 export function SessionPanel() {
   const agent = useAgent()

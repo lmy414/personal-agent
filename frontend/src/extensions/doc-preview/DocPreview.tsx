@@ -1,6 +1,7 @@
 import { createSignal, Show, onMount, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { marked } from 'marked'
+import './doc-preview.css'
 import type { ServerMessage } from '@bridge/protocol'
 
 marked.setOptions({ breaks: true, gfm: true })

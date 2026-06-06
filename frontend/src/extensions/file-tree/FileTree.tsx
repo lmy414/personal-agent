@@ -1,6 +1,7 @@
 import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { FileEntry, ServerMessage } from '@bridge/protocol'
+import './file-tree.css'
 
 interface TreeNode {
   name: string

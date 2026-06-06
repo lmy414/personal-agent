@@ -1,5 +1,6 @@
 import { createSignal, onMount, onCleanup, For } from 'solid-js'
 import { registry } from '@/registry'
+import './right-panel.css'
 
 export function RightPanelTabs() {
   const tabs = () => registry.getBySlot('right-tab')

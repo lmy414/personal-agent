@@ -1,0 +1,81 @@
+/* ====== 底部状态栏 ====== */
+.status-bar {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 4px;
+}
+.status-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  font-size: 13px; color: var(--text-secondary);
+  border-bottom: 1px solid var(--glass-border);
+}
+.status-row:last-child { border-bottom: none; }
+
+.status-label {
+  color: var(--text-muted); font-size: 12px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.status-value {
+  color: var(--text-primary); font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.status-value.mono {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+}
+.status-spacer { flex: 1; }
+
+/* 上下文用量条 */
+.ctx-bar-wrap {
+  padding: 2px 16px 8px;
+}
+.ctx-bar-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.ctx-bar {
+  height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.ctx-bar-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+.ctx-bar-fill.warn { background: #f4a236; }
+.ctx-bar-fill.danger { background: #f87171; }
+
+/* 压缩反馈提示 */
+.compact-feedback {
+  font-size: 11px; text-align: center;
+  padding: 3px 0;
+  animation: compact-feedback-in 0.25s ease;
+  user-select: text;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+  gap: 4px;
+}
+.compact-feedback-text { user-select: text; }
+.compact-feedback-copy { user-select: none; }
+.compact-feedback:hover .compact-feedback-copy { opacity: 1 !important; }
+.compact-feedback--success { color: #4ade80; }
+.compact-feedback--error   { color: #f87171; }
+@keyframes compact-feedback-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.compact-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 6px;
+  padding: 0;
+  line-height: 1;
+}
+.compact-btn:disabled { color: var(--text-muted); cursor: default; }

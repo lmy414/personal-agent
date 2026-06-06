@@ -1,5 +1,6 @@
 import { createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import './status-bar.css'
 
 function formatTime(date: Date): string {
   const h = date.getHours().toString().padStart(2, '0')

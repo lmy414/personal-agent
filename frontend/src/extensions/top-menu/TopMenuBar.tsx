@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js'
 import { setIsSettingsOpen } from '@/shell/settings-signal'
+import './top-menu.css'
 
 export function TopMenuBar() {
   const [menuOpen, setMenuOpen] = createSignal(false)

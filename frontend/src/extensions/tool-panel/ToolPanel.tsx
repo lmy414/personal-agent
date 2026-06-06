@@ -1,6 +1,7 @@
 import { createSignal, For, Show, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { ToolCallEntry } from '@/shell/useAgent'
+import './tool-panel.css'
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`

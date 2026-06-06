@@ -1,6 +1,7 @@
 import { createEffect, For, createSignal, onCleanup, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { isSettingsOpen, setIsSettingsOpen } from '@/shell/settings-signal'
+import './settings-page.css'
 import type { ServerMessage, SkillSummary } from '@bridge/protocol'
 
 type SettingsTab = 'agent' | 'skills'

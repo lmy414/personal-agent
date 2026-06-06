@@ -1,0 +1,31 @@
+/* ====== 预览区 ====== */
+.preview-rendered {
+  font-size: 13px; line-height: 1.7; color: var(--text-primary);
+  height: 100%; overflow: auto;
+}
+.preview-rendered h1 { font-size: 18px; margin: 12px 0 6px; }
+.preview-rendered h2 { font-size: 15px; margin: 10px 0 4px; }
+.preview-rendered h3 { font-size: 13px; margin: 8px 0 4px; }
+.preview-rendered p { margin: 4px 0; }
+.preview-rendered code {
+  background: rgba(255,255,255,0.06); padding: 1px 5px;
+  border-radius: 3px; font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+.preview-rendered pre {
+  background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;
+  overflow-x: auto; font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  line-height: 1.5;
+}
+.preview-source {
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 11px; line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap; word-break: break-all;
+  margin: 0; padding: 8px;
+  background: rgba(0,0,0,0.2); border-radius: 6px;
+  height: 100%; overflow: auto;
+  background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;
+  max-height: 100%; overflow-y: auto;
+}

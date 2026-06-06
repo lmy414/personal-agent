@@ -2,6 +2,7 @@ import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { marked } from 'marked'
 import type { ServerMessage } from '@bridge/protocol'
+import './chat-renderer.css'
 
 marked.setOptions({ breaks: true, gfm: true })
 
