@@ -83,7 +83,7 @@ export function SettingsPage() {
   createEffect(() => {
     if (isSettingsOpen()) {
       agent.getSettings()
-      agent.send('settings.discover-models', {})
+      agent.send('settings.discover', {})
       agent.send('skills.list', {})
     }
   })

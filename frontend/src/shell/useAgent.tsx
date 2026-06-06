@@ -535,7 +535,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       sessionMessages.set(currentSessionId(), next)
       return next
     })
-    send('message.send', { content, attachments })
+    send('agent.prompt', { content, attachments })
   }
   const cancelMessage = () => {
     // 立即本地清理：清空待渲染字符缓冲
@@ -562,7 +562,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     })
     setIsStreaming(false)
     // 发送中断指令给桥接层
-    send('message.cancel', {})
+    send('agent.abort', {})
   }
   const loadHistory = (sid: string) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return
@@ -606,7 +606,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       loadHistory(sid)
     }
   }
-  const switchModel = (modelId: string) => send('model.switch', { modelId })
+  const switchModel = (modelId: string) => send('model.set', { modelId })
   const getSettings = () => send('settings.get', {})
   const setSetting = (key: string, value: string) => send('settings.set', { key, value })
 
