@@ -4,7 +4,6 @@ import { marked } from 'marked'
 import type { ServerMessage } from '@bridge/protocol'
 import './chat-renderer.css'
 import { MessageBubble } from './MessageBubble'
-import { ThinkingBlock } from './ThinkingBlock'
 import { ChatInput } from './ChatInput'
 import type { AvatarStatus } from './Avatar'
 import { Paperclip, Image } from 'lucide-solid'
@@ -202,16 +201,6 @@ export function ChatRenderer() {
     return msgs[idx].role !== msgs[idx - 1].role
   }
 
-  /** 聚合当前 assistant 消息的思考内容（仅取最新一条） */
-  const currentThinking = () => {
-    const msgs = visibleMessages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const t = (msgs[i] as any).thinking as string | undefined
-      if (t && msgs[i].role === 'assistant') return t
-    }
-    return ''
-  }
-
   return (
     <div class="glass-panel chat-panel" style="flex:1">
       <div class="chat-header">
@@ -249,11 +238,16 @@ export function ChatRenderer() {
               const showAvatar = shouldShowAvatar(idx(), visibleMessages())
               const isLast = () => idx() === visibleMessages().length - 1
 
+              const thinking = (isLast() && isAssistant && (msg as any).thinking)
+                ? (msg as any).thinking as string
+                : undefined
+
               return (
                 <MessageBubble
                   role={msg.role as 'user' | 'assistant'}
                   showAvatar={showAvatar}
                   avatarStatus={isLast() ? avatarStatus() : 'idle'}
+                  thinking={thinking}
                 >
                   {msg.role === 'user' && hasAttachments ? (
                     <>
@@ -279,15 +273,6 @@ export function ChatRenderer() {
           </For>
         </Show>
       </div>
-
-      {/* 思考面板 — 消息区下方，输入区上方 */}
-      <Show when={agent.isStreaming() && currentThinking()}>
-        <div class="thinking-panel">
-          <ThinkingBlock steps={currentThinking().length}>
-            {currentThinking()}
-          </ThinkingBlock>
-        </div>
-      </Show>
 
       {/* attachment badges */}
       <Show when={attachments().length > 0}>
