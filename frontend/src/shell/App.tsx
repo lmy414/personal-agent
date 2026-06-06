@@ -2,6 +2,7 @@ import { createSignal, For, onMount, onCleanup } from 'solid-js'
 import { registry, type Extension } from '@/registry'
 import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
 import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
+import { DragHandle } from '@/components/drag-handle'
 import './App.css'
 
 function renderExtension(ext: Extension) {
@@ -46,40 +47,6 @@ export function App() {
     onCleanup(() => window.removeEventListener('close-right-panel', handleClose))
   })
 
-  const handleDragStart = (e: MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startW = rightPanelW()
-    const handle = e.currentTarget as HTMLElement
-    handle.classList.add('dragging')
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'col-resize'
-
-    const onMove = (ev: MouseEvent) => {
-      const w = startW - (ev.clientX - startX)
-      const clamped = Math.max(0, Math.min(900, w))
-      setRightPanelW(clamped)
-
-      if (clamped < 120 && w < 120) {
-        setPanelVisible(false)
-      } else if (clamped > 0) {
-        setPanelVisible(true)
-      }
-    }
-
-    const onUp = () => {
-      handle.classList.remove('dragging')
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      savePanelState(rightPanelW(), panelVisible())
-    }
-
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }
-
   const handleExpandClick = () => {
     setRightPanelW(400)
     setPanelVisible(true)
@@ -121,12 +88,22 @@ export function App() {
         {/* 右侧面板 */}
         <div class="overlay-right-panel">
           <div class="glass-panel right-panel">
-            <div
-              class="panel-drag-handle"
-              onMouseDown={handleDragStart}
-              onDblClick={() => {
+            <DragHandle
+              onDrag={(deltaX) => {
+                const w = rightPanelW() - deltaX
+                const clamped = Math.max(0, Math.min(900, w))
+                setRightPanelW(clamped)
+                if (clamped < 120 && w < 120) {
+                  setPanelVisible(false)
+                } else if (clamped > 0) {
+                  setPanelVisible(true)
+                }
+              }}
+              onDragEnd={() => savePanelState(rightPanelW(), panelVisible())}
+              onDoubleClick={() => {
                 setRightPanelW(0)
                 setPanelVisible(false)
+                savePanelState(0, false)
               }}
             />
             <div
