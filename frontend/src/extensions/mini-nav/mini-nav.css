@@ -1,13 +1,14 @@
 /* ====== Mini Nav — 52px 竖排导航栏 ====== */
-/* 精确匹配 .pen 设计: frame#mREqT */
+/* 精确匹配 .pen: frame#mREqT (52×1150, layout=vertical, opacity=0.92) */
 
 .mini-nav {
   width: 52px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
+  /* 4-stop linear gradient, rotation=180 (top→bottom) */
   background: linear-gradient(
     180deg,
     #000000E6 0%,
@@ -15,24 +16,28 @@
     #00000066 60%,
     #0000001A 100%
   );
+  opacity: 0.92;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  /* stroke: #FFFFFF1A, strokeWidth: {right: 1} */
   border-right: 1px solid #FFFFFF1A;
   flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* 顶部分割线: rectangle#bGK91 fill="$border" opacity=0.6 */
+/* Top line: rectangle#bGK91 — 最后一个子节点，layout=vertical 中排到底部 */
+/* 但命名为 Nav Top Line，放在顶部 */
 .mini-nav-top-line {
   width: 100%;
   height: 0.5px;
-  background: #FFFFFF06;  /* $border */
+  background: #FFFFFF06;
   opacity: 0.6;
   flex-shrink: 0;
 }
 
 /* 导航项: frame#u3kus5/ANrXt/VGmwY/fZnC9/nTPmu/mP9FP */
+/* layout=vertical, gap=2, padding=[10,0], justifyContent=center, alignItems=center */
 .mini-nav-item {
   width: 100%;
   display: flex;
@@ -49,38 +54,40 @@
   cursor: pointer;
 }
 
-/* 激活态: frame#nTPmu fill="#FFFFFF06" */
+/* 激活态: frame#nTPmu fill=#FFFFFF06 */
 .mini-nav-item.active {
   background: #FFFFFF06;
 }
 
 /* 图标: text#ScPb4/lmmVs/lSi2M/PFhfm/J3cwF/FYziO */
+/* fontFamily=Inter, fontSize=16, fontWeight=normal */
 .mini-nav-icon {
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 1;
-  color: #6E6E78;  /* $text-muted */
+  color: #6E6E78;
 }
 
 .mini-nav-item.active .mini-nav-icon {
-  color: #EAEAEE;  /* $text-primary */
+  color: #EAEAEE;
 }
 
 /* 标签: text#m3GzG0/f8MYd/Q5mzu/Ghlc7/IqbSM/aO1cO */
+/* fontFamily=Noto Serif SC, fontSize=9 */
 .mini-nav-label {
   font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
   font-size: 9px;
   font-weight: 400;
   line-height: 1;
-  color: #6E6E78;  /* $text-muted */
+  color: #6E6E78;
 }
 
-/* 仅「通信」标签为 600: text#m3GzG0 */
+/* 仅「通信」 fontWeight=600: text#m3GzG0 */
 .mini-nav-label.bold {
   font-weight: 600;
 }
 
 .mini-nav-item.active .mini-nav-label {
-  color: #EAEAEE;  /* $text-primary */
+  color: #EAEAEE;
 }
