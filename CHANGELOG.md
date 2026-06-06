@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-06-06
+
+### 前端组件库提取 — 9 通用组件 + CSS 模块化
+
+- **原因**: App.css 单文件 1251 行难以维护；各扩展内重复 UI 模式（按钮/开关/输入框/进度条等）无复用；组件代码与样式耦合。参照 uiverse-io/galaxy 平铺式组件库模式，建立前端组件化基础层。
+- **改动**: 29 文件（18 新建，11 修改）
+  - 新建 `frontend/src/components/` 下 9 个通用组件（GlassPanel、Spinner、ProgressBar、Badge、Toggle、IconButton、GlassInput、TabBar、DragHandle），每个自包含 `index.tsx` + `index.css`
+  - 拆分 App.css 到 9 个扩展 CSS（chat-renderer、session-panel、tool-panel、status-bar、file-tree、doc-preview、right-panel、top-menu、settings-page）
+  - App.css 1251 → 150 行（只保留 CSS 变量、reset、滚动条、Grid 布局、顶部菜单、设置页容器、多扩展共用动画）
+  - App.tsx 内联 DragHandle 替换为组件（-23 行）
+  - 9 个扩展 TSX 各添加对应 CSS import
+- **影响**: 前端所有 UI 层，CSS 组织从单文件变为组件级文件，视觉效果零变更
+- **验证**: `tsc --noEmit` 通过，`vite build` 成功（41 modules, CSS 30.58 KB, JS 99.84 KB）
+- **Commit**: `11ea590`, `a4daa5b`, `cffee75`
+
+---
+
 ## 2026-06-05
 
 ### 审计修复：P0/P1/P2 共 8 项
