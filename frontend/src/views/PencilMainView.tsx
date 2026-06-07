@@ -206,8 +206,19 @@ function Sidebar() {
           >
             {timeStr()}
           </div>
-          <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
+          <div style={{ 'font-size': '10px', color: 'var(--text-muted)', display: 'flex', 'align-items': 'center', gap: '6px' }}>
             通信 #{a.sessions().length}
+            <button
+              onClick={() => a.createSession()}
+              style={{
+                width: '18px', height: '18px', 'border-radius': '50%',
+                background: 'rgba(107,143,168,0.15)', border: '1px solid rgba(107,143,168,0.25)',
+                color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer',
+                display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                'line-height': '1', padding: '0',
+              }}
+              title="新建会话"
+            >+</button>
           </div>
         </div>
       </div>
