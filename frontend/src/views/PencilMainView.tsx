@@ -391,6 +391,8 @@ function Sidebar() {
         </For>
         </div>
 
+        <div class="divider" />
+
         {/* Tool Log — max 5 items, scrollable */}
         <div style={{ 'flex-shrink': '0', padding: '12px 16px 8px' }}>
           <div
