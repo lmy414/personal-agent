@@ -6,6 +6,48 @@
 
 ## 2026-06-08
 
+### 系统信息页接入真实日志 + 链接可点击
+- **原因**: 系统信息页日志为硬编码数据，开发者链接"打开"按钮无响应
+- **改动**:
+  - **新建 `bridge/handlers/system-logs.ts`**: 拦截 `console.log/warn/error` 写入环形缓冲区（≤200条），客户端请求时返回最近50条；`pushLog()` 供外部调用
+  - **protocol.ts**: 新增 `system.logs` 客户端/服务端消息类型
+  - **dispatcher.ts**: 注册 `system.logs` 路由
+  - **useAgent.tsx**: 新增 `systemLogs` 信号 + `getSystemLogs` 函数，处理 `system.logs` 消息
+  - **SettingsLayoutView.tsx**: 删除硬编码 `logs` 数组，`SystemPage` 改用 `agent.systemLogs()` 动态渲染，`onMount` 时请求日志；链接"打开"按钮添加 `onClick={() => window.open(url, '_blank')}`
+- **影响**: 系统信息页日志从 mock 变为真实桥接日志；开发者链接可点击跳转
+- **验证**: `npx tsc --noEmit` 前后端均通过
+- **Commit**: (待提交)
+
+### 技能管理接入后端协议
+- **原因**: 技能管理页全量 mock，需接入后端协议实现动态安装/启停/删除
+- **改动**:
+  - **后端**: 新建 `handlers/skills.ts` — 技能列表/安装（项目级/全局）/启停/删除
+  - **协议**: +4 client +1 server 消息 (`skills.list/install/toggle/remove`, `skills.state`)
+  - **前端**: SkillsPage 全量重写 — 项目技能/全局技能分区、安装弹窗、启停开关、删除确认
+- **影响**: 技能管理从 mock 变为功能完整
+- **验证**: 前后端编译通过
+- **Commit**: (待提交)
+
+### MCP 动态配置
+- **原因**: MCP 服务器配置硬编码，需支持动态添加/启停/删除
+- **改动**:
+  - **后端**: 新建 `handlers/mcp.ts` — MCP 列表/保存/启停/删除
+  - **协议**: +4 client +2 server 消息 (`mcp.list/save/toggle/remove`, `mcp.state`/`mcp.saved`)
+  - **前端**: MCP 配置区域重写 — JSON 输入新增、工具列表展开、启停开关、删除
+- **影响**: MCP 管理从 mock 变为功能完整
+- **验证**: 前后端编译通过
+- **Commit**: (待提交)
+
+### 工作目录设置 + 排除规则
+- **原因**: 工作目录和排除规则硬编码，需支持手动输入路径和动态管理排除规则
+- **改动**:
+  - **后端**: 新建 `handlers/workdir.ts` — 工作目录获取/设置、排除规则 CRUD
+  - **协议**: +5 client +2 server 消息
+  - **前端**: WorkdirPage 重写 — 路径输入框、排除规则添加/删除
+- **影响**: 工作目录和排除规则从 mock 变为功能完整
+- **验证**: 前后端编译通过
+- **Commit**: (待提交)
+
 ### 显示设置实现：主题切换 + 壁纸管理
 - **原因**: 设置页显示设置 Tab 全部 mock，主题色和壁纸无法切换，需接入真实功能
 - **改动**:

@@ -66,12 +66,15 @@ export type ClientMessage =
   | ClientMsg<'mcp.toggle', { id: string; enabled: boolean }>
   | ClientMsg<'mcp.remove', { id: string }>
 
-  // ── 工作目录 & 排除规则 (4) ──
+  // ── 工作目录 & 排除规则 (5) ──
   | ClientMsg<'workdir.get', {}>
   | ClientMsg<'workdir.set', { path: string }>
   | ClientMsg<'exclude.list', {}>
   | ClientMsg<'exclude.add', { pattern: string }>
   | ClientMsg<'exclude.remove', { pattern: string }>
+
+  // ── 系统日志 (1) ──
+  | ClientMsg<'system.logs', {}>
 
   // ── 厂商 & 模型配置 (3) ──
   | ClientMsg<'provider.save', { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean }>
@@ -152,6 +155,9 @@ export type ServerMessage =
   // ── 工作目录 & 排除规则 (2) ──
   | ServerMsg<'workdir.state', { path: string }>
   | ServerMsg<'exclude.state', { patterns: string[] }>
+
+  // ── 系统日志 (1) ──
+  | ServerMsg<'system.logs', { logs: { time: string; level: 'INFO' | 'WARN' | 'ERR'; msg: string }[] }>
 
   // ── 厂商 & 模型配置 (3) ──
   | ServerMsg<'provider.saved', { provider: { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean } }>

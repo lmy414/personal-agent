@@ -94,6 +94,8 @@ export interface AgentContextValue {
   getExcludeRules: () => void
   addExcludeRule: (pattern: string) => void
   removeExcludeRule: (pattern: string) => void
+  systemLogs: () => { time: string; level: 'INFO' | 'WARN' | 'ERR'; msg: string }[]
+  getSystemLogs: () => void
 }
 
 // ========== Context ==========
@@ -117,6 +119,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [mcpServers, setMcpServers] = createSignal<MCPServerConfig[]>([])
   const [workdir, setWorkdirState] = createSignal<string>('')
   const [excludeRules, setExcludeRules] = createSignal<string[]>([])
+  const [systemLogs, setSystemLogs] = createSignal<{ time: string; level: 'INFO' | 'WARN' | 'ERR'; msg: string }[]>([])
 
   const cache = createSessionCache()
 
@@ -517,6 +520,12 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         break
       }
 
+      case 'system.logs': {
+        const p = msg.payload as { logs: { time: string; level: 'INFO' | 'WARN' | 'ERR'; msg: string }[] }
+        setSystemLogs(p.logs)
+        break
+      }
+
       // ── 状态同步 ──
 
       case 'state.model':
@@ -671,6 +680,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const getExcludeRules = () => send('exclude.list', {})
   const addExcludeRule = (pattern: string) => send('exclude.add', { pattern })
   const removeExcludeRule = (pattern: string) => send('exclude.remove', { pattern })
+  const getSystemLogs = () => send('system.logs', {})
 
   // ========== 扩展消息订阅 ==========
 
@@ -743,6 +753,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     getExcludeRules,
     addExcludeRule,
     removeExcludeRule,
+    systemLogs,
+    getSystemLogs,
   }
 
   return (

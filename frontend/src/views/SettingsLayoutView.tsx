@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js'
-import { createSignal, For, Show, createMemo, createEffect } from 'solid-js'
+import { createSignal, For, Show, createMemo, createEffect, onMount } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { THEMES, getThemeById, applyTheme, applyWallpaper, applyCustomAccent, applyGlassTint, applyTopBarTint, accentRgb, accentHex } from '@/shell/theme'
 import { ColorPicker } from '@/components/color-picker'
@@ -246,15 +246,6 @@ const excludeRules = [
   { name: '环境变量', pattern: '.env' },
   { name: '临时文件', pattern: '*.tmp' },
   { name: '版本控制', pattern: '.git' },
-]
-
-const logs = [
-  { time: '14:32:15', level: 'INFO' as const, msg: '会话已创建 · 模型 DeepSeek V3' },
-  { time: '14:31:52', level: 'INFO' as const, msg: '文件写入完成 · SettingsLayoutView.tsx · 1.2s' },
-  { time: '14:31:28', level: 'WARN' as const, msg: 'shell_exec 超时 · npm run check · 30s' },
-  { time: '14:31:05', level: 'INFO' as const, msg: '上下文压缩完成 · 释放 8,450 tokens' },
-  { time: '14:30:40', level: 'INFO' as const, msg: 'MCP 服务重连成功 · 7 工具可用' },
-  { time: '14:29:07', level: 'ERR'  as const, msg: '桥接服务器启动 · PID 8241 · 端口 9229' },
 ]
 
 const links = [
@@ -1334,6 +1325,11 @@ function WorkdirPage() {
 }
 
 function SystemPage() {
+  const agent = useAgent()
+
+  // 首次进入时请求日志
+  onMount(() => { agent.getSystemLogs() })
+
   return (
     <>
       <div style={{
@@ -1362,16 +1358,22 @@ function SystemPage() {
       <div style={{
         background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.04)',
         'border-radius': '6px', padding: '12px 16px', 'margin-bottom': '24px',
+        'max-height': '320px', overflow: 'auto',
+        'user-select': 'text', '-webkit-user-select': 'text',
       }}>
-        <For each={logs}>
-          {(log) => (
-            <div style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '6px 0', 'font-size': '12px' }}>
-              <span style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '10px', color: 'var(--text-muted)', width: '60px', 'flex-shrink': '0' }}>{log.time}</span>
-              <span style={{ 'font-size': '10px', 'font-weight': '600', width: '40px', 'flex-shrink': '0', color: log.level === 'INFO' ? 'var(--accent)' : log.level === 'WARN' ? 'var(--warning)' : '#E8553D' }}>{log.level}</span>
-              <span style={{ color: 'var(--text-secondary)', flex: '1' }}>{log.msg}</span>
-            </div>
-          )}
-        </For>
+        <Show when={agent.systemLogs().length > 0} fallback={
+          <div style={{ 'font-size': '12px', color: 'var(--text-muted)', padding: '6px 0' }}>暂无日志</div>
+        }>
+          <For each={agent.systemLogs()}>
+            {(log) => (
+              <div style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '6px 0', 'font-size': '12px', 'user-select': 'text' }}>
+                <span style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '10px', color: 'var(--text-muted)', width: '60px', 'flex-shrink': '0', 'user-select': 'text' }}>{log.time}</span>
+                <span style={{ 'font-size': '10px', 'font-weight': '600', width: '40px', 'flex-shrink': '0', color: log.level === 'INFO' ? 'var(--accent)' : log.level === 'WARN' ? 'var(--warning)' : '#E8553D', 'user-select': 'text' }}>{log.level}</span>
+                <span style={{ color: 'var(--text-secondary)', flex: '1', 'user-select': 'text' }}>{log.msg}</span>
+              </div>
+            )}
+          </For>
+        </Show>
       </div>
 
       <div style={{ display: 'flex', gap: '24px' }}>
@@ -1398,7 +1400,12 @@ function SystemPage() {
                       <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>{link.url}</div>
                     </div>
                   </div>
-                  <span style={{ 'font-size': '11px', color: 'var(--text-muted)', cursor: 'pointer' }}>打开 →</span>
+                  <span
+                    style={{ 'font-size': '11px', color: 'var(--accent)', cursor: 'pointer' }}
+                    onClick={() => window.open(link.url, '_blank')}
+                  >
+                    打开 →
+                  </span>
                 </div>
               )}
             </For>

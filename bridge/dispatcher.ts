@@ -14,6 +14,7 @@ import { handleProviderSave, handleProviderDelete } from './handlers/provider'
 import { handleModelConfigure } from './handlers/model-config'
 import { handleMcpList, handleMcpSave, handleMcpToggle, handleMcpRemove } from './handlers/mcp'
 import { handleWorkdirGet, handleWorkdirSet, handleExcludeList, handleExcludeAdd, handleExcludeRemove } from './handlers/workdir'
+import { handleSystemLogs } from './handlers/system-logs'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -82,6 +83,9 @@ const routes: Record<string, Handler> = {
   'exclude.list': handleExcludeList,
   'exclude.add': handleExcludeAdd,
   'exclude.remove': handleExcludeRemove,
+
+  // ── 系统日志 ──
+  'system.logs': handleSystemLogs,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {

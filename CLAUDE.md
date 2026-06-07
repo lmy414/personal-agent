@@ -28,26 +28,31 @@ personal-agent/
 │   ├── init-db.ts             ←   DB 初始化 + 主会话 + 默认设置
 │   ├── init-config.ts         ←   .pi/settings.json 生成
 │   ├── init-agents.ts         ←   Agent 自动发现
-│   ├── protocol.ts            ←   统一协议（69 条消息，完整 Pi 事件映射，前后端共享）
-│   ├── dispatcher.ts          ←   消息路由表（32 路由）
+│   ├── protocol.ts            ←   统一协议（46 client + 44 server 消息，完整 Pi 事件映射，前后端共享）
+│   ├── dispatcher.ts          ←   消息路由表（45 路由）
 │   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
 │   ├── pi-adapter.ts           ←   Pi 事件 → 协议消息 纯翻译器（~60 行）
 │   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
 │   ├── watcher.ts             ←   文件监听 + 广播（客户端管理统一到 client-manager）
 │   ├── client-manager.ts      ←   统一客户端集（add/remove/broadcast）
 │   ├── auto-name.ts           ←   DeepSeek AI 自动命名服务
-│   └── handlers/              ←   按消息类型拆文件（11 文件）
+│   └── handlers/              ←   按消息类型拆文件（16 文件）
 │       ├── settings.ts        ←     设置 CRUD + 模型发现
 │       ├── file.ts            ←     文件列表/读取/写入
 │       ├── session.ts         ←     会话 CRUD + 历史 + 压缩
 │       ├── message.ts         ←     消息发送/取消（自动命名分离到 auto-name.ts）
 │       ├── model.ts           ←     模型切换/列表
+│       ├── model-config.ts    ←     模型配置（思考强度/启停/可见性）
 │       ├── memory.ts          ←     记忆搜索/列表
 │       ├── memory-store.ts    ←     Bridge 侧记忆读写
-│       ├── skills.ts          ←     技能 CRUD（客户端管理统一到 client-manager）
-│       ├── agent.ts           ←     智能体管理（多智能体架构，客户端管理统一）
+│       ├── skills.ts          ←     技能 CRUD（安装/启停/删除）
+│       ├── agent.ts           ←     智能体管理（多智能体架构）
 │       ├── thinking.ts        ←     思考深度配置
-│       └── tools.ts           ←     工具集配置
+│       ├── tools.ts           ←     工具集配置
+│       ├── provider.ts        ←     厂商 CRUD（API Key 注入）
+│       ├── mcp.ts             ←     MCP 服务器配置（动态添加/启停/删除）
+│       ├── workdir.ts         ←     工作目录 + 排除规则
+│       └── system-logs.ts     ←     系统日志（console 拦截 + 环形缓冲）
 ├── frontend/                  ← SolidJS 前端
 │   ├── src/
 │   │   ├── shell/             ←   壳（Registry 驱动布局 + WS + 全局状态）
@@ -78,7 +83,7 @@ personal-agent/
 │   │   │   ├── CostDashboardView.tsx  ← 费用仪表盘（mock）
 │   │   │   ├── FileTreeView.tsx  ←    文件树视图（复用 FileTree 扩展）
 │   │   │   └── SettingsLayoutView.tsx ← 设置页（5 tab：模型/显示/技能/工作目录/系统）
-│   │   └── extensions/        ←   13 个扩展组件，各含独立 CSS
+│   │   └── extensions/        ←   12 个扩展组件，各含独立 CSS
 │   │       ├── sidebar/       ←     侧边栏（Agent 列表 + 工具日志 + 资源监控，P1-5 拆分）
 │   │       ├── chat-panel/    ←     聊天面板（消息渲染 + 输入框，P1-5 拆分）
 │   │       ├── editor-panel/  ←     编辑器面板（文件预览 + 拖拽，P1-5 拆分）
