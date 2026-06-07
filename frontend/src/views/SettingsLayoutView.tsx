@@ -1216,6 +1216,31 @@ function McpSection() {
 }
 
 function WorkdirPage() {
+  const agent = useAgent()
+  const [editPath, setEditPath] = createSignal('')
+  const [isEditing, setIsEditing] = createSignal(false)
+  const [newRule, setNewRule] = createSignal('')
+
+  const handleStartEdit = () => {
+    setEditPath(agent.workdir())
+    setIsEditing(true)
+  }
+
+  const handleSaveWorkdir = () => {
+    if (editPath().trim()) {
+      agent.setWorkdir(editPath().trim())
+    }
+    setIsEditing(false)
+  }
+
+  const handleAddRule = () => {
+    const p = newRule().trim()
+    if (p) {
+      agent.addExcludeRule(p)
+      setNewRule('')
+    }
+  }
+
   return (
     <>
       <SectionTitle>工作目录</SectionTitle>
@@ -1225,30 +1250,44 @@ function WorkdirPage() {
         'border-radius': '6px', 'margin-bottom': '8px',
       }}>
         <span style={{ 'font-size': '12px', color: 'var(--text-muted)', 'min-width': '80px' }}>项目根目录</span>
-        <input readOnly value="D:\claude\personal-agent" style={inputStyle} />
-        <Btn>更改目录</Btn>
+        <Show when={!isEditing()}>
+          <input readOnly value={agent.workdir()} style={inputStyle} />
+          <Btn onClick={handleStartEdit}>更改目录</Btn>
+        </Show>
+        <Show when={isEditing()}>
+          <input
+            value={editPath()}
+            onInput={(e) => setEditPath(e.currentTarget.value)}
+            placeholder="输入绝对路径，如 D:\\project"
+            style={inputStyle}
+          />
+          <Btn primary onClick={handleSaveWorkdir}>保存</Btn>
+          <Btn onClick={() => setIsEditing(false)}>取消</Btn>
+        </Show>
       </div>
       <div style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': '8px', 'margin-bottom': '32px' }}>
-        包含 47 个文件 · 12 个目录 · 最后扫描 14:32
+        已忽略文件将在文件浏览器中隐藏
       </div>
 
       <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '12px' }}>
         <SectionTitle>文件排除规则</SectionTitle>
-        <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
-          <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>已忽略文件将在文件浏览器中隐藏</span>
-          <Btn primary>添加规则</Btn>
-        </div>
       </div>
       <div style={{
         display: 'flex', 'align-items': 'center', gap: '12px', padding: '12px 16px',
         background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.04)',
         'border-radius': '6px', 'margin-bottom': '16px',
       }}>
-        <input placeholder="输入排除规则，如 *.log 或 node_modules" style={inputStyle} />
-        <Btn>添加规则</Btn>
+        <input
+          value={newRule()}
+          onInput={(e) => setNewRule(e.currentTarget.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddRule() }}
+          placeholder="输入排除规则，如 *.log 或 node_modules"
+          style={inputStyle}
+        />
+        <Btn primary onClick={handleAddRule}>添加规则</Btn>
       </div>
       <div style={{ display: 'flex', gap: '8px', 'margin-bottom': '16px', 'flex-wrap': 'wrap' }}>
-        <For each={['*.log','node_modules','dist','*.db','*.sqlite','.env','*.tmp','.git']}>
+        <For each={agent.excludeRules()}>
           {(tag) => (
             <span style={{
               padding: '4px 10px', 'border-radius': '4px', 'font-size': '11px',
@@ -1258,30 +1297,38 @@ function WorkdirPage() {
           )}
         </For>
       </div>
-      <table style={{ width: '100%', 'border-collapse': 'collapse', 'font-size': '12px', 'margin-top': '12px' }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>规则</th>
-            <th style={thStyle}>匹配类型</th>
-            <th style={thStyle}>匹配规则</th>
-            <th style={thStyle}>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <For each={excludeRules}>
-            {(rule) => (
-              <tr>
-                <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{rule.name}</td>
-                <td style={tdStyle}>
-                  <span style={{ display: 'inline-block', padding: '2px 8px', 'border-radius': '3px', 'font-size': '10px', 'font-family': '"JetBrains Mono", monospace', background: 'rgba(232,85,61,0.10)', color: 'var(--error)' }}>排除</span>
-                </td>
-                <td style={{ ...tdStyle, 'font-family': '"JetBrains Mono", monospace' }}>{rule.pattern}</td>
-                <td style={tdStyle}><span style={{ color: 'var(--text-muted)', cursor: 'pointer' }}>移除</span></td>
-              </tr>
-            )}
-          </For>
-        </tbody>
-      </table>
+      <Show when={agent.excludeRules().length > 0}>
+        <table style={{ width: '100%', 'border-collapse': 'collapse', 'font-size': '12px', 'margin-top': '12px' }}>
+          <thead>
+            <tr>
+              <th style={thStyle}>匹配规则</th>
+              <th style={thStyle}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={agent.excludeRules()}>
+              {(rule) => (
+                <tr>
+                  <td style={{ ...tdStyle, 'font-family': '"JetBrains Mono", monospace' }}>{rule}</td>
+                  <td style={tdStyle}>
+                    <span
+                      onClick={() => agent.removeExcludeRule(rule)}
+                      style={{ color: 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                      移除
+                    </span>
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </Show>
+      <Show when={agent.excludeRules().length === 0}>
+        <div style={{ 'font-size': '12px', color: 'var(--text-muted)', padding: '12px 0' }}>
+          暂无排除规则
+        </div>
+      </Show>
     </>
   )
 }

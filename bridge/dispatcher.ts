@@ -13,6 +13,7 @@ import { handleToolsSet } from './handlers/tools'
 import { handleProviderSave, handleProviderDelete } from './handlers/provider'
 import { handleModelConfigure } from './handlers/model-config'
 import { handleMcpList, handleMcpSave, handleMcpToggle, handleMcpRemove } from './handlers/mcp'
+import { handleWorkdirGet, handleWorkdirSet, handleExcludeList, handleExcludeAdd, handleExcludeRemove } from './handlers/workdir'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -74,6 +75,13 @@ const routes: Record<string, Handler> = {
   'mcp.save': handleMcpSave,
   'mcp.toggle': handleMcpToggle,
   'mcp.remove': handleMcpRemove,
+
+  // ── 工作目录 & 排除规则 ──
+  'workdir.get': handleWorkdirGet,
+  'workdir.set': handleWorkdirSet,
+  'exclude.list': handleExcludeList,
+  'exclude.add': handleExcludeAdd,
+  'exclude.remove': handleExcludeRemove,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {

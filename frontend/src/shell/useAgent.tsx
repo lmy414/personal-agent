@@ -87,6 +87,13 @@ export interface AgentContextValue {
   saveMcp: (cfg: MCPServerConfig) => void
   toggleMcp: (id: string, enabled: boolean) => void
   removeMcp: (id: string) => void
+  workdir: () => string
+  getWorkdir: () => void
+  setWorkdir: (path: string) => void
+  excludeRules: () => string[]
+  getExcludeRules: () => void
+  addExcludeRule: (pattern: string) => void
+  removeExcludeRule: (pattern: string) => void
 }
 
 // ========== Context ==========
@@ -108,6 +115,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [skills, setSkills] = createSignal<SkillSummary[]>([])
   const [skillDirs, setSkillDirs] = createSignal<{ user: string; project: string }>({ user: '', project: '' })
   const [mcpServers, setMcpServers] = createSignal<MCPServerConfig[]>([])
+  const [workdir, setWorkdirState] = createSignal<string>('')
+  const [excludeRules, setExcludeRules] = createSignal<string[]>([])
 
   const cache = createSessionCache()
 
@@ -129,6 +138,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         JSON.stringify({ type: 'settings.get', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {} }),
       JSON.stringify({ type: 'skills.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
       JSON.stringify({ type: 'mcp.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
+      JSON.stringify({ type: 'workdir.get', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
+      JSON.stringify({ type: 'exclude.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
       ]) {
         rawSend(raw)
       }
@@ -492,6 +503,20 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         // 保存成功后自动刷新列表（mcp.state 会广播）
         break
 
+      // ── 工作目录 & 排除规则 ──
+
+      case 'workdir.state': {
+        const p = msg.payload as { path: string }
+        setWorkdirState(p.path)
+        break
+      }
+
+      case 'exclude.state': {
+        const p = msg.payload as { patterns: string[] }
+        setExcludeRules(p.patterns)
+        break
+      }
+
       // ── 状态同步 ──
 
       case 'state.model':
@@ -640,6 +665,13 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const toggleMcp = (id: string, enabled: boolean) => send('mcp.toggle', { id, enabled })
   const removeMcp = (id: string) => send('mcp.remove', { id })
 
+  // ── 工作目录 & 排除规则操作 ──
+  const getWorkdir = () => send('workdir.get', {})
+  const setWorkdir = (path: string) => send('workdir.set', { path })
+  const getExcludeRules = () => send('exclude.list', {})
+  const addExcludeRule = (pattern: string) => send('exclude.add', { pattern })
+  const removeExcludeRule = (pattern: string) => send('exclude.remove', { pattern })
+
   // ========== 扩展消息订阅 ==========
 
   const msgListeners = new Map<ServerMessage['type'], Set<(msg: ServerMessage) => void>>()
@@ -704,6 +736,13 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     saveMcp,
     toggleMcp,
     removeMcp,
+    workdir,
+    getWorkdir,
+    setWorkdir,
+    excludeRules,
+    getExcludeRules,
+    addExcludeRule,
+    removeExcludeRule,
   }
 
   return (
