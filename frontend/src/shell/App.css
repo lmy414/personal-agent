@@ -1,6 +1,7 @@
 /* ====== CSS Variables (Pencil Design System) ====== */
 :root {
   --accent: #6B8FA8;
+  --accent-rgb: 107,143,168;
   --accent-secondary: #5B8C5A;
   --text-primary: #EAEAEE;
   --text-secondary: #A0A0A8;
@@ -27,8 +28,8 @@
   --margin: 12px;
 
   /* 气泡系统 — 保持部分原有值，accent 用新色 */
-  --bubble-user-bg: linear-gradient(135deg, rgba(107,143,168,0.22), rgba(91,140,90,0.15));
-  --bubble-user-border: rgba(107,143,168,0.16);
+  --bubble-user-bg: linear-gradient(135deg, rgba(var(--accent-rgb),0.22), rgba(91,140,90,0.15));
+  --bubble-user-border: rgba(var(--accent-rgb),0.16);
   --bubble-ai-bg: rgba(255,255,255,0.04);
   --bubble-ai-border: rgba(255,255,255,0.06);
   --bubble-radius: 18px;
@@ -42,7 +43,7 @@
 
   /* Avatar */
   --avatar-size: 24px;
-  --avatar-glow-color: rgba(107,143,168,0.2);
+  --avatar-glow-color: rgba(var(--accent-rgb),0.2);
 
   /* 间距 */
   --radius-sm: 6px;
@@ -77,7 +78,7 @@ body::before {
   content: "";
   position: fixed; inset: 0; z-index: 0;
   background:
-    radial-gradient(ellipse at 60% 80%, rgba(107,143,168,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(var(--accent-rgb),0.06) 0%, transparent 50%),
     linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.40) 100%);
   pointer-events: none;
 }
@@ -154,7 +155,7 @@ body::before {
 .msg-content ul, .msg-content ol { margin: 4px 0; padding-left: 20px; }
 .msg-content li { margin: 2px 0; }
 .msg-content a { color: var(--accent); text-decoration: none; }
-.msg-content blockquote { border-left: 2px solid var(--accent); margin: 6px 0; padding: 4px 12px; color: var(--text-secondary); background: rgba(107,143,168,0.04); border-radius: 0 4px 4px 0; }
+.msg-content blockquote { border-left: 2px solid var(--accent); margin: 6px 0; padding: 4px 12px; color: var(--text-secondary); background: rgba(var(--accent-rgb),0.04); border-radius: 0 4px 4px 0; }
 .msg-content code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
 .msg-content pre { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 11px; margin: 6px 0; line-height: 1.5; }
 .msg-content pre code { background: none; padding: 0; font-size: inherit; }
@@ -311,7 +312,7 @@ body::before {
 /* 输入框用更微妙的 focus */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
-  border-color: rgba(107,143,168,0.35);
+  border-color: rgba(var(--accent-rgb),0.35);
 }
 
 /* 按钮重置 — 让 <button> 看起来像 div，保持键盘可访问 */

@@ -6,6 +6,18 @@
 
 ## 2026-06-08
 
+### 显示设置实现：主题切换 + 壁纸管理
+- **原因**: 设置页显示设置 Tab 全部 mock，主题色和壁纸无法切换，需接入真实功能
+- **改动**:
+  - **新建 `shell/theme.ts`**: 主题系统核心 — 5 个主题定义（澪号暗蓝/翡翠绿/琥珀橙/樱花紫/石墨灰）、`applyTheme()` 更新 CSS 变量 + 响应式信号、`restoreTheme()`/`restoreWallpaper()` 从 settings 恢复、`accentRgb()` 信号供 inline style 响应式读取
+  - **App.css**: 新增 `--accent-rgb` CSS 变量；所有 `rgba(107,143,168,...)` 替换为 `rgba(var(--accent-rgb),...)`（6 处）
+  - **useAgent.tsx**: `settings.state` 处理中调用 `restoreTheme()` + `restoreWallpaper()`，页面加载自动恢复
+  - **DisplayPage 重写**: 删除硬编码 `themes`/`wallpapers` 常量；主题卡片点击 → `applyTheme()` + `settings.set('theme', id)` 持久化；壁纸浏览 → FileReader data URL → `applyWallpaper()` + `settings.set('wallpaper', dataUrl)` 持久化；新增重置按钮
+  - **全前端 accent 硬编码清理**: SettingsLayoutView(6处)、CharacterView(2处)、CostDashboardView(3处) 的 `rgba(107,143,168,...)` 全部替换为 `rgba(${accentRgb()},...)`，主题切换即时生效
+- **影响**: 显示设置 Tab 从 mock 变为功能完整；主题切换影响全局 UI（CSS 变量 + inline style 双通道）；壁纸切换即时预览；零后端改动
+- **验证**: `npx tsc --noEmit` 零错误
+- **Commit**: (待提交)
+
 ### 代码审计 + 自动化测试套件补充（v1.0 → v2.0）
 - **原因**: 项目缺乏系统性审计，测试覆盖不足，需全面检查设计架构、功能实现、时序问题并补充测试
 - **改动**:

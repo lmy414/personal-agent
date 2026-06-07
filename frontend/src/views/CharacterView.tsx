@@ -1,6 +1,7 @@
 import type { JSX } from 'solid-js'
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { accentRgb } from '@/shell/theme'
 import { BookOpen, Pencil, Search, Terminal, Globe, FileText, ClipboardList, Palette } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
@@ -13,7 +14,7 @@ function ToggleRow(props: { label: string; desc: string; initialOn: boolean }) {
         <div style={{ 'font-size': '13px', color: 'var(--text-primary)' }}>{props.label}</div>
         <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{props.desc}</div>
       </div>
-      <div {...kbd(() => setOn(!on()))} onClick={() => setOn(!on())} style={{ width: '36px', height: '20px', 'border-radius': '10px', cursor: 'pointer', background: on() ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)', border: 'none', position: 'relative', transition: 'background 0.2s' }}>
+      <div {...kbd(() => setOn(!on()))} onClick={() => setOn(!on())} style={{ width: '36px', height: '20px', 'border-radius': '10px', cursor: 'pointer', background: on() ? `rgba(${accentRgb()},0.40)` : 'rgba(255,255,255,0.10)', border: 'none', position: 'relative', transition: 'background 0.2s' }}>
         <div style={{ position: 'absolute', top: '2px', left: '2px', width: '16px', height: '16px', 'border-radius': '50%', background: 'white', transition: 'transform 0.2s', transform: on() ? 'translateX(16px)' : 'translateX(0)' }} />
       </div>
     </div>
@@ -87,7 +88,7 @@ export default function CharacterView() {
           <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '16px', 'font-weight': '600' }}>{active().name} — 设置</div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button style={{ padding: '6px 14px', 'border-radius': '4px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', 'font-size': '12px', cursor: 'pointer', 'font-family': 'inherit' }}>重置</button>
-            <button style={{ padding: '6px 14px', 'border-radius': '4px', background: 'rgba(107,143,168,0.15)', border: '1px solid rgba(107,143,168,0.20)', color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer', 'font-family': 'inherit' }}>保存</button>
+            <button style={{ padding: '6px 14px', 'border-radius': '4px', background: `rgba(${accentRgb()},0.15)`, border: `1px solid rgba(${accentRgb()},0.20)`, color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer', 'font-family': 'inherit' }}>保存</button>
           </div>
         </div>
 

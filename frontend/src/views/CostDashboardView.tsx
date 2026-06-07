@@ -1,6 +1,7 @@
 import type { JSX } from 'solid-js'
 import { For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { accentRgb } from '@/shell/theme'
 import { BarChart3, TrendingUp, Lightbulb } from 'lucide-solid'
 
 const metrics = [
@@ -108,7 +109,7 @@ export default function CostDashboardView() {
             <div style={{ flex: '1', display: 'flex', 'align-items': 'flex-end', gap: '12px', position: 'relative', 'padding-bottom': '24px' }}>
               <For each={dailyBars}>{(b) => (
                 <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'flex-end', gap: '6px', height: '100%' }}>
-                  <div style={{ width: '100%', background: 'rgba(107,143,168,0.35)', 'border-radius': '3px 3px 0 0', height: b.h, 'min-width': '24px' }} />
+                  <div style={{ width: '100%', background: 'rgba(${accentRgb()},0.35)', 'border-radius': '3px 3px 0 0', height: b.h, 'min-width': '24px' }} />
                   <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>{b.label}</div>
                 </div>
               )}</For>
@@ -152,7 +153,7 @@ export default function CostDashboardView() {
             <div style={{ flex: '1', display: 'flex', 'align-items': 'flex-end', gap: '12px' }}>
               <For each={monthlyBars}>{(b) => (
                 <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', 'justify-content': 'flex-end', gap: '4px', height: '100%' }}>
-                  <div style={{ width: '100%', background: 'rgba(107,143,168,0.35)', 'border-radius': '3px 3px 0 0', height: b.h, 'min-width': '24px' }} />
+                  <div style={{ width: '100%', background: 'rgba(${accentRgb()},0.35)', 'border-radius': '3px 3px 0 0', height: b.h, 'min-width': '24px' }} />
                   <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>{b.label}</div>
                   <div style={{ 'font-size': '9px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace', 'margin-top': '2px' }}>{b.cost}</div>
                 </div>
@@ -170,7 +171,7 @@ export default function CostDashboardView() {
                 <>
                   <div style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '10px 0' }}>
                     <div style={{ flex: '1', height: '16px', background: 'rgba(255,255,255,0.03)', 'border-radius': '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', background: 'rgba(107,143,168,0.35)', 'border-radius': '3px', width: m.w }} />
+                      <div style={{ height: '100%', background: 'rgba(${accentRgb()},0.35)', 'border-radius': '3px', width: m.w }} />
                     </div>
                     <div style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '12px', 'font-weight': '600', color: 'var(--text-secondary)', width: '36px', 'text-align': 'right' }}>{m.pct}</div>
                     <div style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '13px', 'font-weight': '600', color: 'var(--text-primary)', width: '52px', 'text-align': 'right' }}>{m.cost}</div>

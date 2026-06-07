@@ -1,6 +1,7 @@
 import type { JSX } from 'solid-js'
-import { createSignal, For, Show, createMemo } from 'solid-js'
+import { createSignal, For, Show, createMemo, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { THEMES, getThemeById, applyTheme, applyWallpaper, accentRgb, accentHex } from '@/shell/theme'
 import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink, Plus, Trash2, ChevronRight, ChevronDown } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
@@ -22,7 +23,7 @@ function ToggleSmall(props: { initialOn: boolean }) {
   return (
     <div {...kbd(() => setOn(!on()))} onClick={() => setOn(!on())} style={{
       width: '32px', height: '18px', 'border-radius': '9px', cursor: 'pointer',
-      background: on() ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)',
+      background: on() ? `rgba(${accentRgb()},0.40)` : 'rgba(255,255,255,0.10)',
       border: 'none', position: 'relative', transition: 'background 0.2s',
     }}>
       <div style={{
@@ -39,7 +40,7 @@ function ModelToggle(props: { enabled: boolean; onToggle: () => void }) {
   return (
     <div {...kbd(props.onToggle)} onClick={props.onToggle} style={{
       width: '32px', height: '18px', 'border-radius': '9px', cursor: 'pointer',
-      background: props.enabled ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)',
+      background: props.enabled ? `rgba(${accentRgb()},0.40)` : 'rgba(255,255,255,0.10)',
       border: 'none', position: 'relative', transition: 'background 0.2s',
     }}>
       <div style={{
@@ -59,30 +60,14 @@ function Btn(props: { children: JSX.Element; primary?: boolean; onClick?: () => 
   return (
     <button onClick={props.onClick} style={{
       padding: '6px 14px', 'border-radius': '4px', cursor: 'pointer', 'font-family': 'inherit', 'font-size': '12px',
-      background: props.primary ? 'rgba(107,143,168,0.15)' : 'rgba(255,255,255,0.04)',
-      border: props.primary ? '1px solid rgba(107,143,168,0.20)' : '1px solid rgba(255,255,255,0.06)',
+      background: props.primary ? `rgba(${accentRgb()},0.15)` : 'rgba(255,255,255,0.04)',
+      border: props.primary ? `1px solid rgba(${accentRgb()},0.20)` : '1px solid rgba(255,255,255,0.06)',
       color: props.primary ? 'var(--accent)' : 'var(--text-secondary)',
     }}>{props.children}</button>
   )
 }
 
 // ── ModelPage: 厂商 & 模型管理 ──
-
-const themes = [
-  { name: '澪号暗蓝', color: '#6B8FA8', active: true },
-  { name: '翡翠绿',   color: '#5B8C5A', active: false },
-  { name: '琥珀橙',   color: '#C8963E', active: false },
-  { name: '樱花紫',   color: '#8B7FB8', active: false },
-  { name: '石墨灰',   color: '#7A8B94', active: false },
-]
-
-const wallpapers = [
-  { name: '对话区主界面', desc: '聊天面板 + 侧栏 + 编辑器', path: './wallpapers/mio-chat.jpg' },
-  { name: '设置页面',     desc: '全屏设置覆盖',            path: './wallpapers/mio-settings.jpg' },
-  { name: '费用仪表盘',   desc: '用量统计与图表',           path: './wallpapers/mio-dashboard.jpg' },
-  { name: '角色管理',     desc: '角色配置与技能',           path: './wallpapers/mio-agents.jpg' },
-  { name: '会话记录',     desc: '操作日志与追溯',           path: './wallpapers/mio-records.jpg' },
-]
 
 const mcpTools = [
   { name: 'Pencil 设计工具', desc: 'UI/UX 设计协作',    status: '在线', on: true },
@@ -510,66 +495,129 @@ function ModelPage() {
 }
 
 function DisplayPage() {
+  const agent = useAgent()
   const titleStyle: Record<string, string> = { 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600', color: 'var(--text-primary)' }
   const cardStyle: Record<string, string> = { background: '#0E0E1640', border: '1px solid rgba(255,255,255,0.024)', 'border-radius': '6px' }
+
+  // ── 当前主题 ID ──
+  const currentThemeId = createMemo(() => {
+    const entry = agent.settings().find(e => e.key === 'theme')
+    return entry?.value ?? 'mio-blue'
+  })
+
+  const handleThemeClick = (themeId: string) => {
+    const theme = getThemeById(themeId)
+    applyTheme(theme)
+    agent.setSetting('theme', themeId)
+  }
+
+  // ── 壁纸 ──
+  const currentWallpaper = createMemo(() => {
+    const entry = agent.settings().find(e => e.key === 'wallpaper')
+    return entry?.value ?? '/wallpapers/default-bg.jpg'
+  })
+
+  const handleWallpaperBrowse = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        applyWallpaper(dataUrl)
+        // 持久化：存 data URL 到 settings（小文件可行，大文件后续优化为文件写入）
+        agent.setSetting('wallpaper', dataUrl)
+      }
+      reader.readAsDataURL(file)
+    }
+    input.click()
+  }
+
+  const handleWallpaperReset = () => {
+    const defaultPath = '/wallpapers/default-bg.jpg'
+    applyWallpaper(defaultPath)
+    agent.setSetting('wallpaper', defaultPath)
+  }
 
   return (
     <>
       <div style={{ ...titleStyle, 'margin-bottom': '16px' }}>主题颜色</div>
       <div style={{ display: 'grid', 'grid-template-columns': 'repeat(5, 1fr)', gap: '16px', 'margin-bottom': '20px' }}>
-        <For each={themes}>
-          {(t) => (
-            <div style={{
-              padding: '20px', background: 'var(--card-bg)',
-              border: `1px solid ${t.active ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}`,
-              'border-radius': '8px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center',
-              gap: '10px', cursor: 'pointer', transition: 'all 0.15s',
-            }}>
-              <div style={{ width: '48px', height: '48px', 'border-radius': '6px', background: t.color }} />
-              <div style={{ 'font-size': '12px', color: t.active ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.name}</div>
-            </div>
-          )}
+        <For each={THEMES}>
+          {(t) => {
+            const isActive = createMemo(() => currentThemeId() === t.id)
+            return (
+              <div
+                onClick={() => handleThemeClick(t.id)}
+                {...kbd(() => handleThemeClick(t.id))}
+                style={{
+                  padding: '20px', background: 'var(--card-bg)',
+                  border: `1px solid ${isActive() ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}`,
+                  'border-radius': '8px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center',
+                  gap: '10px', cursor: 'pointer', transition: 'all 0.15s',
+                }}>
+                <div style={{ width: '48px', height: '48px', 'border-radius': '6px', background: t.color }} />
+                <div style={{ 'font-size': '12px', color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.name}</div>
+              </div>
+            )
+          }}
         </For>
       </div>
 
-      {/* divider between sections — matches Pencil frame#p2cfV */}
+      {/* divider */}
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', opacity: '0.35', 'margin-bottom': '20px' }} />
 
       <div style={{ ...titleStyle, 'margin-bottom': '12px' }}>界面背景图</div>
-      <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-bottom': '12px' }}>每个主界面可单独设置背景图片</div>
-      <div style={{ display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
-        <For each={wallpapers}>
-          {(wp) => (
-            <div style={{
-              display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
-              padding: '14px 16px', ...cardStyle,
+      <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-bottom': '12px' }}>选择一张图片作为全局背景</div>
+      <div style={{
+        display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+        padding: '14px 16px', ...cardStyle,
+      }}>
+        <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+          <div style={{ 'font-size': '13px', 'font-weight': '500' }}>全局背景</div>
+          <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>
+            {currentWallpaper().startsWith('data:') ? '自定义图片' : currentWallpaper()}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* 缩略图预览 */}
+          <div style={{
+            width: '64px', height: '40px', display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+            background: 'rgba(255,255,255,0.024)', border: '1px solid rgba(255,255,255,0.05)',
+            'border-radius': '4px', overflow: 'hidden',
+          }}>
+            <Show when={currentWallpaper()} fallback={<Image size={16} />}>
+              <img src={currentWallpaper()} style={{ width: '100%', height: '100%', 'object-fit': 'cover' }} />
+            </Show>
+          </div>
+          {/* 浏览按钮 */}
+          <div
+            onClick={handleWallpaperBrowse}
+            {...kbd(handleWallpaperBrowse)}
+            style={{
+              display: 'flex', 'align-items': 'center', padding: '7px 16px',
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
+              'border-radius': '4px', cursor: 'pointer',
             }}>
-              <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                <div style={{ 'font-size': '13px', 'font-weight': '500' }}>{wp.name}</div>
-                <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{wp.desc}</div>
-                <div style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '10px', color: 'var(--text-muted)' }}>{wp.path}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {/* Thumb button — matches Pencil frame#bAfD9: 64×40, fill:#FFFFFF06, stroke:#FFFFFF0D */}
-                <div style={{
-                  width: '64px', height: '40px', display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                  background: 'rgba(255,255,255,0.024)', border: '1px solid rgba(255,255,255,0.05)',
-                  'border-radius': '4px', cursor: 'pointer',
-                }}>
-                  <Image size={16} />
-                </div>
-                {/* Browse button — matches Pencil frame#eAztA: transparent fill, stroke:#FFFFFF14, padding:[7,16] */}
-                <div style={{
-                  display: 'flex', 'align-items': 'center', padding: '7px 16px',
-                  background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
-                  'border-radius': '4px', cursor: 'pointer',
-                }}>
-                  <span style={{ 'font-size': '11px', 'font-weight': '500', color: 'var(--text-secondary)' }}>浏览</span>
-                </div>
-              </div>
+            <span style={{ 'font-size': '11px', 'font-weight': '500', color: 'var(--text-secondary)' }}>浏览</span>
+          </div>
+          {/* 重置按钮 */}
+          <Show when={currentWallpaper() !== '/wallpapers/default-bg.jpg'}>
+            <div
+              onClick={handleWallpaperReset}
+              {...kbd(handleWallpaperReset)}
+              style={{
+                display: 'flex', 'align-items': 'center', padding: '7px 16px',
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
+                'border-radius': '4px', cursor: 'pointer',
+              }}>
+              <span style={{ 'font-size': '11px', 'font-weight': '500', color: 'var(--text-muted)' }}>重置</span>
             </div>
-          )}
-        </For>
+          </Show>
+        </div>
       </div>
     </>
   )
@@ -731,7 +779,7 @@ function SystemPage() {
       }}>
         <div style={{
           width: '56px', height: '56px', 'border-radius': '8px',
-          background: 'rgba(107,143,168,0.15)', border: '1px solid rgba(107,143,168,0.20)',
+          background: `rgba(${accentRgb()},0.15)`, border: `1px solid rgba(${accentRgb()},0.20)`,
           display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-size': '24px', 'flex-shrink': '0',
         }}>澪</div>
         <div style={{ flex: '1' }}>
@@ -842,7 +890,7 @@ export default function SettingsLayoutView() {
                 display: 'flex', 'align-items': 'center', gap: '10px', padding: '10px 16px',
                 cursor: 'pointer', transition: 'all 0.15s',
                 'border-left': page() === item.id ? '2px solid var(--accent)' : '2px solid transparent',
-                background: page() === item.id ? 'rgba(107,143,168,0.06)' : 'transparent',
+                background: page() === item.id ? `rgba(${accentRgb()},0.06)` : 'transparent',
               }}>
                 <span style={{ 'font-size': '14px', width: '20px', 'text-align': 'center', display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}>{item.icon()}</span>
                 <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
