@@ -1,5 +1,6 @@
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { accentRgb } from '@/shell/theme'
 import './session-panel.css'
 
 export function SessionPanel() {
@@ -76,7 +77,7 @@ export function SessionPanel() {
             agent.createSession()
           }}
           style={{
-            background: 'rgba(139,156,240,0.12)',
+            background: `rgba(${accentRgb()},0.12)`,
             border: 'none',
             color: 'var(--accent)',
             cursor: 'pointer',

@@ -13,14 +13,15 @@ export interface ThemeDef {
   color: string       // hex e.g. #6B8FA8
   rgb: string         // "107,143,168"
   secondary: string   // hex for accent-secondary
+  secondaryRgb: string // "91,140,90"
 }
 
 export const THEMES: ThemeDef[] = [
-  { id: 'mio-blue',   name: '澪号暗蓝', color: '#6B8FA8', rgb: '107,143,168', secondary: '#5B8C5A' },
-  { id: 'emerald',    name: '翡翠绿',   color: '#5B8C5A', rgb: '91,140,90',   secondary: '#6B8FA8' },
-  { id: 'amber',      name: '琥珀橙',   color: '#C8963E', rgb: '200,150,62',  secondary: '#5B8C5A' },
-  { id: 'sakura',     name: '樱花紫',   color: '#8B7FB8', rgb: '139,127,184', secondary: '#5B8C5A' },
-  { id: 'graphite',   name: '石墨灰',   color: '#7A8B94', rgb: '122,139,148', secondary: '#5B8C5A' },
+  { id: 'mio-blue',   name: '澪号暗蓝', color: '#6B8FA8', rgb: '107,143,168', secondary: '#5B8C5A', secondaryRgb: '91,140,90' },
+  { id: 'emerald',    name: '翡翠绿',   color: '#5B8C5A', rgb: '91,140,90',   secondary: '#6B8FA8', secondaryRgb: '107,143,168' },
+  { id: 'amber',      name: '琥珀橙',   color: '#C8963E', rgb: '200,150,62',  secondary: '#5B8C5A', secondaryRgb: '91,140,90' },
+  { id: 'sakura',     name: '樱花紫',   color: '#8B7FB8', rgb: '139,127,184', secondary: '#5B8C5A', secondaryRgb: '91,140,90' },
+  { id: 'graphite',   name: '石墨灰',   color: '#7A8B94', rgb: '122,139,148', secondary: '#5B8C5A', secondaryRgb: '91,140,90' },
 ]
 
 const DEFAULT_THEME_ID = 'mio-blue'
@@ -42,9 +43,10 @@ export function applyTheme(theme: ThemeDef): void {
   root.style.setProperty('--accent', theme.color)
   root.style.setProperty('--accent-rgb', theme.rgb)
   root.style.setProperty('--accent-secondary', theme.secondary)
+  root.style.setProperty('--accent-secondary-rgb', theme.secondaryRgb)
   // 气泡系统也跟随主题
   root.style.setProperty('--bubble-user-bg',
-    `linear-gradient(135deg, rgba(${theme.rgb},0.22), rgba(91,140,90,0.15))`)
+    `linear-gradient(135deg, rgba(${theme.rgb},0.22), rgba(${theme.secondaryRgb},0.15))`)
   root.style.setProperty('--bubble-user-border', `rgba(${theme.rgb},0.16)`)
   root.style.setProperty('--avatar-glow-color', `rgba(${theme.rgb},0.2)`)
   // 更新响应式信号

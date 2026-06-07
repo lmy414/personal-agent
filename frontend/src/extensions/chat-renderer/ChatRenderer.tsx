@@ -1,5 +1,6 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { accentRgb } from '@/shell/theme'
 import { marked } from 'marked'
 import type { ServerMessage } from '@bridge/protocol'
 import './chat-renderer.css'
@@ -210,7 +211,7 @@ export function ChatRenderer() {
           )}
         </span>
         <span class="chat-header-right">
-          <span class="energy-dot" style={{background: agent.connected() ? 'rgba(139,156,240,0.6)' : 'rgba(255,80,80,0.6)'}} />
+          <span class="energy-dot" style={{background: agent.connected() ? `rgba(${accentRgb()},0.6)` : 'rgba(255,80,80,0.6)'}} />
           {agent.connected() ? '就绪' : '断连'}
         </span>
       </div>
