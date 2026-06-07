@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js'
-import { createSignal, For, Show, createMemo, onMount, onCleanup } from 'solid-js'
+import { createSignal, For, Show, createMemo, onMount, onCleanup, createEffect } from 'solid-js'
 import { useAgent, type MessageEntry, type ToolCallEntry } from '@/shell/useAgent'
 import type { SessionInfo, AgentInfo, ServerMessage } from '@bridge/protocol'
 import { Code2, FileText, Globe, Search, CirclePause, BarChart3, Brain, Paperclip, ChevronLeft, FolderOpen } from 'lucide-solid'
@@ -135,7 +135,15 @@ function Sidebar() {
     }))
   )
 
-  const handleCreateSession = () => a.createSession()
+  let toolScrollRef: HTMLDivElement | undefined
+
+  // 工具列表 → 自动滚到底部
+  createEffect(() => {
+    void a.toolCalls().length
+    if (toolScrollRef) {
+      toolScrollRef.scrollTop = toolScrollRef.scrollHeight
+    }
+  })
 
   return (
     <div
@@ -346,7 +354,7 @@ function Sidebar() {
                             color: 'var(--text-muted)',
                             cursor: 'pointer',
                           }}
-                          onClick={handleCreateSession}
+                          onClick={() => a.createSession()}
                         >
                           + 新建会话
                         </div>
@@ -457,7 +465,7 @@ function Sidebar() {
               <CirclePause size={12} />
             </button>
           </div>
-          <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '280px', 'overflow-y': 'auto' }}>
+          <div ref={toolScrollRef} style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '280px', 'overflow-y': 'auto' }}>
             <Show when={tools().length === 0}>
               <div style={{ 'font-size': '11px', color: 'var(--text-muted)', 'text-align': 'center', padding: '8px' }}>
                 暂无工具执行记录
@@ -659,11 +667,21 @@ function ChatPanel() {
   const [inputValue, setInputValue] = createSignal('')
   const [collapsedThinkings, setCollapsedThinkings] = createSignal<Set<string>>(new Set())
   let textareaRef: HTMLTextAreaElement | undefined
+  let chatScrollRef: HTMLDivElement | undefined
 
   // 启动时自动创建 session（如果还没有）
   onMount(() => {
     if (agent.sessions().length === 0) {
       agent.createSession()
+    }
+  })
+
+  // 消息变化 / 切换会话 → 滚到底部
+  createEffect(() => {
+    void agent.messages().length
+    void agent.sessionId()
+    if (chatScrollRef) {
+      chatScrollRef.scrollTop = chatScrollRef.scrollHeight
     }
   })
 
@@ -792,6 +810,7 @@ function ChatPanel() {
 
       {/* Chat Area */}
       <div
+        ref={chatScrollRef}
         style={{
           flex: '1',
           'overflow-y': 'auto',
