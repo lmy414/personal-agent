@@ -50,7 +50,7 @@ export default function SessionRecordsView() {
 
       {/* Session List */}
       <div style={{ width: '360px', 'flex-shrink': '0', display: 'flex', 'flex-direction': 'column', 'border-right': '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ padding: '16px 20px', 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600', display: 'flex', 'justify-content': 'space-between' }}>
+        <div style={{ padding: '16px 20px', 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600', display: 'flex', 'justify-content': 'space-between', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)' }}>
           <span>记录</span>
           <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>24 会话</span>
         </div>

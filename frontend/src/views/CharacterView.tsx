@@ -65,7 +65,7 @@ export default function CharacterView() {
 
       {/* Agent List */}
       <div style={{ width: '340px', 'flex-shrink': '0', display: 'flex', 'flex-direction': 'column', 'border-right': '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ padding: '16px 20px', 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600' }}>角色管理</div>
+        <div style={{ padding: '16px 20px', 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)' }}>角色管理</div>
         <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', padding: '8px 16px', height: '40px', 'border-bottom': '1px solid rgba(255,255,255,0.03)' }}>
           <div style={{ display: 'flex', 'align-items': 'center', gap: '6px', 'font-size': '13px', color: 'var(--text-muted)' }}><Search size={14} /> 搜索角色名...</div>
         </div>

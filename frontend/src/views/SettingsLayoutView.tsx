@@ -1167,6 +1167,7 @@ export default function SettingsLayoutView() {
         <div style={{
           padding: '16px 20px', 'font-family': '"Noto Serif SC", serif',
           'font-size': '15px', 'font-weight': '600',
+          background: 'rgb(var(--top-bar-tint-rgb))',
           'border-bottom': '1px solid rgba(255,255,255,0.03)',
         }}>設定</div>
         <div style={{ flex: '1', 'overflow-y': 'auto', padding: '8px 0' }}>
