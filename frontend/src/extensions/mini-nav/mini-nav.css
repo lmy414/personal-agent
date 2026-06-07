@@ -37,9 +37,13 @@
   background: rgba(255,255,255,0.08);
 }
 
-/* 第一个选项（通信）固定使用首栏颜色，保证视觉连贯 */
-.nav-item.active.is-first {
+/* 第一个选项（通信）始终使用首栏颜色，保证视觉连贯 */
+.nav-item.is-first {
   background: rgb(var(--top-bar-tint-rgb));
+  color: var(--text-primary);
+}
+.nav-item.is-first:hover {
+  color: var(--text-primary);
 }
 
 .nav-icon {
