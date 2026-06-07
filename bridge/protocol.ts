@@ -60,6 +60,12 @@ export type ClientMessage =
   | ClientMsg<'skills.toggle', { name: string; source: 'user' | 'project'; enabled: boolean }>
   | ClientMsg<'skills.remove', { name: string; source: 'user' | 'project'; dirName: string }>
 
+  // ── MCP (4) ──
+  | ClientMsg<'mcp.list', {}>
+  | ClientMsg<'mcp.save', { id: string; name: string; command: string; args: string[]; tools: PreDefTool[]; enabled?: boolean }>
+  | ClientMsg<'mcp.toggle', { id: string; enabled: boolean }>
+  | ClientMsg<'mcp.remove', { id: string }>
+
   // ── 厂商 & 模型配置 (3) ──
   | ClientMsg<'provider.save', { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean }>
   | ClientMsg<'provider.delete', { id: string }>
@@ -131,6 +137,10 @@ export type ServerMessage =
   | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'skills.state', { skills: SkillSummary[]; userSkillDir: string; projectSkillDir: string }>
   | ServerMsg<'skills.installed', { name: string; source: string }>
+
+  // ── MCP (2) ──
+  | ServerMsg<'mcp.state', { servers: MCPServerConfig[] }>
+  | ServerMsg<'mcp.saved', { id: string }>
 
   // ── 厂商 & 模型配置 (3) ──
   | ServerMsg<'provider.saved', { provider: { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean } }>
@@ -221,6 +231,30 @@ export interface SkillSummary {
   enabled: boolean
   filePath: string
   dirName: string
+}
+
+/** MCP 预定义工具参数 */
+export interface PreDefToolParam {
+  type: 'string' | 'number' | 'boolean'
+  required: boolean
+  description: string
+}
+
+/** MCP 预定义工具 */
+export interface PreDefTool {
+  name: string
+  description: string
+  params: Record<string, PreDefToolParam>
+}
+
+/** MCP Server 配置 */
+export interface MCPServerConfig {
+  id: string
+  name: string
+  command: string
+  args: string[]
+  tools: PreDefTool[]
+  enabled: boolean
 }
 
 /** 工具调用持久化记录 */

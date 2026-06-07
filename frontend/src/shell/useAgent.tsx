@@ -1,6 +1,6 @@
 import { createContext, createSignal, onCleanup, useContext, type Component, type JSX } from 'solid-js'
 import { createStore } from 'solid-js/store'
-import type { ServerMessage, StatusPayload, SessionInfo, AgentInfo } from '@bridge/protocol'
+import type { ServerMessage, StatusPayload, SessionInfo, AgentInfo, SkillSummary, MCPServerConfig } from '@bridge/protocol'
 import { createWsConnection } from './use-ws'
 import { createSessionCache } from './use-session-cache'
 import { createCharPump } from './char-pump'
@@ -76,6 +76,17 @@ export interface AgentContextValue {
   updateAgent: (agentId: string, updates: { name?: string; avatarColor?: string; roleDescription?: string }) => void
   deleteAgent: (agentId: string) => void
   setDefaultAgent: (agentId: string) => void
+  skills: () => SkillSummary[]
+  skillDirs: () => { user: string; project: string }
+  getSkills: () => void
+  installSkill: (zipPath: string, target: 'user' | 'project') => void
+  toggleSkill: (name: string, source: 'user' | 'project', enabled: boolean) => void
+  removeSkill: (name: string, source: 'user' | 'project', dirName: string) => void
+  mcpServers: () => MCPServerConfig[]
+  getMcpServers: () => void
+  saveMcp: (cfg: MCPServerConfig) => void
+  toggleMcp: (id: string, enabled: boolean) => void
+  removeMcp: (id: string) => void
 }
 
 // ========== Context ==========
@@ -94,6 +105,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [status, setStatus] = createStore<StatusPayload>({
     tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0,
   })
+  const [skills, setSkills] = createSignal<SkillSummary[]>([])
+  const [skillDirs, setSkillDirs] = createSignal<{ user: string; project: string }>({ user: '', project: '' })
+  const [mcpServers, setMcpServers] = createSignal<MCPServerConfig[]>([])
 
   const cache = createSessionCache()
 
@@ -113,6 +127,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         JSON.stringify({ type: 'session.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
         JSON.stringify({ type: 'agent.model.list', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {} }),
         JSON.stringify({ type: 'settings.get', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {} }),
+      JSON.stringify({ type: 'skills.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
+      JSON.stringify({ type: 'mcp.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
       ]) {
         rawSend(raw)
       }
@@ -451,6 +467,31 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         agentsStore.handleAgentDefaultChanged((msg.payload as { agentId: string }).agentId)
         break
 
+      // ── 技能 ──
+
+      case 'skills.state': {
+        const p = msg.payload as { skills: SkillSummary[]; userSkillDir: string; projectSkillDir: string }
+        setSkills(p.skills)
+        setSkillDirs({ user: p.userSkillDir, project: p.projectSkillDir })
+        break
+      }
+
+      case 'skills.installed':
+        // 安装成功后自动刷新列表（skills.state 会广播）
+        break
+
+      // ── MCP ──
+
+      case 'mcp.state': {
+        const p = msg.payload as { servers: MCPServerConfig[] }
+        setMcpServers(p.servers)
+        break
+      }
+
+      case 'mcp.saved':
+        // 保存成功后自动刷新列表（mcp.state 会广播）
+        break
+
       // ── 状态同步 ──
 
       case 'state.model':
@@ -587,6 +628,18 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const getSettings = () => settingsStore.getSettings()
   const setSetting = (key: string, value: string) => settingsStore.setSetting(key, value)
 
+  // ── 技能操作 ──
+  const getSkills = () => send('skills.list', {})
+  const installSkill = (zipPath: string, target: 'user' | 'project') => send('skills.install', { zipPath, target })
+  const toggleSkill = (name: string, source: 'user' | 'project', enabled: boolean) => send('skills.toggle', { name, source, enabled })
+  const removeSkill = (name: string, source: 'user' | 'project', dirName: string) => send('skills.remove', { name, source, dirName })
+
+  // ── MCP 操作 ──
+  const getMcpServers = () => send('mcp.list', {})
+  const saveMcp = (cfg: MCPServerConfig) => send('mcp.save', cfg)
+  const toggleMcp = (id: string, enabled: boolean) => send('mcp.toggle', { id, enabled })
+  const removeMcp = (id: string) => send('mcp.remove', { id })
+
   // ========== 扩展消息订阅 ==========
 
   const msgListeners = new Map<ServerMessage['type'], Set<(msg: ServerMessage) => void>>()
@@ -640,6 +693,17 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     updateAgent: agentsStore.updateAgent,
     deleteAgent: agentsStore.deleteAgent,
     setDefaultAgent: agentsStore.setDefaultAgent,
+    skills,
+    skillDirs,
+    getSkills,
+    installSkill,
+    toggleSkill,
+    removeSkill,
+    mcpServers,
+    getMcpServers,
+    saveMcp,
+    toggleMcp,
+    removeMcp,
   }
 
   return (

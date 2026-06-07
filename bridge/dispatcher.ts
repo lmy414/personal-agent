@@ -12,6 +12,7 @@ import { handleThinkingSet } from './handlers/thinking'
 import { handleToolsSet } from './handlers/tools'
 import { handleProviderSave, handleProviderDelete } from './handlers/provider'
 import { handleModelConfigure } from './handlers/model-config'
+import { handleMcpList, handleMcpSave, handleMcpToggle, handleMcpRemove } from './handlers/mcp'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -67,6 +68,12 @@ const routes: Record<string, Handler> = {
   'skills.install': handleSkillsInstall,
   'skills.toggle': handleSkillsToggle,
   'skills.remove': handleSkillsRemove,
+
+  // ── MCP ──
+  'mcp.list': handleMcpList,
+  'mcp.save': handleMcpSave,
+  'mcp.toggle': handleMcpToggle,
+  'mcp.remove': handleMcpRemove,
 }
 
 export function dispatch(msg: ClientMessage, ws: WebSocket): void {
