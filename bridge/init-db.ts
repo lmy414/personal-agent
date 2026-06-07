@@ -28,6 +28,7 @@ export function initDB(): ReturnType<typeof _initDB> {
       ['history_retention', '100'],
       ['work_dir', ''],
       ['providers', JSON.stringify([{ id: 'deepseek', name: 'DeepSeek', apiKey: '', active: true }])],
+      ['model_configs', '{}'],
     ]
     const insert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
     for (const [k, v] of defaults) insert.run(k, v)

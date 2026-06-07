@@ -11,7 +11,19 @@ export function createSettings(send: (type: string, payload: unknown) => void) {
   const getSettings = () => send('settings.get', {})
   const setSetting = (key: string, value: string) => send('settings.set', { key, value })
 
-  return { entries, setEntries, getSettings, setSetting }
+  // ── Provider CRUD ──
+
+  const saveProvider = (id: string, name: string, opts?: { apiUrl?: string; apiKey?: string; active?: boolean }) =>
+    send('provider.save', { id, name, apiUrl: opts?.apiUrl, apiKey: opts?.apiKey, active: opts?.active ?? true })
+
+  const deleteProvider = (id: string) => send('provider.delete', { id })
+
+  // ── Model configuration ──
+
+  const configureModel = (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }) =>
+    send('model.configure', { modelId, ...config })
+
+  return { entries, setEntries, getSettings, setSetting, saveProvider, deleteProvider, configureModel }
 }
 
 export type SettingsStore = ReturnType<typeof createSettings>

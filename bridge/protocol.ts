@@ -9,7 +9,7 @@ export interface MessageEnvelope<T extends string = string, P = unknown> {
 }
 
 // ========== 客户端 → 服务端 ==========
-// 共 35 条，覆盖 Pi Agent + Harness 全部可调用方法 + 多智能体管理
+// 共 36 条，覆盖 Pi Agent + Harness 全部可调用方法 + 多智能体管理 + 厂商/模型配置
 
 export type ClientMessage =
   // ── 智能体管理 (6) — 多智能体架构核心 ──
@@ -59,6 +59,11 @@ export type ClientMessage =
   | ClientMsg<'skills.install', { zipPath: string; target: 'user' | 'project' }>
   | ClientMsg<'skills.toggle', { name: string; source: 'user' | 'project'; enabled: boolean }>
   | ClientMsg<'skills.remove', { name: string; source: 'user' | 'project'; dirName: string }>
+
+  // ── 厂商 & 模型配置 (3) ──
+  | ClientMsg<'provider.save', { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean }>
+  | ClientMsg<'provider.delete', { id: string }>
+  | ClientMsg<'model.configure', { modelId: string; thinkingLevel?: ThinkingLevel; compactThreshold?: number; enabled?: boolean }>
 
   // ── 心跳 (1) ──
   | ClientMsg<'ping', {}>
@@ -126,6 +131,11 @@ export type ServerMessage =
   | ServerMsg<'settings.state', { entries: { key: string; value: string }[] }>
   | ServerMsg<'skills.state', { skills: SkillSummary[]; userSkillDir: string; projectSkillDir: string }>
   | ServerMsg<'skills.installed', { name: string; source: string }>
+
+  // ── 厂商 & 模型配置 (3) ──
+  | ServerMsg<'provider.saved', { provider: { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean } }>
+  | ServerMsg<'provider.deleted', { id: string; affectedAgents: number; fallbackModel: string }>
+  | ServerMsg<'model.configured', { modelId: string; thinkingLevel?: ThinkingLevel; compactThreshold?: number; enabled?: boolean }>
 
   // ── 压缩事件 (1) — Pi session_compact / session_before_compact ──
   | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }>

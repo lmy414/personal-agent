@@ -10,6 +10,8 @@ import { handleSkillsList, handleSkillsInstall, handleSkillsToggle, handleSkills
 import { handleAgentList, handleAgentCreate, handleAgentUpdate, handleAgentDelete, handleAgentSwitch, handleAgentSetDefault } from './handlers/agent'
 import { handleThinkingSet } from './handlers/thinking'
 import { handleToolsSet } from './handlers/tools'
+import { handleProviderSave, handleProviderDelete } from './handlers/provider'
+import { handleModelConfigure } from './handlers/model-config'
 
 type Handler = (msg: ClientMessage, ws: WebSocket) => void | Promise<void>
 
@@ -58,6 +60,9 @@ const routes: Record<string, Handler> = {
   'settings.get': handleSettingsGet,
   'settings.set': handleSettingsSet,
   'settings.discover': handleSettingsDiscoverModels,
+  'provider.save': handleProviderSave,
+  'provider.delete': handleProviderDelete,
+  'model.configure': handleModelConfigure,
   'skills.list': handleSkillsList,
   'skills.install': handleSkillsInstall,
   'skills.toggle': handleSkillsToggle,

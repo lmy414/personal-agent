@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js'
-import { createSignal, For, Show } from 'solid-js'
+import { createSignal, For, Show, createMemo } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink } from 'lucide-solid'
+import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink, Plus, Trash2, ChevronRight, ChevronDown } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
@@ -49,25 +49,7 @@ function Btn(props: { children: string; primary?: boolean }) {
   )
 }
 
-// ── mock 数据 ──
-
-const modelProviders = [
-  { name: 'Anthropic', meta: '4 个模型 · 已连接', on: true },
-  { name: 'DeepSeek', meta: '3 个模型 · 已连接', on: true },
-  { name: 'OpenAI', meta: '2 个模型 · 已连接', on: true },
-  { name: 'Google AI', meta: '1 个模型 · 未配置', on: false },
-]
-
-const models = [
-  { name: 'Claude Opus 4.6', provider: 'Anthropic', dots: 4, on: true },
-  { name: 'Claude Sonnet 4.6', provider: 'Anthropic', dots: 3, on: true },
-  { name: 'Claude Haiku 4.5', provider: 'Anthropic', dots: 2, on: true },
-  { name: 'DeepSeek V4 Pro', provider: 'DeepSeek', dots: 3, on: true },
-  { name: 'DeepSeek V4 Lite', provider: 'DeepSeek', dots: 2, on: false },
-  { name: 'GPT-4o', provider: 'OpenAI', dots: 3, on: true },
-  { name: 'GPT-4o Mini', provider: 'OpenAI', dots: 2, on: false },
-  { name: 'Gemini 2.5 Pro', provider: 'Google AI', dots: 3, on: false },
-]
+// ── ModelPage: 厂商 & 模型管理 ──
 
 const themes = [
   { name: '澪号暗蓝', color: '#6B8FA8', active: true },
@@ -140,68 +122,279 @@ const links = [
 
 // ── 子页面 ──
 
+// ── 厂商 ID → 显示名 ──
+const PROVIDER_NAMES: Record<string, string> = {
+  deepseek: 'DeepSeek', anthropic: 'Anthropic', openai: 'OpenAI', google: 'Google Gemini',
+  groq: 'Groq', xai: 'xAI', mistral: 'Mistral', openrouter: 'OpenRouter', cerebras: 'Cerebras',
+  fireworks: 'Fireworks', together: 'Together AI', minimax: 'MiniMax', moonshotai: 'Moonshot AI',
+  kimi: 'Kimi', zai: 'ZAI',
+}
+
+const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high'] as const
+const THINKING_DOTS: Record<string, number> = { off: 0, minimal: 1, low: 2, medium: 3, high: 4 }
+
+interface ProviderConfig { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean }
+
 function ModelPage() {
   const agent = useAgent()
+  const [expandedProvider, setExpandedProvider] = createSignal<string | null>(null)
+  const [showNewForm, setShowNewForm] = createSignal(false)
+  const [newProviderId, setNewProviderId] = createSignal('')
+  const [newApiKey, setNewApiKey] = createSignal('')
+  const [newApiUrl, setNewApiUrl] = createSignal('')
+  const [deleteConfirm, setDeleteConfirm] = createSignal<string | null>(null)
+
+  const providers = createMemo<ProviderConfig[]>(() => {
+    const entry = agent.settings().find(e => e.key === 'providers')
+    if (!entry?.value) return []
+    try { return JSON.parse(entry.value) } catch { return [] }
+  })
+
+  const modelConfigs = createMemo<Record<string, { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }>>(() => {
+    const entry = agent.settings().find(e => e.key === 'model_configs')
+    if (!entry?.value) return {}
+    try { return JSON.parse(entry.value) } catch { return {} }
+  })
+
+  // Group agents by provider
+  const agentsByProvider = createMemo(() => {
+    const map = new Map<string, import('@bridge/protocol').AgentInfo[]>()
+    for (const a of agent.agents()) {
+      const p = a.provider
+      if (!map.has(p)) map.set(p, [])
+      map.get(p)!.push(a)
+    }
+    return map
+  })
+
+  const availableProviderIds = createMemo(() => {
+    const existing = new Set(providers().map(p => p.id))
+    return Object.keys(PROVIDER_NAMES).filter(id => !existing.has(id))
+  })
+
+  const handleAddProvider = () => {
+    if (!newProviderId()) return
+    const name = PROVIDER_NAMES[newProviderId()] ?? newProviderId()
+    agent.saveProvider(newProviderId(), name, {
+      apiKey: newApiKey() || undefined,
+      apiUrl: newApiUrl() || undefined,
+    })
+    setShowNewForm(false)
+    setNewProviderId('')
+    setNewApiKey('')
+    setNewApiUrl('')
+  }
+
+  const handleDeleteProvider = (id: string) => {
+    agent.deleteProvider(id)
+    setDeleteConfirm(null)
+    setExpandedProvider(null)
+  }
+
+  const handleToggleModel = (modelId: string, currentEnabled: boolean) => {
+    agent.configureModel(modelId, { enabled: !currentEnabled })
+  }
+
+  const handleThinkingChange = (modelId: string, currentLevel: string) => {
+    const idx = THINKING_LEVELS.indexOf(currentLevel as any)
+    const next = THINKING_LEVELS[(idx + 1) % THINKING_LEVELS.length]
+    agent.configureModel(modelId, { thinkingLevel: next })
+  }
+
+  const getModelConfig = (modelId: string) => modelConfigs()[modelId] ?? {}
+  const isModelEnabled = (modelId: string) => getModelConfig(modelId).enabled !== false
+
   return (
     <>
+      {/* ── Provider Cards ── */}
       <div style={{ 'margin-bottom': '32px' }}>
         <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', 'margin-bottom': '16px' }}>
           <SectionTitle>模型提供商</SectionTitle>
-          <Btn primary>+ 新增提供商</Btn>
+          <Show when={!showNewForm()}>
+            <Btn primary onClick={() => setShowNewForm(true)}><Plus size={14} style="margin-right:4px" />新增提供商</Btn>
+          </Show>
         </div>
+
+        {/* New provider form */}
+        <Show when={showNewForm()}>
+          <div style={{ padding: '16px', background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.06)', 'border-radius': '8px', 'margin-bottom': '16px', display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
+            <div style={{ 'font-size': '13px', 'font-weight': '600' }}>添加厂商</div>
+            <div style={{ display: 'flex', gap: '12px', 'flex-wrap': 'wrap' }}>
+              <select value={newProviderId()} onChange={(e) => setNewProviderId(e.currentTarget.value)}
+                style={{ ...inputStyle, width: '180px' }}>
+                <option value="">选择厂商...</option>
+                <For each={availableProviderIds()}>{(id) =>
+                  <option value={id}>{PROVIDER_NAMES[id] ?? id}</option>
+                }</For>
+              </select>
+              <input placeholder="API Key" value={newApiKey()} onInput={(e) => setNewApiKey(e.currentTarget.value)}
+                style={{ ...inputStyle, flex: '1', 'min-width': '200px' }} />
+              <input placeholder="API URL (可选)" value={newApiUrl()} onInput={(e) => setNewApiUrl(e.currentTarget.value)}
+                style={{ ...inputStyle, flex: '1', 'min-width': '200px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Btn primary onClick={handleAddProvider}>确认添加</Btn>
+              <Btn onClick={() => setShowNewForm(false)}>取消</Btn>
+            </div>
+          </div>
+        </Show>
+
         <div style={{ display: 'grid', 'grid-template-columns': 'repeat(4, 1fr)', gap: '12px' }}>
-          <For each={modelProviders}>
-            {(p) => (
-              <div style={{
-                padding: '14px', background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.04)',
-                'border-radius': '6px', display: 'flex', 'align-items': 'center', gap: '10px',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>
-                <div style={{
-                  width: '7px', height: '7px', 'border-radius': '50%', 'flex-shrink': '0',
-                  background: p.on ? 'var(--success)' : 'var(--text-muted)',
-                  'box-shadow': p.on ? '0 0 4px rgba(91,140,90,0.3)' : 'none',
-                }} />
-                <div style={{ flex: '1' }}>
-                  <div style={{ 'font-size': '13px', 'font-weight': '500' }}>{p.name}</div>
-                  <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'margin-top': '1px' }}>{p.meta}</div>
+          <For each={providers()}>
+            {(p) => {
+              const modelCount = (agentsByProvider().get(p.id) ?? []).length
+              const isExpanded = expandedProvider() === p.id
+              return (
+                <div>
+                  <div
+                    onClick={() => setExpandedProvider(isExpanded ? null : p.id)}
+                    style={{
+                      padding: '14px', background: 'var(--card-bg)', border: isExpanded ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.04)',
+                      'border-radius': '6px', display: 'flex', 'align-items': 'center', gap: '10px',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}>
+                    <div style={{
+                      width: '7px', height: '7px', 'border-radius': '50%', 'flex-shrink': '0',
+                      background: p.active ? 'var(--success)' : 'var(--text-muted)',
+                      'box-shadow': p.active ? '0 0 4px rgba(91,140,90,0.3)' : 'none',
+                    }} />
+                    <div style={{ flex: '1' }}>
+                      <div style={{ 'font-size': '13px', 'font-weight': '500' }}>{p.name}</div>
+                      <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'margin-top': '1px' }}>
+                        {modelCount} 个模型{p.active ? ' · 已连接' : ' · 未配置'}
+                      </div>
+                    </div>
+                    <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
+                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </span>
+                  </div>
+
+                  {/* Expanded model list */}
+                  <Show when={isExpanded}>
+                    <div style={{ 'margin-top': '8px', padding: '12px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', 'border-radius': '6px' }}>
+                      <table style={{ width: '100%', 'border-collapse': 'collapse', 'font-size': '12px' }}>
+                        <thead>
+                          <tr>
+                            <th style={thStyle}>模型</th>
+                            <th style={{ ...thStyle, width: '100px' }}>思考强度</th>
+                            <th style={{ ...thStyle, width: '60px' }}>启用</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <For each={(agentsByProvider().get(p.id) ?? [])}>
+                            {(agent) => {
+                              const cfg = getModelConfig(agent.modelId)
+                              const level = cfg.thinkingLevel ?? 'medium'
+                              const dots = THINKING_DOTS[level] ?? 3
+                              const enabled = isModelEnabled(agent.modelId)
+                              // Non-thinking models: check provider — Anthropic, DeepSeek support thinking; others may not
+                              const supportsThinking = ['deepseek', 'anthropic'].includes(p.id)
+                              return (
+                                <tr style={{ opacity: enabled ? 1 : 0.4, transition: 'opacity 0.15s' }}>
+                                  <td style={tdStyle}>
+                                    <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{agent.name}</div>
+                                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{agent.modelId}</div>
+                                  </td>
+                                  <td style={tdStyle}>
+                                    {supportsThinking ? (
+                                      <div onClick={() => handleThinkingChange(agent.modelId, level)}
+                                        style={{ display: 'flex', gap: '3px', cursor: 'pointer' }}
+                                        title={`当前: ${level} — 点击切换`}>
+                                        {[1,2,3,4].map((d) => (
+                                          <div style={{ width: '5px', height: '5px', 'border-radius': '50%', background: d <= dots ? 'var(--accent)' : 'rgba(255,255,255,0.10)' }} />
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>不支持</span>
+                                    )}
+                                  </td>
+                                  <td style={tdStyle}>
+                                    <div onClick={() => handleToggleModel(agent.modelId, enabled)} style={{ cursor: 'pointer' }}>
+                                      <ToggleSmall initialOn={enabled} />
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            }}
+                          </For>
+                        </tbody>
+                      </table>
+
+                      {/* Delete provider button */}
+                      <div style={{ 'margin-top': '12px', 'border-top': '1px solid rgba(255,255,255,0.04)', 'padding-top': '10px' }}>
+                        <Show when={deleteConfirm() === p.id}
+                          fallback={
+                            <button onClick={() => setDeleteConfirm(p.id)}
+                              style={{ display: 'flex', 'align-items': 'center', gap: '4px', padding: '4px 10px', 'border-radius': '4px', background: 'transparent', border: '1px solid rgba(239,68,68,0.15)', color: 'var(--text-muted)', 'font-size': '11px', cursor: 'pointer', 'font-family': 'inherit' }}>
+                              <Trash2 size={11} /> 删除厂商
+                            </button>
+                          }>
+                          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'font-size': '11px' }}>
+                            <span style={{ color: '#EF4444' }}>该厂商下的角色将切换到首个可用模型，确认删除？</span>
+                            <button onClick={() => handleDeleteProvider(p.id)}
+                              style={{ padding: '3px 8px', 'border-radius': '3px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', cursor: 'pointer', 'font-size': '11px', 'font-weight': '600' }}>确认</button>
+                            <button onClick={() => setDeleteConfirm(null)}
+                              style={{ padding: '3px 8px', 'border-radius': '3px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)', cursor: 'pointer', 'font-size': '11px' }}>取消</button>
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
+                  </Show>
                 </div>
-                <button style={{
-                  padding: '3px 10px', 'border-radius': '3px', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)', 'font-size': '10px', cursor: 'pointer',
-                }}>{p.on ? '配置' : '设置'}</button>
-              </div>
-            )}
+              )
+            }}
           </For>
         </div>
       </div>
-      <SectionTitle>可用模型列表</SectionTitle>
+
+      {/* ── Global Model List ── */}
+      <SectionTitle>全部模型</SectionTitle>
       <table style={{ width: '100%', 'border-collapse': 'collapse', 'font-size': '12px' }}>
         <thead>
           <tr>
             <th style={thStyle}>模型名称</th>
-            <th style={thStyle}>思考强度</th>
-            <th style={thStyle}>状态</th>
+            <th style={thStyle}>厂商</th>
+            <th style={{ ...thStyle, width: '100px' }}>思考强度</th>
+            <th style={{ ...thStyle, width: '60px' }}>状态</th>
           </tr>
         </thead>
         <tbody>
-          <For each={models}>
-            {(m, i) => (
-              <tr style={{ transition: 'background 0.12s', cursor: 'pointer' }}>
-                <td style={tdStyle}>
-                  <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{m.name}</div>
-                  <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{m.provider}</div>
-                </td>
-                <td style={tdStyle}>
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    {[1,2,3,4].map((d) => (
-                      <div style={{ width: '5px', height: '5px', 'border-radius': '50%', background: d <= m.dots ? 'var(--accent)' : 'rgba(255,255,255,0.10)' }} />
-                    ))}
-                  </div>
-                </td>
-                <td style={tdStyle}><ToggleSmall initialOn={m.on} /></td>
-              </tr>
-            )}
+          <For each={agent.agents()}>
+            {(agent) => {
+              const cfg = getModelConfig(agent.modelId)
+              const level = cfg.thinkingLevel ?? 'medium'
+              const dots = THINKING_DOTS[level] ?? 3
+              const enabled = isModelEnabled(agent.modelId)
+              const supportsThinking = ['deepseek', 'anthropic'].includes(agent.provider)
+              const providerName = PROVIDER_NAMES[agent.provider] ?? agent.provider
+              return (
+                <tr style={{ opacity: enabled ? 1 : 0.4, transition: 'opacity 0.15s', cursor: 'pointer' }}>
+                  <td style={tdStyle}>
+                    <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{agent.name}</div>
+                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{agent.modelId}</div>
+                  </td>
+                  <td style={tdStyle}>{providerName}</td>
+                  <td style={tdStyle}>
+                    {supportsThinking ? (
+                      <div onClick={() => handleThinkingChange(agent.modelId, level)}
+                        style={{ display: 'flex', gap: '3px', cursor: 'pointer' }}
+                        title={`当前: ${level} — 点击切换`}>
+                        {[1,2,3,4].map((d) => (
+                          <div style={{ width: '5px', height: '5px', 'border-radius': '50%', background: d <= dots ? 'var(--accent)' : 'rgba(255,255,255,0.10)' }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>不支持</span>
+                    )}
+                  </td>
+                  <td style={tdStyle}>
+                    <div onClick={() => handleToggleModel(agent.modelId, enabled)} style={{ cursor: 'pointer' }}>
+                      <ToggleSmall initialOn={enabled} />
+                    </div>
+                  </td>
+                </tr>
+              )
+            }}
           </For>
         </tbody>
       </table>

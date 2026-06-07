@@ -66,6 +66,9 @@ export interface AgentContextValue {
   settings: () => { key: string; value: string }[]
   getSettings: () => void
   setSetting: (key: string, value: string) => void
+  saveProvider: (id: string, name: string, opts?: { apiUrl?: string; apiKey?: string; active?: boolean }) => void
+  deleteProvider: (id: string) => void
+  configureModel: (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }) => void
   agents: () => AgentInfo[]
   switchAgent: (agentId: string) => void
   createAgent: (name: string, provider: string, modelId: string, opts?: { avatarColor?: string; roleDescription?: string }) => void
@@ -622,6 +625,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     settings: settingsStore.entries,
     getSettings,
     setSetting,
+    saveProvider: settingsStore.saveProvider,
+    deleteProvider: settingsStore.deleteProvider,
+    configureModel: settingsStore.configureModel,
     agents: agentsStore.agents,
     switchAgent: agentsStore.switchAgent,
     createAgent: agentsStore.createAgent,

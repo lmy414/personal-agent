@@ -1,0 +1,66 @@
+import type { WebSocket } from 'ws'
+import type { ClientMessage } from '../protocol'
+import { getDB } from '../db'
+
+interface ModelConfig {
+  thinkingLevel?: string
+  compactThreshold?: number
+  enabled?: boolean
+}
+
+function getModelConfigs(): Record<string, ModelConfig> {
+  const db = getDB()
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'model_configs'").get() as
+    | { value: string }
+    | undefined
+  if (!row?.value) return {}
+  try { return JSON.parse(row.value) } catch { return {} }
+}
+
+function saveModelConfigs(configs: Record<string, ModelConfig>): void {
+  const db = getDB()
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+    'model_configs', JSON.stringify(configs),
+  )
+}
+
+export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
+  const payload = msg.payload as {
+    modelId: string; thinkingLevel?: string; compactThreshold?: number; enabled?: boolean
+  }
+
+  if (!payload.modelId) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      id: `srv-${Date.now()}`,
+      sessionId: msg.sessionId,
+      ts: Date.now(),
+      payload: { code: 'INVALID_MODEL', message: 'modelId is required', recoverable: true },
+    }))
+    return
+  }
+
+  const configs = getModelConfigs()
+  const current = configs[payload.modelId] ?? {}
+  const updated: ModelConfig = { ...current }
+
+  if (payload.thinkingLevel !== undefined) updated.thinkingLevel = payload.thinkingLevel
+  if (payload.compactThreshold !== undefined) updated.compactThreshold = payload.compactThreshold
+  if (payload.enabled !== undefined) updated.enabled = payload.enabled
+
+  configs[payload.modelId] = updated
+  saveModelConfigs(configs)
+
+  ws.send(JSON.stringify({
+    type: 'model.configured',
+    id: `srv-${Date.now()}`,
+    sessionId: msg.sessionId,
+    ts: Date.now(),
+    payload: {
+      modelId: payload.modelId,
+      thinkingLevel: updated.thinkingLevel as any,
+      compactThreshold: updated.compactThreshold,
+      enabled: updated.enabled,
+    },
+  }))
+}
