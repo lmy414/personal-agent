@@ -1,6 +1,8 @@
+import type { JSX } from 'solid-js'
 import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import type { FileEntry, ServerMessage } from '@bridge/protocol'
+import { Folder, FolderOpen, FileText, FileCode, Palette, Globe, Settings, Image, File, FileBox } from 'lucide-solid'
 import './file-tree.css'
 
 interface TreeNode {
@@ -17,17 +19,18 @@ function getSettingFromList(entries: { key: string; value: string }[], key: stri
   return entries.find((e) => e.key === key)?.value ?? ''
 }
 
-function fileIcon(name: string, type: 'file' | 'directory'): string {
-  if (type === 'directory') return '📁'
+function fileIcon(name: string, type: 'file' | 'directory'): () => JSX.Element {
+  const s = 13
+  if (type === 'directory') return () => <Folder size={s} />
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'md' || ext === 'mdx') return '📝'
-  if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') return '🟦'
-  if (ext === 'json') return '{}'
-  if (ext === 'css') return '🎨'
-  if (ext === 'html') return '🌐'
-  if (ext === 'py' || ext === 'rs' || ext === 'go') return '⚙️'
-  if (IMAGE_EXTS.has(ext)) return '🖼️'
-  return '📄'
+  if (ext === 'md' || ext === 'mdx') return () => <FileText size={s} />
+  if (ext === 'ts' || ext === 'tsx' || ext === 'js' || ext === 'jsx') return () => <FileCode size={s} />
+  if (ext === 'json') return () => <FileBox size={s} />
+  if (ext === 'css') return () => <Palette size={s} />
+  if (ext === 'html') return () => <Globe size={s} />
+  if (ext === 'py' || ext === 'rs' || ext === 'go') return () => <Settings size={s} />
+  if (IMAGE_EXTS.has(ext)) return () => <Image size={s} />
+  return () => <File size={s} />
 }
 
 export function FileTree() {
@@ -205,8 +208,8 @@ export function FileTree() {
         >
           <span class="ft-icon">
             {props.node.type === 'directory'
-              ? (isExpanded() ? '📂' : '📁')
-              : fileIcon(props.node.name, 'file')}
+              ? (isExpanded() ? <FolderOpen size={13} /> : <Folder size={13} />)
+              : (fileIcon(props.node.name, 'file')())}
           </span>
           <span class="ft-name">{props.node.name}</span>
         </div>
@@ -231,7 +234,7 @@ export function FileTree() {
   return (
     <div class="file-tree">
       <div class="file-tree-toolbar">
-        <span class="file-tree-root-path" title="当前工作目录">📁 {displayRoot() || '加载中...'}</span>
+        <span class="file-tree-root-path" title="当前工作目录"><FolderOpen size={13} /> {displayRoot() || '加载中...'}</span>
         <button
           class="file-tree-refresh-btn"
           title="刷新文件列表"

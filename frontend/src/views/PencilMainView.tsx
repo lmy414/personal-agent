@@ -1,6 +1,8 @@
+import type { JSX } from 'solid-js'
 import { createSignal, For, Show, createMemo } from 'solid-js'
 import { useAgent, type MessageEntry, type ToolCallEntry } from '@/shell/useAgent'
 import type { SessionInfo, AgentInfo } from '@bridge/protocol'
+import { Code2, FileText, Globe, Search, CirclePause, BarChart3, Brain, Paperclip, ChevronLeft, FolderOpen } from 'lucide-solid'
 
 // ===== 类型 =====
 
@@ -13,7 +15,7 @@ interface ToolItem {
 }
 
 interface Tab {
-  icon: string
+  icon: () => JSX.Element
   label: string
   active?: boolean
 }
@@ -56,9 +58,9 @@ function formatTokens(n: number): string {
 // ===== 静态配置 =====
 
 const TABS: Tab[] = [
-  { icon: '⚛', label: 'app.tsx' },
-  { icon: '📝', label: 'readme.md', active: true },
-  { icon: '🌐', label: 'index.html' },
+  { icon: () => <Code2 size={12} />, label: 'app.tsx' },
+  { icon: () => <FileText size={12} />, label: 'readme.md', active: true },
+  { icon: () => <Globe size={12} />, label: 'index.html' },
 ]
 
 const INPUT_TAGS = ['MCP 工具', '代码片段', '图片', '文件']
@@ -202,7 +204,7 @@ function Sidebar() {
           'flex-shrink': '0',
         }}
       >
-        <span style={{ 'font-size': '14px', color: 'var(--text-muted)' }}>🔍</span>
+        <span style={{ color: 'var(--text-muted)', display: 'flex' }}><Search size={14} /></span>
         <input
           placeholder="搜索通信记录..."
           value={searchQuery()}
@@ -393,7 +395,7 @@ function Sidebar() {
                 'font-family': 'inherit',
               }}
             >
-              ⏸
+              <CirclePause size={12} />
             </button>
           </div>
           <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
@@ -496,7 +498,7 @@ function Sidebar() {
             >
               資源監視
             </span>
-            <span style={{ 'font-size': '12px', color: 'var(--text-muted)' }}>📊</span>
+            <span style={{ color: 'var(--text-muted)', display: 'flex' }}><BarChart3 size={12} /></span>
           </div>
 
           {/* Token Card */}
@@ -802,7 +804,7 @@ function ChatPanel() {
                                 'margin-bottom': '4px',
                               }}
                             >
-                              <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>💭</span>
+                              <span style={{ color: 'var(--text-muted)', display: 'flex' }}><Brain size={11} /></span>
                               <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>
                                 思考过程
                               </span>
@@ -921,7 +923,7 @@ function ChatPanel() {
               'flex-shrink': '0',
             }}
           >
-            📎
+            <Paperclip size={16} />
           </button>
           <textarea
             ref={textareaRef}
@@ -1055,7 +1057,7 @@ function EditorPanel() {
             'font-family': 'inherit',
           }}
         >
-          收起 ◀
+          收起 <ChevronLeft size={11} />
         </button>
       </div>
       <div class="divider" />
@@ -1089,7 +1091,7 @@ function EditorPanel() {
                   transition: 'all 0.15s',
                 }}
               >
-                <span style={{ 'font-size': '12px' }}>{tab.icon}</span>
+                <span style={{ display: 'flex', 'align-items': 'center' }}>{tab.icon()}</span>
                 <span>{tab.label}</span>
               </div>
             )}

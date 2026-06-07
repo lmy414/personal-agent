@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js'
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { Settings, Palette, Wrench, FolderOpen, Info } from 'lucide-solid'
+import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
@@ -96,7 +96,7 @@ const mcpTools = [
 
 const skillGroups = [
   {
-    icon: '🌐', title: '全局技能', desc: '所有项目可用',
+    icon: () => <Globe size={14} />, title: '全局技能', desc: '所有项目可用',
     skills: [
       { name: '代码审查', desc: '自动检测代码质量与安全漏洞', on: true },
       { name: '多语言翻译', desc: '支持跨语言工程文档', on: true },
@@ -104,7 +104,7 @@ const skillGroups = [
     ],
   },
   {
-    icon: '📁', title: '项目技能', desc: '仅当前项目可用',
+    icon: () => <FolderOpen size={14} />, title: '项目技能', desc: '仅当前项目可用',
     skills: [
       { name: '单元测试生成', desc: '基于代码逻辑自动生成测试用例', on: true },
       { name: '文档生成', desc: '从代码注释生成 API 文档', on: true },
@@ -135,8 +135,8 @@ const logs = [
 ]
 
 const links = [
-  { icon: '🐙', name: 'GitHub',  url: 'github.com/layyck' },
-  { icon: '📺', name: 'Bilibili', url: 'space.bilibili.com/2529362295' },
+  { icon: () => <ExternalLink size={16} />, name: 'GitHub',  url: 'github.com/layyck' },
+  { icon: () => <Monitor size={16} />, name: 'Bilibili', url: 'space.bilibili.com/2529362295' },
 ]
 
 // ── 子页面 ──
@@ -257,7 +257,7 @@ function DisplayPage() {
                   background: 'rgba(255,255,255,0.024)', border: '1px solid rgba(255,255,255,0.05)',
                   'border-radius': '4px', cursor: 'pointer',
                 }}>
-                  <span style={{ 'font-size': '16px', color: 'var(--text-muted)' }}>🖼</span>
+                  <Image size={16} />
                 </div>
                 {/* Browse button — matches Pencil frame#eAztA: transparent fill, stroke:#FFFFFF14, padding:[7,16] */}
                 <div style={{
@@ -323,7 +323,7 @@ function SkillsPage() {
         {(group) => (
           <div style={{ 'margin-bottom': '20px' }}>
             <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '10px' }}>
-              <span style={{ 'font-size': '14px' }}>{group.icon}</span>
+              <span style={{ display: 'flex', 'align-items': 'center' }}>{group.icon()}</span>
               <span style={{ 'font-size': '12px', 'font-weight': '500' }}>{group.title}</span>
               <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': 'auto' }}>{group.desc}</span>
             </div>
@@ -481,7 +481,7 @@ function SystemPage() {
                   border: '1px solid rgba(255,255,255,0.04)', 'border-radius': '6px',
                 }}>
                   <div style={{ display: 'flex', 'align-items': 'center', gap: '10px' }}>
-                    <span style={{ 'font-size': '16px' }}>{link.icon}</span>
+                    <span style={{ display: 'flex', 'align-items': 'center' }}>{link.icon()}</span>
                     <div>
                       <div style={{ 'font-size': '13px', 'font-weight': '500' }}>{link.name}</div>
                       <div style={{ 'font-size': '10px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>{link.url}</div>

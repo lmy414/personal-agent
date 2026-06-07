@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js'
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { MessageSquare, Search, Database, FileText, Bug, Palette, Zap, Plug } from 'lucide-solid'
+import { MessageSquare, Search, Database, FileText, Bug, Palette, Zap, Plug, Brain } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
@@ -55,7 +55,7 @@ export default function SessionRecordsView() {
           <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'font-family': '"JetBrains Mono", monospace' }}>24 会话</span>
         </div>
         <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', padding: '8px 16px', height: '40px', 'border-bottom': '1px solid rgba(255,255,255,0.03)' }}>
-          <span style={{ 'font-size': '13px', color: 'var(--text-muted)' }}>🔍 搜索会话记录...</span>
+          <span style={{ display: 'flex', 'align-items': 'center', gap: '6px', 'font-size': '13px', color: 'var(--text-muted)' }}><Search size={14} /> 搜索会话记录...</span>
         </div>
         <div style={{ flex: '1', 'overflow-y': 'auto' }}>
           <For each={sessionGroups}>{(group, gi) => (
@@ -110,7 +110,7 @@ export default function SessionRecordsView() {
             <div style={{ width: '28px', height: '28px', 'border-radius': '4px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-size': '11px', 'font-weight': 'bold', 'flex-shrink': '0', background: 'rgba(255,255,255,0.04)', color: '#fff' }}>C</div>
             <div style={{ 'max-width': '85%' }}>
               <div style={{ background: 'rgba(10,10,16,0.25)', 'border-radius': '6px', padding: '8px 12px', 'margin-bottom': '8px' }}>
-                <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>💭 思考过程 · 1.2s</div>
+                <div style={{ display: 'flex', 'align-items': 'center', gap: '4px', 'font-size': '11px', color: 'var(--text-muted)' }}><Brain size={11} /> 思考过程 · 1.2s</div>
                 <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-top': '4px', 'line-height': '1.5' }}>好的，我先分析一下当前的组件结构，然后提出重构方案。</div>
               </div>
               <div style={{ padding: '10px 14px', 'border-radius': '8px', 'font-size': '13px', 'line-height': '1.6', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}>好的，我来分析一下当前组件的状态管理情况。</div>
