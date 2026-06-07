@@ -52,6 +52,12 @@ function timeStr(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function formatDuration(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`
+  if (ms > 0) return `${ms}ms`
+  return '...'
+}
+
 function formatTokens(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
@@ -123,7 +129,7 @@ function Sidebar() {
       name: tc.toolName,
       status: toolStatusText(tc),
       desc: `${tc.toolName} · ${(tc.input as Record<string, unknown>)['path'] as string ?? ''}`,
-      time: timeStr(),
+      time: formatDuration(tc.duration),
       dot: toolDot(tc),
     }))
   )
