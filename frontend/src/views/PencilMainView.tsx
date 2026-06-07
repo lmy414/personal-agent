@@ -70,19 +70,25 @@ const INPUT_TAGS = ['MCP 工具', '代码片段', '图片', '文件']
 function Sidebar() {
   const a = useAgent()
   const [searchQuery, setSearchQuery] = createSignal('')
-  const [expandedAgents, setExpandedAgents] = createSignal<string[]>([])
+  const [expandedAgents, setExpandedAgents] = createSignal<string[]>(['default'])
 
-  // 默认展开所有角色（因为目前角色少）
-  const ensureExpanded = () => {
-    for (const ag of allAgents()) {
-      if (!expandedAgents().includes(ag.id)) {
-        setExpandedAgents((prev) => [...prev, ag.id])
-      }
-    }
+  const toggleExpand = (id: string) => {
+    setExpandedAgents((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
   }
-  ensureExpanded()
 
-  // 当前正在聊天的角色 — 从当前 session 的 agentId 反查
+  // must be defined before activeAgent and sessionsByAgent
+  const allAgents = createMemo(() => {
+    const list = a.agents()
+    if (list.length > 0) return list
+    return [{
+      id: 'default', name: '澪', provider: 'DeepSeek', modelId: '',
+      avatarColor: '#6B8FA8', roleDescription: '技術顧問 · 戦術支援',
+      isDefault: true, createdAt: 0, sessionCount: 0,
+    } as AgentInfo]
+  })
+
   const activeAgent = createMemo(() => {
     const sessions = a.sessions()
     const curSid = a.sessionId()
@@ -94,40 +100,16 @@ function Sidebar() {
     return linked ?? agents.find((ag) => ag.isDefault) ?? agents[0]
   })
 
-  const toggleExpand = (id: string) => {
-    setExpandedAgents((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
-  }
-
   const sessionsByAgent = createMemo(() => {
     const map = new Map<string, SessionInfo[]>()
-    const allSessions = a.sessions()
     const agents = allAgents()
     const defaultId = agents.find((ag) => ag.isDefault)?.id ?? agents[0]?.id ?? 'default'
-    for (const s of allSessions) {
+    for (const s of a.sessions()) {
       const key = s.agentId || defaultId
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(s)
     }
     return map
-  })
-
-  const allAgents = createMemo(() => {
-    const list = a.agents()
-    // 兜底：至少有一个澪
-    if (list.length > 0) return list
-    return [{
-      id: 'default',
-      name: '澪',
-      provider: 'DeepSeek',
-      modelId: '',
-      avatarColor: '#6B8FA8',
-      roleDescription: '技術顧問 · 戦術支援',
-      isDefault: true,
-      createdAt: 0,
-      sessionCount: 0,
-    } as AgentInfo]
   })
 
   const handleAgentClick = (agentId: string) => {
