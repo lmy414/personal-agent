@@ -73,6 +73,7 @@ function Sidebar() {
   const a = useAgent()
   const [searchQuery, setSearchQuery] = createSignal('')
   const [expandedAgents, setExpandedAgents] = createSignal<string[]>(['default'])
+  const [deleteTarget, setDeleteTarget] = createSignal<string | null>(null)
 
   const toggleExpand = (id: string) => {
     setExpandedAgents((prev) =>
@@ -391,6 +392,25 @@ function Sidebar() {
                             >
                               {s.roundCount}轮
                             </span>
+                            <Show
+                              when={deleteTarget() === s.id}
+                              fallback={
+                                <span
+                                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(s.id) }}
+                                  style={{ 'font-size': '12px', color: 'var(--text-muted)', cursor: 'pointer', 'margin-left': '4px', 'line-height': '1' }}
+                                  title="删除会话"
+                                >×</span>
+                              }
+                            >
+                              <span
+                                onClick={(e) => { e.stopPropagation(); a.send('session.delete', { sessionId: s.id }); setDeleteTarget(null) }}
+                                style={{ 'font-size': '10px', color: '#f87171', cursor: 'pointer', 'margin-left': '4px', 'white-space': 'nowrap', 'font-weight': '500' }}
+                              >确认</span>
+                              <span
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(null) }}
+                                style={{ 'font-size': '10px', color: 'var(--text-muted)', cursor: 'pointer', 'margin-left': '2px' }}
+                              >取消</span>
+                            </Show>
                           </div>
                         )}
                       </For>
