@@ -740,7 +740,14 @@ function ChatPanel() {
     const cached = mdCache.get(msgId)
     if (cached === text) return mdCache.get(`r:${msgId}`) ?? ''
     mdCache.set(msgId, text)
-    const html = isRawHtml(text) ? text : marked.parse(text) as string
+    let html = text
+    if (isRawHtml(text)) {
+      // 去掉外层文档标签，只保留 body 内容用于 inline 渲染
+      html = text.replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<\/?(html|head|body)[^>]*>/gi, '')
+    } else {
+      html = marked.parse(text) as string
+    }
     mdCache.set(`r:${msgId}`, html)
     return html
   }
