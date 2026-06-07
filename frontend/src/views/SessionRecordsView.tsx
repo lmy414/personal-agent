@@ -1,6 +1,8 @@
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
+function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
+
 interface Session {
   icon: string; title: string; meta: string; cost: string
 }
@@ -59,7 +61,7 @@ export default function SessionRecordsView() {
               <For each={group.sessions}>{(s, si) => {
                 const key = `${gi()}-${si()}`
                 return (
-                  <div onClick={() => setActiveKey(key)} style={{ display: 'flex', 'align-items': 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', 'border-left': activeKey() === key ? '3px solid var(--accent)' : '3px solid transparent', background: activeKey() === key ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
+                  <div {...kbd(() => setActiveKey(key))} onClick={() => setActiveKey(key)} style={{ display: 'flex', 'align-items': 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', 'border-left': activeKey() === key ? '3px solid var(--accent)' : '3px solid transparent', background: activeKey() === key ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
                     <div style={{ 'font-size': '14px', width: '20px', 'text-align': 'center', 'flex-shrink': '0' }}>{s.icon}</div>
                     <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', gap: '2px', 'min-width': '0' }}>
                       <div style={{ 'font-size': '12px', color: 'var(--text-primary)', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>{s.title}</div>

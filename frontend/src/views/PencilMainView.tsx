@@ -20,6 +20,17 @@ interface Tab {
 
 // ===== 工具函数 =====
 
+/** 让 div 获得键盘可访问性 — 不改变布局或样式 */
+function kbdHandlers(fn: () => void) {
+  return {
+    tabIndex: 0 as number,
+    role: 'button' as const,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() }
+    },
+  }
+}
+
 function toolDot(tc: ToolCallEntry): 'ok' | 'err' | 'run' {
   if (tc.status === 'running') return 'run'
   if (tc.status === 'error') return 'err'
@@ -233,6 +244,7 @@ function Sidebar() {
                     cursor: 'pointer',
                     transition: 'background 0.12s',
                   }}
+                  {...kbdHandlers(() => toggleExpand(agentItem.id))}
                   onClick={() => toggleExpand(agentItem.id)}
                 >
                   <div
@@ -319,6 +331,7 @@ function Sidebar() {
                                   ? '3px solid var(--text-muted)'
                                   : '3px solid transparent',
                             }}
+                            {...kbdHandlers(() => agent.switchSession(s.id))}
                             onClick={() => agent.switchSession(s.id)}
                           >
                             <span style={{ 'font-size': '12px', color: 'var(--text-secondary)' }}>

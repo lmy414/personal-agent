@@ -1,6 +1,8 @@
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
+function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
+
 type SettingsPage = 'model' | 'display' | 'skills' | 'workdir' | 'system'
 
 const NAV_ITEMS: { id: SettingsPage; icon: string; label: string; desc: string }[] = [
@@ -16,7 +18,7 @@ const NAV_ITEMS: { id: SettingsPage; icon: string; label: string; desc: string }
 function ToggleSmall(props: { initialOn: boolean }) {
   const [on, setOn] = createSignal(props.initialOn)
   return (
-    <div onClick={() => setOn(!on())} style={{
+    <div {...kbd(() => setOn(!on()))} onClick={() => setOn(!on())} style={{
       width: '32px', height: '18px', 'border-radius': '9px', cursor: 'pointer',
       background: on() ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)',
       border: 'none', position: 'relative', transition: 'background 0.2s',
@@ -535,7 +537,7 @@ export default function SettingsLayoutView() {
         <div style={{ flex: '1', 'overflow-y': 'auto', padding: '8px 0' }}>
           <For each={NAV_ITEMS}>
             {(item) => (
-              <div onClick={() => setPage(item.id)} style={{
+              <div {...kbd(() => setPage(item.id))} onClick={() => setPage(item.id)} style={{
                 display: 'flex', 'align-items': 'center', gap: '10px', padding: '10px 16px',
                 cursor: 'pointer', transition: 'all 0.15s',
                 'border-left': page() === item.id ? '2px solid var(--accent)' : '2px solid transparent',

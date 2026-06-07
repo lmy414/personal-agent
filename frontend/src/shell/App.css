@@ -290,3 +290,55 @@ body::before {
 @media (max-width: 900px) {
   :root { --left-col: 280px; --gap: 8px; --margin: 8px; }
 }
+
+/* ====== 无障碍 ====== */
+
+/* Focus visible — 全局可见焦点环 */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 输入框用更微妙的 focus */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: none;
+  border-color: rgba(107,143,168,0.35);
+}
+
+/* 按钮重置 — 让 <button> 看起来像 div，保持键盘可访问 */
+button.unstyled {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: inherit;
+}
+
+/* 全局可点击元素 */
+[data-clickable] {
+  cursor: pointer;
+}
+
+/* Reduced motion — 关闭动画 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .praying-dot { animation: none; }
+}
+
+/* ====== Z-Index Scale ======
+   0     — 背景纹理 (body::before)
+   1     — 主内容区 (.glass-panel-full, App flex root)
+   2-9   — 面板内元素 (bracket, chat bubbles, etc.)
+   10    — 面板拖拽把手
+   20    — 旧 Grid overlay
+   45    — 顶部菜单栏
+   50    — 顶部菜单开关
+   55    — 设置全页面
+*/

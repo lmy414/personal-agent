@@ -1,6 +1,8 @@
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 
+function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
+
 function ToggleRow(props: { label: string; desc: string; initialOn: boolean }) {
   const [on, setOn] = createSignal(props.initialOn)
   return (
@@ -9,7 +11,7 @@ function ToggleRow(props: { label: string; desc: string; initialOn: boolean }) {
         <div style={{ 'font-size': '13px', color: 'var(--text-primary)' }}>{props.label}</div>
         <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{props.desc}</div>
       </div>
-      <div onClick={() => setOn(!on())} style={{ width: '36px', height: '20px', 'border-radius': '10px', cursor: 'pointer', background: on() ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)', border: 'none', position: 'relative', transition: 'background 0.2s' }}>
+      <div {...kbd(() => setOn(!on()))} onClick={() => setOn(!on())} style={{ width: '36px', height: '20px', 'border-radius': '10px', cursor: 'pointer', background: on() ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)', border: 'none', position: 'relative', transition: 'background 0.2s' }}>
         <div style={{ position: 'absolute', top: '2px', left: '2px', width: '16px', height: '16px', 'border-radius': '50%', background: 'white', transition: 'transform 0.2s', transform: on() ? 'translateX(16px)' : 'translateX(0)' }} />
       </div>
     </div>
@@ -66,7 +68,7 @@ export default function CharacterView() {
         </div>
         <div style={{ flex: '1', 'overflow-y': 'auto' }}>
           <For each={agents}>{(a) => (
-            <div onClick={() => setActiveId(a.id)} style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', 'border-left': activeId() === a.id ? '3px solid var(--accent)' : '3px solid transparent', background: activeId() === a.id ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
+            <div {...kbd(() => setActiveId(a.id))} onClick={() => setActiveId(a.id)} style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', 'border-left': activeId() === a.id ? '3px solid var(--accent)' : '3px solid transparent', background: activeId() === a.id ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
               <div style={{ width: '36px', height: '36px', 'border-radius': '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '14px', 'font-weight': 'bold', color: '#fff', 'flex-shrink': '0' }}>{a.avatar}</div>
               <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', gap: '2px' }}>
                 <div style={{ 'font-size': '13px', 'font-weight': '500', color: 'var(--text-primary)' }}>{a.name}</div>
