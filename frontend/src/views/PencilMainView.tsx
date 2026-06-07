@@ -471,9 +471,15 @@ function Sidebar() {
             </For>
           </div>
         </div>
-        <div class="divider" />
+      </div>
 
-        {/* Dashboard */}
+      {/* Dashboard — 底部固定 */}
+      <div
+        style={{
+          'flex-shrink': '0',
+          'border-top': '1px solid rgba(255,255,255,0.03)',
+        }}
+      >
         <div
           style={{
             padding: '12px 16px',
