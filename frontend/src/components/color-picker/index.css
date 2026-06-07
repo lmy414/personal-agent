@@ -61,10 +61,8 @@
 
 /* ── 下拉面板 ── */
 .color-picker__panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 100;
+  position: fixed;
+  z-index: 9999;
   width: 240px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);

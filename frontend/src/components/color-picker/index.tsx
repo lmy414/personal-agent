@@ -1,4 +1,4 @@
-import { createSignal, Show, onCleanup, onMount } from 'solid-js'
+import { createSignal, Show, onCleanup, onMount, createEffect } from 'solid-js'
 import './index.css'
 
 export interface ColorPickerProps {
@@ -81,11 +81,48 @@ export function ColorPicker(props: ColorPickerProps) {
 
   // 点击外部关闭
   let panelRef: HTMLDivElement | undefined
+  let triggerRef: HTMLButtonElement | undefined
   const handleDocClick = (e: MouseEvent) => {
     if (panelRef && !panelRef.contains(e.target as Node)) setOpen(false)
   }
   onMount(() => document.addEventListener('mousedown', handleDocClick))
   onCleanup(() => document.removeEventListener('mousedown', handleDocClick))
+
+  // 自适应定位：根据触发按钮在视口中的位置决定面板展开方向
+  const updatePosition = () => {
+    if (!panelRef || !triggerRef) return
+    const rect = triggerRef.getBoundingClientRect()
+    const panelH = panelRef.offsetHeight || 320
+    const panelW = panelRef.offsetWidth || 240
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    // 垂直方向：下方空间不足则向上展开
+    const spaceBelow = vh - rect.bottom
+    const spaceAbove = rect.top
+    let top: number
+    if (spaceBelow >= panelH + 8 || spaceBelow >= spaceAbove) {
+      top = rect.bottom + 8
+    } else {
+      top = rect.top - panelH - 8
+    }
+
+    // 水平方向：右对齐，右侧空间不足则左对齐
+    let left = rect.right - panelW
+    if (left < 8) left = 8
+    if (left + panelW > vw - 8) left = vw - panelW - 8
+
+    panelRef.style.top = `${top}px`
+    panelRef.style.left = `${left}px`
+  }
+
+  // 打开时计算位置
+  createEffect(() => {
+    if (open()) {
+      // DOM 更新后计算
+      requestAnimationFrame(updatePosition)
+    }
+  })
 
   // 饱和度/明度面板拖拽
   let svRef: HTMLDivElement | undefined
@@ -161,6 +198,7 @@ export function ColorPicker(props: ColorPickerProps) {
     <div class="color-picker">
       <button
         class="color-picker__trigger"
+        ref={triggerRef}
         onClick={() => { syncFromHex(props.value); setOpen(!open()) }}
         type="button"
       >
