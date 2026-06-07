@@ -630,6 +630,7 @@ function Sidebar() {
 function ChatPanel() {
   const agent = useAgent()
   const [inputValue, setInputValue] = createSignal('')
+  const [collapsedThinkings, setCollapsedThinkings] = createSignal<Set<string>>(new Set())
   let textareaRef: HTMLTextAreaElement | undefined
 
   const handleSend = () => {
@@ -646,7 +647,48 @@ function ChatPanel() {
     }
   }
 
-  const messages = createMemo(() => agent.messages())
+  // 过滤掉纯工具调用的空气泡
+  const messages = createMemo(() =>
+    agent.messages().filter((m) => m.content || m.thinking || m.partial)
+  )
+
+  const toggleThinking = (msgId: string) => {
+    setCollapsedThinkings((prev) => {
+      const next = new Set(prev)
+      if (next.has(msgId)) next.delete(msgId)
+      else next.add(msgId)
+      return next
+    })
+  }
+
+  // 当前会话标题
+  const sessionTitle = createMemo(() => {
+    const s = agent.sessions().find((s) => s.id === agent.sessionId())
+    return s?.title ?? '新会话'
+  })
+
+  // 当前角色名
+  const agentName = createMemo(() => {
+    const sessions = agent.sessions()
+    const curSid = agent.sessionId()
+    const curSession = sessions.find((s) => s.id === curSid)
+    const agentList = agent.agents()
+    const linked = curSession?.agentId
+      ? agentList.find((a) => a.id === curSession.agentId)
+      : undefined
+    return linked?.name ?? agentList.find((a) => a.isDefault)?.name ?? agentList[0]?.name ?? '澪'
+  })
+
+  // Markdown 渲染 — 写回纯文本，避免 innerHTML 分散
+  const renderContent = (text: string) => {
+    if (!text) return text
+    let html = text
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:var(--code-bg);border-radius:4px;padding:10px 14px;margin:6px 0;overflow-x:auto"><code style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--success)">$2</code></pre>')
+    html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:11px;font-family:JetBrains Mono,monospace">$1</code>')
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    html = html.replace(/\n/g, '<br/>')
+    return html
+  }
 
   return (
     <div
@@ -686,7 +728,7 @@ function ChatPanel() {
             color: '#fff',
           }}
         >
-          澪号端末 · MIO-TERMINAL
+          {agentName()} · {sessionTitle()}
         </div>
         <div
           style={{
@@ -782,39 +824,33 @@ function ChatPanel() {
                           flex: '1',
                         }}
                       >
-                        {/* Thinking block */}
+                        {/* Thinking block — collapsible */}
                         <Show when={msg.thinking}>
                           <div
                             style={{
                               background: 'rgba(10,10,16,0.25)',
                               'border-radius': '6px',
-                              padding: '8px 12px',
+                              padding: '6px 10px',
                               width: '100%',
                               'margin-bottom': '4px',
+                              cursor: 'pointer',
                             }}
+                            onClick={() => toggleThinking(msg.messageId)}
                           >
-                            <div
-                              style={{
-                                display: 'flex',
-                                'align-items': 'center',
-                                gap: '8px',
-                                'margin-bottom': '4px',
-                              }}
-                            >
+                            <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-muted)', display: 'flex' }}><Brain size={11} /></span>
-                              <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>
-                                思考过程
+                              <span style={{ 'font-size': '11px', color: 'var(--text-muted)', flex: '1' }}>
+                                思考过程 {collapsedThinkings().has(msg.messageId) ? '(点击展开)' : '(点击收起)'}
+                              </span>
+                              <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
+                                {collapsedThinkings().has(msg.messageId) ? '▶' : '▼'}
                               </span>
                             </div>
-                            <div
-                              style={{
-                                'font-size': '12px',
-                                color: 'var(--text-muted)',
-                                'line-height': '1.5',
-                              }}
-                            >
-                              {msg.thinking}
-                            </div>
+                            <Show when={!collapsedThinkings().has(msg.messageId)}>
+                              <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'line-height': '1.5', 'margin-top': '4px' }}>
+                                {msg.thinking}
+                              </div>
+                            </Show>
                           </div>
                         </Show>
                         {/* Bubble */}
@@ -829,7 +865,7 @@ function ChatPanel() {
                             border: '1px solid rgba(255,255,255,0.04)',
                           }}
                         >
-                          {msg.content || (msg.partial ? '...' : '')}
+                          <div innerHTML={renderContent(msg.content) || (msg.partial ? '...' : '')} style={{ 'font-size': '13px', 'line-height': '1.6', color: 'var(--text-primary)' }} />
                         </div>
                       </div>
                     </div>
