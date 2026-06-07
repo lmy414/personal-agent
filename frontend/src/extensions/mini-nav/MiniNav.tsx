@@ -2,6 +2,7 @@ import type { JSX } from 'solid-js'
 import { For } from 'solid-js'
 import { MessageSquare, Users, ClipboardList, Coins, FolderOpen, Settings } from 'lucide-solid'
 import { activeView, navigateTo, type ViewId } from '@/shell/nav-signal'
+import { sidebarMode, setSidebarMode } from '@/shell/sidebar-mode'
 import './mini-nav.css'
 
 interface NavItem {
@@ -20,14 +21,28 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 export function MiniNav() {
+  const isActive = (id: ViewId) => {
+    if (id === 'files') return sidebarMode() === 'files'
+    return activeView() === id && sidebarMode() !== 'files'
+  }
+
+  const handleClick = (id: ViewId) => {
+    if (id === 'files') {
+      setSidebarMode(sidebarMode() === 'files' ? 'chat' : 'files')
+    } else {
+      setSidebarMode('chat')
+      navigateTo(id)
+    }
+  }
+
   return (
     <nav class="mini-nav">
       <For each={NAV_ITEMS}>
         {(item) => (
           <button
             class="nav-item"
-            classList={{ active: activeView() === item.id }}
-            onClick={() => navigateTo(item.id)}
+            classList={{ active: isActive(item.id) }}
+            onClick={() => handleClick(item.id)}
             title={item.label}
           >
             <span class="nav-icon">{item.icon()}</span>
