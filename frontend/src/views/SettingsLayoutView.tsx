@@ -34,6 +34,23 @@ function ToggleSmall(props: { initialOn: boolean }) {
   )
 }
 
+// Controlled toggle for model enable/disable — reads from model_configs
+function ModelToggle(props: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <div {...kbd(props.onToggle)} onClick={props.onToggle} style={{
+      width: '32px', height: '18px', 'border-radius': '9px', cursor: 'pointer',
+      background: props.enabled ? 'rgba(107,143,168,0.40)' : 'rgba(255,255,255,0.10)',
+      border: 'none', position: 'relative', transition: 'background 0.2s',
+    }}>
+      <div style={{
+        position: 'absolute', top: '2px', left: '2px', width: '14px', height: '14px',
+        'border-radius': '50%', background: 'white', transition: 'transform 0.2s',
+        transform: props.enabled ? 'translateX(14px)' : 'translateX(0)',
+      }} />
+    </div>
+  )
+}
+
 function SectionTitle(props: { children: string }) {
   return <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', 'margin-bottom': '16px' }}>{props.children}</div>
 }
@@ -312,9 +329,7 @@ function ModelPage() {
                                     )}
                                   </td>
                                   <td style={tdStyle}>
-                                    <div onClick={() => handleToggleModel(model.id, enabled)} style={{ cursor: 'pointer' }}>
-                                      <ToggleSmall initialOn={enabled} />
-                                    </div>
+                                    <ModelToggle enabled={enabled} onToggle={() => handleToggleModel(model.id, enabled)} />
                                   </td>
                                 </tr>
                               )
@@ -392,9 +407,7 @@ function ModelPage() {
                         )}
                       </td>
                       <td style={tdStyle}>
-                        <div onClick={() => handleToggleModel(model.id, enabled)} style={{ cursor: 'pointer' }}>
-                          <ToggleSmall initialOn={enabled} />
-                        </div>
+                        <ModelToggle enabled={enabled} onToggle={() => handleToggleModel(model.id, enabled)} />
                       </td>
                     </tr>
                   )
