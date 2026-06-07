@@ -135,7 +135,7 @@ export type ServerMessage =
   // ── 厂商 & 模型配置 (3) ──
   | ServerMsg<'provider.saved', { provider: { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean } }>
   | ServerMsg<'provider.deleted', { id: string; affectedAgents: number; fallbackModel: string }>
-  | ServerMsg<'model.configured', { modelId: string; thinkingLevel?: ThinkingLevel; compactThreshold?: number; enabled?: boolean }>
+  | ServerMsg<'model.configured', { modelId: string; thinkingLevel?: ThinkingLevel; compactThreshold?: number; enabled?: boolean; visible?: boolean }>
 
   // ── 压缩事件 (1) — Pi session_compact / session_before_compact ──
   | ServerMsg<'session.compacted', { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }>

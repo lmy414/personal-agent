@@ -172,20 +172,17 @@ function ModelPage() {
     } catch { return [] }
   })
 
-  const modelConfigs = createMemo<Record<string, { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }>>(() => {
+  const modelConfigs = createMemo<Record<string, { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean; visible?: boolean }>>(() => {
     const entry = agent.settings().find(e => e.key === 'model_configs')
     if (!entry?.value) return {}
     try { return JSON.parse(entry.value) } catch { return {} }
   })
 
-  // Models come from providers JSON (written by settings.discover via Pi)
+  // Models come from providers JSON (written by settings.discover via Pi).
+  // DO NOT sort — stable order prevents <For> index-based DOM reuse bugs.
   const getProviderModels = (providerId: string) => {
     const p = providers().find(p => p.id === providerId)
-    return (p?.models ?? []).slice().sort((a, b) => {
-      const aOn = isModelEnabled(a.id) ? 1 : 0
-      const bOn = isModelEnabled(b.id) ? 1 : 0
-      return bOn - aOn // enabled first
-    })
+    return (p?.models ?? []).filter(m => getModelConfig(m.id).visible !== false)
   }
 
   const availableProviderIds = createMemo(() => {
@@ -210,6 +207,28 @@ function ModelPage() {
     agent.deleteProvider(id)
     setDeleteConfirm(null)
     setExpandedProvider(null)
+  }
+
+  // ── 配置弹窗状态 ──
+  const [configModalProviderId, setConfigModalProviderId] = createSignal<string | null>(null)
+
+  const configModalProvider = () => providers().find(p => p.id === configModalProviderId())
+  const visibleModelIds = () => new Set(getProviderModels(configModalProviderId() ?? '').map(m => m.id))
+  const removableModels = () => getProviderModels(configModalProviderId() ?? '')
+  // All models from providers JSON that are NOT currently visible
+  const addableModels = () => {
+    const p = configModalProvider()
+    if (!p?.models) return []
+    const visible = visibleModelIds()
+    return p.models.filter(m => !visible.has(m.id))
+  }
+
+  const handleRemoveModel = (modelId: string) => {
+    agent.configureModel(modelId, { visible: false })
+  }
+
+  const handleAddModel = (modelId: string) => {
+    agent.configureModel(modelId, { visible: true })
   }
 
   const handleToggleModel = (modelId: string, currentEnabled: boolean) => {
@@ -285,6 +304,10 @@ function ModelPage() {
                         {modelCount} 个模型{p.active ? ' · 已连接' : ' · 未配置'}
                       </div>
                     </div>
+                    <button onClick={(e) => { e.stopPropagation(); setConfigModalProviderId(p.id) }}
+                      style={{ padding: '2px 8px', 'border-radius': '3px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)', 'font-size': '10px', cursor: 'pointer', 'font-family': 'inherit' }}>
+                      配置
+                    </button>
                     <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
@@ -417,6 +440,71 @@ function ModelPage() {
           }</For>
         </tbody>
       </table>
+
+      {/* ── Config Modal ── */}
+      <Show when={configModalProviderId()}>
+        <div onClick={() => setConfigModalProviderId(null)}
+          style={{ position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.60)', 'z-index': '100', display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '720px', 'max-height': '80vh', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.08)', 'border-radius': '10px', padding: '24px', display: 'flex', 'flex-direction': 'column', gap: '16px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between' }}>
+              <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '16px', 'font-weight': '600' }}>
+                配置 {configModalProvider()?.name} 模型
+              </div>
+              <button onClick={() => setConfigModalProviderId(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', 'font-size': '18px' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '16px', 'overflow-y': 'auto', flex: '1' }}>
+              <div>
+                <div style={{ 'font-size': '12px', 'font-weight': '600', 'margin-bottom': '8px', color: 'var(--text-secondary)' }}>
+                  已加入 ({removableModels().length})
+                </div>
+                <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                  <Show when={removableModels().length > 0} fallback={
+                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)', padding: '8px' }}>无模型</div>
+                  }>
+                    <For each={removableModels()}>
+                      {(m) => (
+                        <div onClick={() => handleRemoveModel(m.id)}
+                          style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '8px 10px', 'border-radius': '4px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div>
+                            <div style={{ 'font-size': '12px', color: 'var(--text-primary)' }}>{m.name}</div>
+                            <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>{m.id}</div>
+                          </div>
+                          <span style={{ 'font-size': '10px', color: '#EF4444' }}>移除</span>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              </div>
+              <div>
+                <div style={{ 'font-size': '12px', 'font-weight': '600', 'margin-bottom': '8px', color: 'var(--text-secondary)' }}>
+                  可添加 ({addableModels().length})
+                </div>
+                <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                  <Show when={addableModels().length > 0} fallback={
+                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)', padding: '8px' }}>全部已加入</div>
+                  }>
+                    <For each={addableModels()}>
+                      {(m) => (
+                        <div onClick={() => handleAddModel(m.id)}
+                          style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '8px 10px', 'border-radius': '4px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div>
+                            <div style={{ 'font-size': '12px', color: 'var(--text-muted)' }}>{m.name}</div>
+                            <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>{m.id}</div>
+                          </div>
+                          <span style={{ 'font-size': '10px', color: 'var(--accent)' }}>加入</span>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Show>
     </>
   )
 }

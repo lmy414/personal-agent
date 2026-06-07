@@ -68,7 +68,7 @@ export interface AgentContextValue {
   setSetting: (key: string, value: string) => void
   saveProvider: (id: string, name: string, opts?: { apiUrl?: string; apiKey?: string; active?: boolean }) => void
   deleteProvider: (id: string) => void
-  configureModel: (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }) => void
+  configureModel: (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean; visible?: boolean }) => void
   agents: () => AgentInfo[]
   switchAgent: (agentId: string) => void
   createAgent: (name: string, provider: string, modelId: string, opts?: { avatarColor?: string; roleDescription?: string }) => void

@@ -26,7 +26,7 @@ function saveModelConfigs(configs: Record<string, ModelConfig>): void {
 
 export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
   const payload = msg.payload as {
-    modelId: string; thinkingLevel?: string; compactThreshold?: number; enabled?: boolean
+    modelId: string; thinkingLevel?: string; compactThreshold?: number; enabled?: boolean; visible?: boolean
   }
 
   if (!payload.modelId) {
@@ -47,6 +47,7 @@ export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
   if (payload.thinkingLevel !== undefined) updated.thinkingLevel = payload.thinkingLevel
   if (payload.compactThreshold !== undefined) updated.compactThreshold = payload.compactThreshold
   if (payload.enabled !== undefined) updated.enabled = payload.enabled
+  if (payload.visible !== undefined) updated.visible = payload.visible
 
   configs[payload.modelId] = updated
   saveModelConfigs(configs)
@@ -61,6 +62,7 @@ export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
       thinkingLevel: updated.thinkingLevel as any,
       compactThreshold: updated.compactThreshold,
       enabled: updated.enabled,
+      visible: updated.visible,
     },
   }))
 

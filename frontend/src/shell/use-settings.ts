@@ -20,7 +20,7 @@ export function createSettings(send: (type: string, payload: unknown) => void) {
 
   // ── Model configuration ──
 
-  const configureModel = (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }) =>
+  const configureModel = (modelId: string, config: { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean; visible?: boolean }) =>
     send('model.configure', { modelId, ...config })
 
   return { entries, setEntries, getSettings, setSetting, saveProvider, deleteProvider, configureModel }
