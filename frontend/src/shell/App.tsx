@@ -48,7 +48,7 @@ export function App() {
           style={{
             flex: '1',
             display: 'flex',
-            overflow: 'hidden',
+            overflow: 'visible',
             'min-width': '0',
           }}
         >

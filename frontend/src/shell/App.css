@@ -144,6 +144,26 @@ body::before {
 .str { color: #5B8C5A; }
 .cm { color: var(--text-muted); }
 
+/* ====== Markdown 渲染样式（聊天气泡内） ====== */
+.msg-content p { margin: 4px 0; }
+.msg-content p:first-child { margin-top: 0; }
+.msg-content p:last-child { margin-bottom: 0; }
+.msg-content h1 { font-size: 18px; margin: 12px 0 6px; font-weight: 600; }
+.msg-content h2 { font-size: 15px; margin: 10px 0 4px; font-weight: 600; }
+.msg-content h3 { font-size: 13px; margin: 8px 0 4px; font-weight: 600; }
+.msg-content ul, .msg-content ol { margin: 4px 0; padding-left: 20px; }
+.msg-content li { margin: 2px 0; }
+.msg-content a { color: var(--accent); text-decoration: none; }
+.msg-content blockquote { border-left: 2px solid var(--accent); margin: 6px 0; padding: 4px 12px; color: var(--text-secondary); background: rgba(107,143,168,0.04); border-radius: 0 4px 4px 0; }
+.msg-content code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; }
+.msg-content pre { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 11px; margin: 6px 0; line-height: 1.5; }
+.msg-content pre code { background: none; padding: 0; font-size: inherit; }
+.msg-content strong { font-weight: 600; color: var(--text-primary); }
+.msg-content table { border-collapse: collapse; margin: 6px 0; font-size: 12px; width: 100%; }
+.msg-content th, .msg-content td { border: 1px solid rgba(255,255,255,0.1); padding: 4px 10px; text-align: left; }
+.msg-content th { background: rgba(255,255,255,0.04); font-weight: 600; }
+.msg-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 10px 0; }
+
 /* ====== 面板拖拽把手 ====== */
 .panel-drag-handle {
   position: absolute; left: -5px; top: 0; bottom: 0;
