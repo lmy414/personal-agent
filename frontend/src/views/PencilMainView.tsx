@@ -222,9 +222,10 @@ function Sidebar() {
       </div>
       <div class="divider" />
 
-      {/* Scroll Area */}
-      <div style={{ flex: '1', 'overflow-y': 'auto', 'min-height': '0' }}>
-        {/* Agent List */}
+      {/* Scroll Area — flex column: agent list fills, tool log sinks to bottom */}
+      <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'min-height': '0' }}>
+        {/* Agent List — scrollable */}
+        <div style={{ flex: '1', 'overflow-y': 'auto', 'min-height': '0' }}>
         <For each={allAgents()}>
           {(agentItem: AgentInfo) => {
             const agentSessions = () => {
@@ -360,9 +361,10 @@ function Sidebar() {
             )
           }}
         </For>
+        </div>
 
-        {/* Tool Log */}
-        <div style={{ padding: '12px 16px 8px' }}>
+        {/* Tool Log — max 5 items, scrollable */}
+        <div style={{ 'flex-shrink': '0', padding: '12px 16px 8px' }}>
           <div
             style={{
               display: 'flex',
@@ -398,7 +400,7 @@ function Sidebar() {
               <CirclePause size={12} />
             </button>
           </div>
-          <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '190px', 'overflow-y': 'auto' }}>
             <Show when={tools().length === 0}>
               <div style={{ 'font-size': '11px', color: 'var(--text-muted)', 'text-align': 'center', padding: '8px' }}>
                 暂无工具执行记录
@@ -473,13 +475,8 @@ function Sidebar() {
         </div>
       </div>
 
-      {/* Dashboard — 底部固定 */}
-      <div
-        style={{
-          'flex-shrink': '0',
-          'border-top': '1px solid rgba(255,255,255,0.03)',
-        }}
-      >
+      {/* Dashboard — 底部固定，紧贴工具栏 */}
+      <div style={{ 'flex-shrink': '0', 'border-top': '1px solid rgba(255,255,255,0.03)' }}>
         <div
           style={{
             padding: '12px 16px',
