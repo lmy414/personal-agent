@@ -164,7 +164,11 @@ function ModelPage() {
   // Models come from providers JSON (written by settings.discover via Pi)
   const getProviderModels = (providerId: string) => {
     const p = providers().find(p => p.id === providerId)
-    return p?.models ?? []
+    return (p?.models ?? []).slice().sort((a, b) => {
+      const aOn = isModelEnabled(a.id) ? 1 : 0
+      const bOn = isModelEnabled(b.id) ? 1 : 0
+      return bOn - aOn // enabled first
+    })
   }
 
   const availableProviderIds = createMemo(() => {
