@@ -2,9 +2,161 @@ import type { JSX } from 'solid-js'
 import { createSignal, For, Show, createMemo, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
 import { THEMES, getThemeById, applyTheme, applyWallpaper, applyCustomAccent, applyGlassTint, accentRgb, accentHex } from '@/shell/theme'
+import { ColorPicker } from '@/components/color-picker'
 import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink, Plus, Trash2, ChevronRight, ChevronDown } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
+
+/** 精选色板 — 暗色系 UI 适用的 accent 色 */
+const ACCENT_SWATCHES = [
+  '#6B8FA8', '#5B8C5A', '#C8963E', '#8B7FB8', '#7A8B94',
+  '#E8553D', '#D4766B', '#6BA3BE', '#8FA86B', '#BE8FA3',
+  '#A89060', '#6090A8', '#A86B8F', '#6BA88F', '#A86B6B',
+]
+
+/** 玻璃色调色板 */
+const GLASS_SWATCHES = [
+  { name: '纯黑', rgb: '0,0,0' },
+  { name: '深蓝', rgb: '8,12,24' },
+  { name: '深灰', rgb: '18,18,18' },
+  { name: '深绿', rgb: '6,14,10' },
+  { name: '深紫', rgb: '14,8,20' },
+  { name: '暖黑', rgb: '16,10,6' },
+]
+
+/** hex → "R,G,B" */
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  return `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
+}
+
+/** "R,G,B" → hex */
+function rgbToHex(rgb: string): string {
+  const [r, g, b] = rgb.split(',').map(Number)
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
+/** 自定义色板组件 — 色块网格 + hex 输入框，风格与暗色玻璃 UI 统一 */
+function AccentColorPicker(props: { value: string; onChange: (hex: string) => void }) {
+  const [hexInput, setHexInput] = createSignal(props.value)
+
+  createEffect(() => setHexInput(props.value))
+
+  const handleHexSubmit = () => {
+    let v = hexInput().trim()
+    if (!v.startsWith('#')) v = '#' + v
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) props.onChange(v)
+  }
+
+  return (
+    <div style={{ display: 'flex', 'flex-direction': 'column', gap: '10px' }}>
+      {/* 色块网格 */}
+      <div style={{ display: 'grid', 'grid-template-columns': 'repeat(5, 1fr)', gap: '8px' }}>
+        <For each={ACCENT_SWATCHES}>
+          {(swatch) => {
+            const isActive = createMemo(() => props.value.toUpperCase() === swatch.toUpperCase())
+            return (
+              <div
+                onClick={() => props.onChange(swatch)}
+                {...kbd(() => props.onChange(swatch))}
+                style={{
+                  width: '100%', 'aspect-ratio': '1', 'border-radius': '6px',
+                  background: swatch,
+                  border: `1.5px solid ${isActive() ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.06)'}`,
+                  'box-shadow': isActive() ? `0 0 0 2px ${swatch}40` : 'none',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  transform: isActive() ? 'scale(1.08)' : 'scale(1)',
+                }}
+              />
+            )
+          }}
+        </For>
+      </div>
+      {/* hex 输入框 */}
+      <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+        <div style={{
+          width: '24px', height: '24px', 'border-radius': '4px', 'flex-shrink': '0',
+          background: props.value, border: '1px solid rgba(255,255,255,0.10)',
+        }} />
+        <input
+          type="text"
+          value={hexInput()}
+          onInput={(e) => setHexInput(e.currentTarget.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit() }}
+          onBlur={handleHexSubmit}
+          maxLength={7}
+          style={{
+            width: '80px', padding: '5px 8px', 'font-size': '12px',
+            'font-family': '"JetBrains Mono", monospace',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            'border-radius': '4px', color: 'var(--text-primary)',
+            outline: 'none',
+          }}
+        />
+        <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>HEX</span>
+      </div>
+    </div>
+  )
+}
+
+/** 玻璃色调色板 — 预设 + 自定义 hex */
+function GlassTintPicker(props: { value: string; onChange: (rgb: string) => void }) {
+  const hexInput = createMemo(() => rgbToHex(props.value))
+
+  const handleHexSubmit = (hex: string) => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) props.onChange(hexToRgb(hex))
+  }
+
+  return (
+    <div style={{ display: 'flex', 'flex-direction': 'column', gap: '10px' }}>
+      {/* 预设色块 */}
+      <div style={{ display: 'flex', gap: '10px', 'flex-wrap': 'wrap' }}>
+        <For each={GLASS_SWATCHES}>
+          {(t) => {
+            const isActive = createMemo(() => props.value === t.rgb)
+            return (
+              <div
+                onClick={() => props.onChange(t.rgb)}
+                {...kbd(() => props.onChange(t.rgb))}
+                style={{
+                  padding: '10px 14px', background: `rgba(${t.rgb},0.80)`,
+                  border: `1.5px solid ${isActive() ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  'box-shadow': isActive() ? '0 0 0 2px rgba(255,255,255,0.08)' : 'none',
+                  'border-radius': '6px', cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '6px',
+                }}>
+                <div style={{ width: '36px', height: '24px', 'border-radius': '4px', background: `rgba(${t.rgb},0.90)`, border: '1px solid rgba(255,255,255,0.06)' }} />
+                <div style={{ 'font-size': '11px', color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.name}</div>
+              </div>
+            )
+          }}
+        </For>
+      </div>
+      {/* 自定义 hex */}
+      <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+        <div style={{
+          width: '24px', height: '24px', 'border-radius': '4px', 'flex-shrink': '0',
+          background: `rgba(${props.value},0.90)`, border: '1px solid rgba(255,255,255,0.10)',
+        }} />
+        <input
+          type="text"
+          value={hexInput()}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleHexSubmit(e.currentTarget.value) }}
+          onBlur={(e) => handleHexSubmit(e.currentTarget.value)}
+          maxLength={7}
+          style={{
+            width: '80px', padding: '5px 8px', 'font-size': '12px',
+            'font-family': '"JetBrains Mono", monospace',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            'border-radius': '4px', color: 'var(--text-primary)',
+            outline: 'none',
+          }}
+        />
+        <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>HEX</span>
+      </div>
+    </div>
+  )
+}
 
 type SettingsPage = 'model' | 'display' | 'skills' | 'workdir' | 'system'
 
@@ -584,49 +736,12 @@ function DisplayPage() {
             })()}
           </div>
         </div>
-        <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
-          <div style={{
-            width: '36px', height: '36px', 'border-radius': '6px',
-            background: accentHex(),
-            border: '1px solid rgba(255,255,255,0.10)',
-            cursor: 'pointer', position: 'relative', overflow: 'hidden',
-          }}>
-            <input
-              type="color"
-              value={accentHex()}
-              onInput={(e) => {
-                const hex = e.currentTarget.value
-                applyCustomAccent(hex)
-                agent.setSetting('custom-accent', hex)
-              }}
-              style={{
-                position: 'absolute', inset: '-8px',
-                width: 'calc(100% + 16px)', height: 'calc(100% + 16px)',
-                cursor: 'pointer', border: 'none', padding: '0',
-              }}
-            />
-          </div>
-          <Show when={agent.settings().find(e => e.key === 'custom-accent')}>
-            <div
-              onClick={() => {
-                const theme = getThemeById(currentThemeId())
-                applyTheme(theme)
-                agent.setSetting('custom-accent', '')
-              }}
-              {...kbd(() => {
-                const theme = getThemeById(currentThemeId())
-                applyTheme(theme)
-                agent.setSetting('custom-accent', '')
-              })}
-              style={{
-                display: 'flex', 'align-items': 'center', padding: '7px 16px',
-                background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
-                'border-radius': '4px', cursor: 'pointer',
-              }}>
-              <span style={{ 'font-size': '11px', 'font-weight': '500', color: 'var(--text-muted)' }}>重置</span>
-            </div>
-          </Show>
-        </div>
+        <ColorPicker
+          value={accentHex()}
+          onChange={(hex) => { applyCustomAccent(hex); agent.setSetting('custom-accent', hex) }}
+          onReset={() => { applyTheme(getThemeById(currentThemeId())); agent.setSetting('custom-accent', '') }}
+          showReset={!!agent.settings().find(e => e.key === 'custom-accent')}
+        />
       </div>
 
       {/* divider */}
@@ -669,37 +784,20 @@ function DisplayPage() {
       </div>
       <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
         <span style={{ 'font-size': '12px', color: 'var(--text-muted)' }}>自定义</span>
-        <div style={{
-          width: '28px', height: '28px', 'border-radius': '4px',
-          background: `rgba(${(() => {
+        <ColorPicker
+          value={(() => {
             const entry = agent.settings().find(e => e.key === 'glass-tint')
-            return entry?.value ?? '0,0,0'
-          })()},0.90)`,
-          border: '1px solid rgba(255,255,255,0.10)',
-          cursor: 'pointer', position: 'relative', overflow: 'hidden',
-        }}>
-          <input
-            type="color"
-            value={(() => {
-              const entry = agent.settings().find(e => e.key === 'glass-tint')
-              const rgb = entry?.value ?? '0,0,0'
-              const [r, g, b] = rgb.split(',').map(Number)
-              return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
-            })()}
-            onInput={(e) => {
-              const hex = e.currentTarget.value
-              const h = hex.replace('#', '')
-              const rgb = `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
-              applyGlassTint(rgb)
-              agent.setSetting('glass-tint', rgb)
-            }}
-            style={{
-              position: 'absolute', inset: '-8px',
-              width: 'calc(100% + 16px)', height: 'calc(100% + 16px)',
-              cursor: 'pointer', border: 'none', padding: '0',
-            }}
-          />
-        </div>
+            const rgb = entry?.value ?? '0,0,0'
+            const [r, g, b] = rgb.split(',').map(Number)
+            return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+          })()}
+          onChange={(hex) => {
+            const h = hex.replace('#', '')
+            const rgb = `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
+            applyGlassTint(rgb)
+            agent.setSetting('glass-tint', rgb)
+          }}
+        />
       </div>
 
       {/* divider */}

@@ -11,7 +11,7 @@
   transition: border-color 0.2s;
 }
 .glass-input:focus {
-  border-color: rgba(139, 156, 240, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 .glass-input::placeholder {
   color: rgba(255, 255, 255, 0.20);
