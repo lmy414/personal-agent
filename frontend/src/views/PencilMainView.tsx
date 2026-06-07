@@ -259,7 +259,7 @@ function Sidebar() {
               if (!q) return list
               return list.filter((s) => s.title.toLowerCase().includes(q))
             }
-            const isExpanded = () => expandedAgents().includes(agentItem.id) || agentItem.isDefault
+            const isExpanded = () => expandedAgents().includes(agentItem.id)
             return (
               <>
                 <div
