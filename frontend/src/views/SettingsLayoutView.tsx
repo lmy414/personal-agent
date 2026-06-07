@@ -1165,10 +1165,11 @@ export default function SettingsLayoutView() {
         'border-right': '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{
-          padding: '16px 20px', 'font-family': '"Noto Serif SC", serif',
+          display: 'flex', 'align-items': 'center', padding: '12px 16px', height: '54px',
+          'font-family': '"Noto Serif SC", serif',
           'font-size': '15px', 'font-weight': '600',
           background: 'rgb(var(--top-bar-tint-rgb))',
-          'border-bottom': '1px solid rgba(255,255,255,0.03)',
+          'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0',
         }}>設定</div>
         <div style={{ flex: '1', 'overflow-y': 'auto', padding: '8px 0' }}>
           <For each={NAV_ITEMS}>
@@ -1194,7 +1195,7 @@ export default function SettingsLayoutView() {
       <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'min-width': '0' }}>
         <div style={{
           display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
-          padding: '16px 24px', height: '60px',
+          padding: '12px 16px', height: '54px',
           background: 'rgb(var(--top-bar-tint-rgb))',
           'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0',
         }}>
