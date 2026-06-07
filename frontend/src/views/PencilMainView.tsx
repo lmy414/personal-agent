@@ -68,13 +68,29 @@ const INPUT_TAGS = ['MCP 工具', '代码片段', '图片', '文件']
 // ===== Sidebar 组件 =====
 
 function Sidebar() {
-  const agent = useAgent()
+  const a = useAgent()
   const [searchQuery, setSearchQuery] = createSignal('')
   const [expandedAgents, setExpandedAgents] = createSignal<string[]>([])
 
-  const currentAgent = createMemo(() =>
-    agent.agents().find((a) => a.isDefault) ?? agent.agents()[0]
-  )
+  // 默认展开当前活跃角色
+  const ensureExpanded = () => {
+    const aid = activeAgent()?.id
+    if (aid && !expandedAgents().includes(aid)) {
+      setExpandedAgents((prev) => [...prev, aid])
+    }
+  }
+  ensureExpanded()
+
+  // 当前正在聊天的角色 — 从当前 session 的 agentId 反查
+  const activeAgent = createMemo(() => {
+    const sessions = a.sessions()
+    const curSid = a.sessionId()
+    const curSession = sessions.find((s) => s.id === curSid)
+    const linked = curSession?.agentId
+      ? a.agents().find((ag) => ag.id === curSession.agentId)
+      : undefined
+    return linked ?? a.agents().find((ag) => ag.isDefault) ?? a.agents()[0]
+  })
 
   const toggleExpand = (id: string) => {
     setExpandedAgents((prev) =>
@@ -82,11 +98,10 @@ function Sidebar() {
     )
   }
 
-  // 按 agentId 分组 sessions，没有 agentId 的归到 default agent
   const sessionsByAgent = createMemo(() => {
     const map = new Map<string, SessionInfo[]>()
-    const allSessions = agent.sessions()
-    const defaultId = currentAgent()?.id ?? ''
+    const allSessions = a.sessions()
+    const defaultId = a.agents().find((ag) => ag.isDefault)?.id ?? a.agents()[0]?.id ?? ''
     for (const s of allSessions) {
       const key = s.agentId || defaultId
       if (!map.has(key)) map.set(key, [])
@@ -95,10 +110,20 @@ function Sidebar() {
     return map
   })
 
-  const allAgents = createMemo(() => agent.agents())
+  const allAgents = createMemo(() => a.agents())
+
+  const handleAgentClick = (agentId: string) => {
+    const agentSessions = sessionsByAgent().get(agentId) ?? []
+    if (agentSessions.length > 0) {
+      a.switchSession(agentSessions[0].id)
+    } else {
+      // 没有会话时，为该角色新建一个
+      a.createSession()
+    }
+  }
 
   const tools = createMemo((): ToolItem[] =>
-    agent.toolCalls().slice(-5).reverse().map((tc) => ({
+    a.toolCalls().slice(-5).reverse().map((tc) => ({
       name: tc.toolName,
       status: toolStatusText(tc),
       desc: `${tc.toolName} · ${(tc.input as Record<string, unknown>)['path'] as string ?? ''}`,
@@ -107,7 +132,7 @@ function Sidebar() {
     }))
   )
 
-  const handleCreateSession = () => agent.createSession()
+  const handleCreateSession = () => a.createSession()
 
   return (
     <div
@@ -150,7 +175,7 @@ function Sidebar() {
               'flex-shrink': '0',
             }}
           >
-            {(currentAgent()?.name ?? 'M')[0]}
+            {(activeAgent()?.name ?? '澪')[0]}
           </div>
           <div style={{ display: 'flex', 'flex-direction': 'column', gap: '2px' }}>
             <div
@@ -161,10 +186,10 @@ function Sidebar() {
                 color: '#fff',
               }}
             >
-              {currentAgent()?.name ?? '澪号'}
+              {activeAgent()?.name ?? '澪号'}
             </div>
             <div style={{ 'font-size': '11px', color: 'rgba(255,255,255,0.40)' }}>
-              {currentAgent()?.roleDescription ?? '技術顧問'}
+              {activeAgent()?.roleDescription ?? '技術顧問'}
             </div>
           </div>
         </div>
@@ -186,7 +211,7 @@ function Sidebar() {
             {timeStr()}
           </div>
           <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
-            通信 #{agent.sessions().length}
+            通信 #{a.sessions().length}
           </div>
         </div>
       </div>
@@ -326,16 +351,16 @@ function Sidebar() {
                               cursor: 'pointer',
                               transition: 'background 0.12s',
                               background:
-                                s.id === agent.sessionId()
+                                s.id === a.sessionId()
                                   ? 'rgba(255,255,255,0.02)'
                                   : 'transparent',
                               'border-left':
-                                s.id === agent.sessionId()
+                                s.id === a.sessionId()
                                   ? '3px solid var(--text-muted)'
                                   : '3px solid transparent',
                             }}
-                            {...kbdHandlers(() => agent.switchSession(s.id))}
-                            onClick={() => agent.switchSession(s.id)}
+                            {...kbdHandlers(() => a.switchSession(s.id))}
+                            onClick={() => a.switchSession(s.id)}
                           >
                             <span style={{ 'font-size': '12px', color: 'var(--text-secondary)' }}>
                               {s.title}
@@ -530,7 +555,7 @@ function Sidebar() {
                   'font-weight': '600',
                 }}
               >
-                {formatTokens(agent.status.contextUsed)} / {formatTokens(agent.status.contextMax)}
+                {formatTokens(a.status.contextUsed)} / {formatTokens(a.status.contextMax)}
               </span>
             </div>
             <div style={{ 'margin-top': '2px' }}>
@@ -543,8 +568,8 @@ function Sidebar() {
                   'margin-bottom': '4px',
                 }}
               >
-                <span>{agent.status.contextMax > 0 ? Math.round((agent.status.contextUsed / agent.status.contextMax) * 100) : 0}%</span>
-                <span>剩余 {formatTokens(Math.max(0, agent.status.contextMax - agent.status.contextUsed))}</span>
+                <span>{a.status.contextMax > 0 ? Math.round((a.status.contextUsed / a.status.contextMax) * 100) : 0}%</span>
+                <span>剩余 {formatTokens(Math.max(0, a.status.contextMax - a.status.contextUsed))}</span>
               </div>
               <div
                 style={{
@@ -559,7 +584,7 @@ function Sidebar() {
                     height: '100%',
                     'border-radius': '2px',
                     background: 'var(--accent)',
-                    width: `${agent.status.contextMax > 0 ? Math.min(100, (agent.status.contextUsed / agent.status.contextMax) * 100) : 0}%`,
+                    width: `${a.status.contextMax > 0 ? Math.min(100, (a.status.contextUsed / a.status.contextMax) * 100) : 0}%`,
                   }}
                 />
               </div>
@@ -577,7 +602,7 @@ function Sidebar() {
                 'text-align': 'center',
                 'font-family': 'inherit',
               }}
-              onClick={() => agent.send('agent.compact', {})}
+              onClick={() => a.send('agent.compact', {})}
             >
               压缩上下文
             </button>
@@ -609,7 +634,7 @@ function Sidebar() {
                   'font-weight': '600',
                 }}
               >
-                ${agent.status.cost.toFixed(2)}
+                ${a.status.cost.toFixed(2)}
               </span>
             </div>
             <div
@@ -621,7 +646,7 @@ function Sidebar() {
             >
               <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>本轮消耗</span>
               <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>
-                {formatTokens(agent.status.tokens)} tokens
+                {formatTokens(a.status.tokens)} tokens
               </span>
             </div>
           </div>
