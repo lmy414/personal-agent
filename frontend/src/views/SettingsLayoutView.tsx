@@ -258,7 +258,7 @@ const logs = [
 ]
 
 const links = [
-  { icon: () => <ExternalLink size={16} />, name: 'GitHub',  url: 'github.com/layyck' },
+  { icon: () => <ExternalLink size={16} />, name: 'GitHub',  url: 'https://github.com/lmy414' },
   { icon: () => <Monitor size={16} />, name: 'Bilibili', url: 'https://space.bilibili.com/321480847' },
 ]
 
