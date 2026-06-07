@@ -86,7 +86,7 @@ export function ChatRenderer() {
     if (!txt && atts.length === 0) return
 
     if (atts.length > 0) {
-      const badges = atts.map((a) => `[📎 ${a.name}]`).join(' ')
+      const badges = atts.map((a) => `[附件: ${a.name}]`).join(' ')
       const displayText = txt || '请帮我分析这些文件'
 
       const fileBlocks = atts.map((a) => {
