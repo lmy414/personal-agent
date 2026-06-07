@@ -509,10 +509,10 @@ function Sidebar() {
       <div style={{ 'flex-shrink': '0', 'border-top': '1px solid rgba(255,255,255,0.03)' }}>
         <div
           style={{
-            padding: '12px 16px',
+            padding: '10px 16px',
             display: 'flex',
             'flex-direction': 'column',
-            gap: '12px',
+            gap: '8px',
           }}
         >
           <div
@@ -534,83 +534,47 @@ function Sidebar() {
             <span style={{ color: 'var(--text-muted)', display: 'flex' }}><BarChart3 size={12} /></span>
           </div>
 
-          {/* Token Card */}
+          {/* Token Card — compact */}
           <div
             style={{
               background: 'var(--card-bg)',
               'border-radius': '6px',
-              padding: '12px',
+              padding: '10px 12px',
               display: 'flex',
               'flex-direction': 'column',
-              gap: '8px',
+              gap: '6px',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                'justify-content': 'space-between',
-                'align-items': 'center',
-              }}
-            >
+            <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center' }}>
               <span style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>上下文用量</span>
-              <span
-                style={{
-                  'font-size': '13px',
-                  color: 'var(--text-primary)',
-                  'font-weight': '600',
-                }}
-              >
-                {formatTokens(a.status.contextUsed)} / {formatTokens(a.status.contextMax)}
+              <span style={{ 'font-size': '13px', color: 'var(--text-primary)', 'font-weight': '600' }}>
+                {formatTokens(a.status.contextUsed)}
               </span>
             </div>
-            <div style={{ 'margin-top': '2px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  'justify-content': 'space-between',
-                  'font-size': '10px',
-                  color: 'var(--text-muted)',
-                  'margin-bottom': '4px',
-                }}
-              >
-                <span>{a.status.contextMax > 0 ? Math.round((a.status.contextUsed / a.status.contextMax) * 100) : 0}%</span>
-                <span>剩余 {formatTokens(Math.max(0, a.status.contextMax - a.status.contextUsed))}</span>
+            <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+              <div style={{
+                flex: '1', height: '3px', 'border-radius': '2px',
+                background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', 'border-radius': '2px', background: 'var(--accent)',
+                  width: `${a.status.contextMax > 0 ? Math.min(100, (a.status.contextUsed / a.status.contextMax) * 100) : 0}%`,
+                }} />
               </div>
-              <div
+              <button
                 style={{
-                  height: '3px',
-                  'border-radius': '2px',
-                  background: 'rgba(255,255,255,0.06)',
-                  overflow: 'hidden',
+                  padding: '2px 8px', 'border-radius': '3px',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'var(--text-muted)', 'font-size': '10px',
+                  cursor: 'pointer', 'font-family': 'inherit',
+                  'white-space': 'nowrap', 'flex-shrink': '0',
                 }}
+                onClick={() => a.send('agent.compact', {})}
               >
-                <div
-                  style={{
-                    height: '100%',
-                    'border-radius': '2px',
-                    background: 'var(--accent)',
-                    width: `${a.status.contextMax > 0 ? Math.min(100, (a.status.contextUsed / a.status.contextMax) * 100) : 0}%`,
-                  }}
-                />
-              </div>
+                压缩
+              </button>
             </div>
-            <button
-              style={{
-                width: '100%',
-                padding: '8px',
-                'border-radius': '4px',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                color: 'var(--text-secondary)',
-                'font-size': '12px',
-                cursor: 'pointer',
-                'text-align': 'center',
-                'font-family': 'inherit',
-              }}
-              onClick={() => a.send('agent.compact', {})}
-            >
-              压缩上下文
-            </button>
           </div>
 
           {/* Cost Card */}
@@ -618,10 +582,10 @@ function Sidebar() {
             style={{
               background: 'var(--card-bg)',
               'border-radius': '6px',
-              padding: '12px',
+              padding: '10px 12px',
               display: 'flex',
               'flex-direction': 'column',
-              gap: '8px',
+              gap: '6px',
             }}
           >
             <div
