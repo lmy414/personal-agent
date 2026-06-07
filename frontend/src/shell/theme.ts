@@ -54,6 +54,44 @@ export function applyTheme(theme: ThemeDef): void {
   setAccentHex(theme.color)
 }
 
+/** hex → "R,G,B" */
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return `${r},${g},${b}`
+}
+
+/** 自定义 accent 颜色（覆盖当前主题的 accent） */
+export function applyCustomAccent(hex: string): void {
+  const rgb = hexToRgb(hex)
+  const root = document.documentElement
+  root.style.setProperty('--accent', hex)
+  root.style.setProperty('--accent-rgb', rgb)
+  root.style.setProperty('--bubble-user-border', `rgba(${rgb},0.16)`)
+  root.style.setProperty('--avatar-glow-color', `rgba(${rgb},0.2)`)
+  setAccentRgb(rgb)
+  setAccentHex(hex)
+}
+
+/** 玻璃面板色调 — 控制 --glass-tint-rgb */
+export function applyGlassTint(rgb: string): void {
+  document.documentElement.style.setProperty('--glass-tint-rgb', rgb)
+}
+
+/** 从 settings 恢复自定义 accent（如果有） */
+export function restoreCustomAccent(settingsEntries: { key: string; value: string }[]): void {
+  const entry = settingsEntries.find(e => e.key === 'custom-accent')
+  if (entry?.value) applyCustomAccent(entry.value)
+}
+
+/** 从 settings 恢复玻璃色调 */
+export function restoreGlassTint(settingsEntries: { key: string; value: string }[]): void {
+  const entry = settingsEntries.find(e => e.key === 'glass-tint')
+  if (entry?.value) applyGlassTint(entry.value)
+}
+
 /** 从 settings entries 中恢复主题 */
 export function restoreTheme(settingsEntries: { key: string; value: string }[]): void {
   const entry = settingsEntries.find(e => e.key === 'theme')

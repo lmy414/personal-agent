@@ -16,13 +16,14 @@
   --card-bg: rgba(14,14,22,0.25);
 
   /* Glass panel — Pencil gradient */
-  --panel-bg-top: rgba(0,0,0,0.90);
-  --panel-bg-mid: rgba(0,0,0,0.70);
-  --panel-bg-low: rgba(0,0,0,0.40);
-  --panel-bg-bottom: rgba(0,0,0,0.10);
+  --panel-bg-top: rgba(var(--glass-tint-rgb),0.90);
+  --panel-bg-mid: rgba(var(--glass-tint-rgb),0.70);
+  --panel-bg-low: rgba(var(--glass-tint-rgb),0.40);
+  --panel-bg-bottom: rgba(var(--glass-tint-rgb),0.10);
   --glass-bg: linear-gradient(180deg, var(--panel-bg-top), var(--panel-bg-mid), var(--panel-bg-low), var(--panel-bg-bottom));
   --glass-border: rgba(255,255,255,0.06);
   --glass-blur: blur(20px) saturate(120%);
+  --glass-tint-rgb: 0,0,0;
 
   /* Layout */
   --gap: 6px;

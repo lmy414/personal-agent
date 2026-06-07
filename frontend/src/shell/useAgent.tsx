@@ -6,7 +6,7 @@ import { createSessionCache } from './use-session-cache'
 import { createCharPump } from './char-pump'
 import { createSettings } from './use-settings'
 import { createAgents } from './use-agents'
-import { restoreTheme, restoreWallpaper } from './theme'
+import { restoreTheme, restoreWallpaper, restoreCustomAccent, restoreGlassTint } from './theme'
 
 // ========== 全局状态类型 ==========
 
@@ -424,6 +424,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         settingsStore.setEntries((msg.payload as { entries: { key: string; value: string }[] }).entries)
         restoreTheme((msg.payload as { entries: { key: string; value: string }[] }).entries)
         restoreWallpaper((msg.payload as { entries: { key: string; value: string }[] }).entries)
+        restoreCustomAccent((msg.payload as { entries: { key: string; value: string }[] }).entries)
+        restoreGlassTint((msg.payload as { entries: { key: string; value: string }[] }).entries)
         break
 
       // ── 智能体事件 ──

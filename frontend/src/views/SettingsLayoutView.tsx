@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js'
 import { createSignal, For, Show, createMemo, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { THEMES, getThemeById, applyTheme, applyWallpaper, accentRgb, accentHex } from '@/shell/theme'
+import { THEMES, getThemeById, applyTheme, applyWallpaper, applyCustomAccent, applyGlassTint, accentRgb, accentHex } from '@/shell/theme'
 import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink, Plus, Trash2, ChevronRight, ChevronDown } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
@@ -509,6 +509,7 @@ function DisplayPage() {
     const theme = getThemeById(themeId)
     applyTheme(theme)
     agent.setSetting('theme', themeId)
+    agent.setSetting('custom-accent', '')
   }
 
   // ── 壁纸 ──
@@ -565,6 +566,140 @@ function DisplayPage() {
             )
           }}
         </For>
+      </div>
+
+      {/* divider */}
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', opacity: '0.35', 'margin-bottom': '20px' }} />
+
+      {/* ── 自定义颜色 ── */}
+      <div style={{ ...titleStyle, 'margin-bottom': '12px' }}>自定义颜色</div>
+      <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-bottom': '12px' }}>选择任意颜色覆盖当前主题的强调色</div>
+      <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '14px 16px', ...cardStyle }}>
+        <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+          <div style={{ 'font-size': '13px', 'font-weight': '500' }}>强调色</div>
+          <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>
+            {(() => {
+              const custom = agent.settings().find(e => e.key === 'custom-accent')
+              return custom?.value ? custom.value : '跟随主题'
+            })()}
+          </div>
+        </div>
+        <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+          <div style={{
+            width: '36px', height: '36px', 'border-radius': '6px',
+            background: accentHex(),
+            border: '1px solid rgba(255,255,255,0.10)',
+            cursor: 'pointer', position: 'relative', overflow: 'hidden',
+          }}>
+            <input
+              type="color"
+              value={accentHex()}
+              onInput={(e) => {
+                const hex = e.currentTarget.value
+                applyCustomAccent(hex)
+                agent.setSetting('custom-accent', hex)
+              }}
+              style={{
+                position: 'absolute', inset: '-8px',
+                width: 'calc(100% + 16px)', height: 'calc(100% + 16px)',
+                cursor: 'pointer', border: 'none', padding: '0',
+              }}
+            />
+          </div>
+          <Show when={agent.settings().find(e => e.key === 'custom-accent')}>
+            <div
+              onClick={() => {
+                const theme = getThemeById(currentThemeId())
+                applyTheme(theme)
+                agent.setSetting('custom-accent', '')
+              }}
+              {...kbd(() => {
+                const theme = getThemeById(currentThemeId())
+                applyTheme(theme)
+                agent.setSetting('custom-accent', '')
+              })}
+              style={{
+                display: 'flex', 'align-items': 'center', padding: '7px 16px',
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.08)',
+                'border-radius': '4px', cursor: 'pointer',
+              }}>
+              <span style={{ 'font-size': '11px', 'font-weight': '500', color: 'var(--text-muted)' }}>重置</span>
+            </div>
+          </Show>
+        </div>
+      </div>
+
+      {/* divider */}
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', opacity: '0.35', 'margin-bottom': '20px' }} />
+
+      {/* ── 背景颜色（玻璃色调） ── */}
+      <div style={{ ...titleStyle, 'margin-bottom': '12px' }}>背景颜色</div>
+      <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-bottom': '12px' }}>半透明玻璃面板的底色调</div>
+      <div style={{ display: 'flex', gap: '12px', 'margin-bottom': '12px', 'flex-wrap': 'wrap' }}>
+        <For each={[
+          { name: '纯黑', rgb: '0,0,0' },
+          { name: '深蓝', rgb: '8,12,24' },
+          { name: '深灰', rgb: '18,18,18' },
+          { name: '深绿', rgb: '6,14,10' },
+          { name: '深紫', rgb: '14,8,20' },
+          { name: '暖黑', rgb: '16,10,6' },
+        ]}>
+          {(t) => {
+            const currentGlassTint = createMemo(() => {
+              const entry = agent.settings().find(e => e.key === 'glass-tint')
+              return entry?.value ?? '0,0,0'
+            })
+            const isActive = createMemo(() => currentGlassTint() === t.rgb)
+            return (
+              <div
+                onClick={() => { applyGlassTint(t.rgb); agent.setSetting('glass-tint', t.rgb) }}
+                {...kbd(() => { applyGlassTint(t.rgb); agent.setSetting('glass-tint', t.rgb) })}
+                style={{
+                  padding: '12px 16px', background: `rgba(${t.rgb},0.80)`,
+                  border: `1px solid ${isActive() ? 'var(--accent)' : 'rgba(255,255,255,0.06)'}`,
+                  'border-radius': '6px', cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '6px',
+                }}>
+                <div style={{ width: '40px', height: '28px', 'border-radius': '4px', background: `rgba(${t.rgb},0.90)`, border: '1px solid rgba(255,255,255,0.08)' }} />
+                <div style={{ 'font-size': '11px', color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.name}</div>
+              </div>
+            )
+          }}
+        </For>
+      </div>
+      <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+        <span style={{ 'font-size': '12px', color: 'var(--text-muted)' }}>自定义</span>
+        <div style={{
+          width: '28px', height: '28px', 'border-radius': '4px',
+          background: `rgba(${(() => {
+            const entry = agent.settings().find(e => e.key === 'glass-tint')
+            return entry?.value ?? '0,0,0'
+          })()},0.90)`,
+          border: '1px solid rgba(255,255,255,0.10)',
+          cursor: 'pointer', position: 'relative', overflow: 'hidden',
+        }}>
+          <input
+            type="color"
+            value={(() => {
+              const entry = agent.settings().find(e => e.key === 'glass-tint')
+              const rgb = entry?.value ?? '0,0,0'
+              const [r, g, b] = rgb.split(',').map(Number)
+              return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+            })()}
+            onInput={(e) => {
+              const hex = e.currentTarget.value
+              const h = hex.replace('#', '')
+              const rgb = `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
+              applyGlassTint(rgb)
+              agent.setSetting('glass-tint', rgb)
+            }}
+            style={{
+              position: 'absolute', inset: '-8px',
+              width: 'calc(100% + 16px)', height: 'calc(100% + 16px)',
+              cursor: 'pointer', border: 'none', padding: '0',
+            }}
+          />
+        </div>
       </div>
 
       {/* divider */}
