@@ -6,6 +6,35 @@
 
 ## 2026-06-08
 
+### 代码审计 + 自动化测试套件补充（v1.0 → v2.0）
+- **原因**: 项目缺乏系统性审计，测试覆盖不足，需全面检查设计架构、功能实现、时序问题并补充测试
+- **改动**:
+  - **审计发现**: 23 个前端问题 + 18 个架构问题，新发现 7 项（message.ts/pi-adapter.ts 代码重复、session.list O(n²)、agent.switch 语义混乱、消息 ID Date.now() 重复风险、settings.set sessionId 为空、watcher 忽略 frontend/、旧测试与代码不同步）
+  - **Bug 修复**: model-config.ts `ModelConfig` 接口缺少 `visible?: boolean`，移除 `as any` 断言
+  - **新增 6 个测试文件**（98 个用例，全部通过）:
+    - `dispatcher-protocol-consistency.test.ts` — dispatcher 路由与 protocol.ts 类型对齐
+    - `session-handler.test.ts` — 主会话保护、标题消毒、history retention、合并排序、消息 ID 风险
+    - `agent-handler.test.ts` — 自动发现、默认设置、删除、切换语义、Avatar 颜色轮转
+    - `pi-adapter.test.ts` — extractTextContent、Pi 事件翻译全路径、代码重复检测
+    - `client-manager.test.ts` — 客户端添加/移除、广播、排除广播、连接生命周期
+    - `settings-provider.test.ts` — Provider Key 注入、discover-models 过滤、ModelConfig 更新、ENV_KEY_MAP 完整性
+  - **run-all.ts**: v1.0 → v2.0，注册 6 个新测试
+- **影响**: 测试文件从 8 个增加到 14 个，总用例从 ~50 增加到 ~148
+- **验证**: 6 个新测试文件全部 `npx tsx --test` 通过
+- **Commit**: (待提交)
+
+### 前端功能实现状态审计
+- **原因**: 需要明确哪些 UI 功能已实现、哪些是 Mock、哪些完全缺失
+- **改动**: 全量阅读 13 个扩展 + 6 个视图 + 8 个组件 + shell 层代码，输出完整功能清单
+- **发现**:
+  - **已实现（接真实数据）**: 10 个扩展/视图
+  - **Mock/硬编码**: 4 个视图（CharacterView、SessionRecordsView、CostDashboardView、Settings 4 个 Tab）
+  - **完全未实现**: 9 项（U1-U9）
+  - **部分实现/有缺陷**: 10 项（P1-P10）
+  - **设计问题**: 5 项（D1-D5）
+- **影响**: 文档记录，无代码改动
+- **Commit**: (待提交)
+
 ### UI 优化：空气泡过滤 + 思考默认折叠 + 暂停按钮条件显示
 - **原因**: LLM 思考后无文字输出导致空气泡；思考内容默认展开影响阅读
 - **改动**: ChatPanel 消息过滤排除已完成无内容的 AI 消息；思考块改为 `expandedThinkings` 默认折叠；Sidebar 暂停按钮仅 `isStreaming` 时红色显示

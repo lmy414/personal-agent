@@ -323,7 +323,7 @@ async function checkViteBuild() {
 
 async function main() {
   console.log('╔══════════════════════════════════════════════════════════╗')
-  console.log('║     澪号 Personal Agent — 自动化检查套件 v1.0           ║')
+  console.log('║     澪号 Personal Agent — 自动化检查套件 v2.0           ║')
   console.log('╚══════════════════════════════════════════════════════════╝')
 
   // Phase 1: Static checks (fast)
@@ -345,6 +345,12 @@ async function main() {
   await runNodeTest('File Security 文件安全测试', 'tests/file-security.test.ts')
   await runNodeTest('Session Guard 会话保护测试', 'tests/session-guard.test.ts')
   await runNodeTest('Dataflow Consistency 数据流一致性测试', 'tests/dataflow-consistency.test.ts')
+  await runNodeTest('Dispatcher-Protocol 一致性测试', 'tests/dispatcher-protocol-consistency.test.ts')
+  await runNodeTest('Session Handler 逻辑测试', 'tests/session-handler.test.ts')
+  await runNodeTest('Agent Handler 逻辑测试', 'tests/agent-handler.test.ts')
+  await runNodeTest('Pi Adapter 翻译器测试', 'tests/pi-adapter.test.ts')
+  await runNodeTest('Client Manager 广播逻辑测试', 'tests/client-manager.test.ts')
+  await runNodeTest('Settings & Provider 逻辑测试', 'tests/settings-provider.test.ts')
 
   // Phase 4: Vite build
   await checkViteBuild()

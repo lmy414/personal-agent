@@ -6,6 +6,7 @@ interface ModelConfig {
   thinkingLevel?: string
   compactThreshold?: number
   enabled?: boolean
+  visible?: boolean
 }
 
 function getModelConfigs(): Record<string, ModelConfig> {
@@ -59,7 +60,7 @@ export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
     ts: Date.now(),
     payload: {
       modelId: payload.modelId,
-      thinkingLevel: updated.thinkingLevel as any,
+      thinkingLevel: updated.thinkingLevel,
       compactThreshold: updated.compactThreshold,
       enabled: updated.enabled,
       visible: updated.visible,

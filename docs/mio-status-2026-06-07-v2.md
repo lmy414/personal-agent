@@ -286,7 +286,74 @@ Server → Client (36 条)
 
 ---
 
-## 八、建议执行顺序
+## 八、前端功能实现状态审计（2026-06-08）
+
+### 已实现（接真实数据）— 10 个扩展/视图
+
+| 模块 | 功能 |
+|------|------|
+| ChatRenderer | MomoTalk 布局、Avatar 三态动画、Thinking 折叠、Markdown 渲染+缓存、拖拽附件、图片附件、流式渲染 |
+| Sidebar | Agent 列表+展开/折叠、会话搜索/切换/删除（二次确认）、工具日志（最近8条）、资源监控、压缩/中断按钮 |
+| EditorPanel | 多文件 Tab、拖拽调整宽度、Markdown/HTML 预览、源码/预览切换 |
+| FileTree | 目录树浏览、懒加载、文件拖拽到聊天、工作目录感知、自动刷新 |
+| ToolPanel | 工具调用列表、展开详情、状态指示、中断按钮+Toast |
+| DocPreview | 文件内容预览、Markdown/HTML/图片渲染 |
+| RightPanel | Tab 切换、持久化内容、关闭按钮 |
+| MiniNav | 6 个导航项、文件模式切换、活跃状态 |
+| StatusBar | 时间、模型名、Token 消耗、费用、上下文进度条 |
+| FileTreeView | 文件树全屏视图（复用 FileTree 扩展） |
+
+### Mock/硬编码 — 4 个视图
+
+| View | 缺失 |
+|------|------|
+| CharacterView | 5 个 Agent 硬编码，未读 useAgent().agents()，保存/重置无功能 |
+| SessionRecordsView | 会话列表/消息详情/工具日志全部硬编码 |
+| CostDashboardView | 指标/图表/洞察全部硬编码 |
+| SettingsLayoutView | 模型管理 ✅；显示/技能/工作目录/系统 4 个 Tab 大量硬编码 |
+
+### 完全未实现 — 9 项
+
+| # | 功能 |
+|---|------|
+| U1 | CharacterView 接入真实数据 |
+| U2 | SessionRecordsView 接入真实数据 |
+| U3 | CostDashboardView 接入真实数据 |
+| U4 | 设置页 - 显示设置 Tab（themes/wallpapers 切换无效果） |
+| U5 | 设置页 - 技能管理 Tab（Toggle 无功能） |
+| U6 | 设置页 - 工作目录 Tab（excludeRules 硬编码） |
+| U7 | 设置页 - 系统信息 Tab（logs/links 硬编码） |
+| U8 | chat-panel 附件按钮（onAttach 为空） |
+| U9 | 通用组件库实际复用（8 个组件实现但几乎未被扩展使用） |
+
+### 部分实现/有缺陷 — 10 项
+
+| # | 问题 |
+|---|------|
+| P1 | chat-panel vs chat-renderer 重复（两个扩展注册同一 slot） |
+| P2 | SettingsLayoutView 模型管理配置弹窗逻辑复杂，visible/enable 状态切换可能有竞态 |
+| P3 | EditorPanel 与 DocPreview 功能重叠，同时打开互相干扰 |
+| P4 | status-bar 未注册到任何 slot（有实现但未渲染） |
+| P5 | session-panel 未注册到任何 slot（Sidebar 已内置会话列表） |
+| P6 | top-menu 仅 2 个菜单项 |
+| P7 | INPUT_TAGS 快捷标签点击无响应 |
+| P8 | Avatar 图片用 file:// 协议，浏览器安全策略可能阻止 |
+| P9 | FileTree 初始竞态（settings.state 先于 file.list 到达时可能双请求） |
+| P10 | Markdown 渲染 XSS（marked.parse 输出直接 innerHTML） |
+
+### 设计问题 — 5 项
+
+| # | 问题 | 影响 |
+|---|------|------|
+| D1 | chat-panel 和 chat-renderer 共存 | 用户看到哪个取决于注册顺序 |
+| D2 | 通用组件库未被消费 | 维护成本 vs 价值不匹配 |
+| D3 | 内联样式泛滥 | 难以主题化和维护 |
+| D4 | CustomEvent 与 Signal 混用 | 两套事件系统 |
+| D5 | Mock 数据与真实数据混杂 | 同一组件内部分真实部分 mock |
+
+---
+
+## 九、建议执行顺序
 
 ```
 Phase 0: 协议对齐 (P0-1 → P0-4)              ← 1-2 个会话
