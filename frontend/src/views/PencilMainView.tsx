@@ -123,7 +123,7 @@ function Sidebar() {
   }
 
   const tools = createMemo((): ToolItem[] =>
-    a.toolCalls().slice(-5).reverse().map((tc) => ({
+    a.toolCalls().slice(-8).reverse().map((tc) => ({
       name: tc.toolName,
       status: toolStatusText(tc),
       desc: `${tc.toolName} · ${(tc.input as Record<string, unknown>)['path'] as string ?? ''}`,
@@ -430,7 +430,7 @@ function Sidebar() {
               <CirclePause size={12} />
             </button>
           </div>
-          <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '190px', 'overflow-y': 'auto' }}>
+          <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '280px', 'overflow-y': 'auto' }}>
             <Show when={tools().length === 0}>
               <div style={{ 'font-size': '11px', color: 'var(--text-muted)', 'text-align': 'center', padding: '8px' }}>
                 暂无工具执行记录
