@@ -161,16 +161,11 @@ function ModelPage() {
     try { return JSON.parse(entry.value) } catch { return {} }
   })
 
-  // Group agents by provider
-  const agentsByProvider = createMemo(() => {
-    const map = new Map<string, import('@bridge/protocol').AgentInfo[]>()
-    for (const a of agent.agents()) {
-      const p = a.provider
-      if (!map.has(p)) map.set(p, [])
-      map.get(p)!.push(a)
-    }
-    return map
-  })
+  // Models come from providers JSON (written by settings.discover via Pi)
+  const getProviderModels = (providerId: string) => {
+    const p = providers().find(p => p.id === providerId)
+    return p?.models ?? []
+  }
 
   const availableProviderIds = createMemo(() => {
     const existing = new Set(providers().map(p => p.id))
@@ -247,7 +242,7 @@ function ModelPage() {
         <div style={{ display: 'grid', 'grid-template-columns': 'repeat(4, 1fr)', gap: '12px' }}>
           <For each={providers()}>
             {(p) => {
-              const modelCount = (agentsByProvider().get(p.id) ?? []).length
+              const modelCount = getProviderModels(p.id).length
               const isExpanded = expandedProvider() === p.id
               return (
                 <div>
@@ -286,23 +281,22 @@ function ModelPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          <For each={(agentsByProvider().get(p.id) ?? [])}>
-                            {(agent) => {
-                              const cfg = getModelConfig(agent.modelId)
+                          <For each={getProviderModels(p.id)}>
+                            {(model) => {
+                              const cfg = getModelConfig(model.id)
                               const level = cfg.thinkingLevel ?? 'medium'
                               const dots = THINKING_DOTS[level] ?? 3
-                              const enabled = isModelEnabled(agent.modelId)
-                              // Non-thinking models: check provider — Anthropic, DeepSeek support thinking; others may not
+                              const enabled = isModelEnabled(model.id)
                               const supportsThinking = ['deepseek', 'anthropic'].includes(p.id)
                               return (
                                 <tr style={{ opacity: enabled ? 1 : 0.4, transition: 'opacity 0.15s' }}>
                                   <td style={tdStyle}>
-                                    <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{agent.name}</div>
-                                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{agent.modelId}</div>
+                                    <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{model.name}</div>
+                                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{model.id}</div>
                                   </td>
                                   <td style={tdStyle}>
                                     {supportsThinking ? (
-                                      <div onClick={() => handleThinkingChange(agent.modelId, level)}
+                                      <div onClick={() => handleThinkingChange(model.id, level)}
                                         style={{ display: 'flex', gap: '3px', cursor: 'pointer' }}
                                         title={`当前: ${level} — 点击切换`}>
                                         {[1,2,3,4].map((d) => (
@@ -314,7 +308,7 @@ function ModelPage() {
                                     )}
                                   </td>
                                   <td style={tdStyle}>
-                                    <div onClick={() => handleToggleModel(agent.modelId, enabled)} style={{ cursor: 'pointer' }}>
+                                    <div onClick={() => handleToggleModel(model.id, enabled)} style={{ cursor: 'pointer' }}>
                                       <ToggleSmall initialOn={enabled} />
                                     </div>
                                   </td>
@@ -364,43 +358,46 @@ function ModelPage() {
           </tr>
         </thead>
         <tbody>
-          <For each={agent.agents()}>
-            {(agent) => {
-              const cfg = getModelConfig(agent.modelId)
-              const level = cfg.thinkingLevel ?? 'medium'
-              const dots = THINKING_DOTS[level] ?? 3
-              const enabled = isModelEnabled(agent.modelId)
-              const supportsThinking = ['deepseek', 'anthropic'].includes(agent.provider)
-              const providerName = PROVIDER_NAMES[agent.provider] ?? agent.provider
-              return (
-                <tr style={{ opacity: enabled ? 1 : 0.4, transition: 'opacity 0.15s', cursor: 'pointer' }}>
-                  <td style={tdStyle}>
-                    <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{agent.name}</div>
-                    <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{agent.modelId}</div>
-                  </td>
-                  <td style={tdStyle}>{providerName}</td>
-                  <td style={tdStyle}>
-                    {supportsThinking ? (
-                      <div onClick={() => handleThinkingChange(agent.modelId, level)}
-                        style={{ display: 'flex', gap: '3px', cursor: 'pointer' }}
-                        title={`当前: ${level} — 点击切换`}>
-                        {[1,2,3,4].map((d) => (
-                          <div style={{ width: '5px', height: '5px', 'border-radius': '50%', background: d <= dots ? 'var(--accent)' : 'rgba(255,255,255,0.10)' }} />
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>不支持</span>
-                    )}
-                  </td>
-                  <td style={tdStyle}>
-                    <div onClick={() => handleToggleModel(agent.modelId, enabled)} style={{ cursor: 'pointer' }}>
-                      <ToggleSmall initialOn={enabled} />
-                    </div>
-                  </td>
-                </tr>
-              )
-            }}
-          </For>
+          <For each={providers()}>
+            {(p) => (
+              <For each={getProviderModels(p.id)}>
+                {(model) => {
+                  const cfg = getModelConfig(model.id)
+                  const level = cfg.thinkingLevel ?? 'medium'
+                  const dots = THINKING_DOTS[level] ?? 3
+                  const enabled = isModelEnabled(model.id)
+                  const supportsThinking = ['deepseek', 'anthropic'].includes(p.id)
+                  return (
+                    <tr style={{ opacity: enabled ? 1 : 0.4, transition: 'opacity 0.15s', cursor: 'pointer' }}>
+                      <td style={tdStyle}>
+                        <div style={{ 'font-weight': '500', color: 'var(--text-primary)' }}>{model.name}</div>
+                        <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{model.id}</div>
+                      </td>
+                      <td style={tdStyle}>{p.name}</td>
+                      <td style={tdStyle}>
+                        {supportsThinking ? (
+                          <div onClick={() => handleThinkingChange(model.id, level)}
+                            style={{ display: 'flex', gap: '3px', cursor: 'pointer' }}
+                            title={`当前: ${level} — 点击切换`}>
+                            {[1,2,3,4].map((d) => (
+                              <div style={{ width: '5px', height: '5px', 'border-radius': '50%', background: d <= dots ? 'var(--accent)' : 'rgba(255,255,255,0.10)' }} />
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>不支持</span>
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        <div onClick={() => handleToggleModel(model.id, enabled)} style={{ cursor: 'pointer' }}>
+                          <ToggleSmall initialOn={enabled} />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                }}
+              </For>
+            )
+          }}</For>
         </tbody>
       </table>
     </>

@@ -65,6 +65,36 @@ export function getAvailableModels(registry?: ModelRegistry): { id: string; name
   }))
 }
 
+// ========== SQLite → Env Key 注入 ==========
+
+const ENV_KEY_MAP: Record<string, string> = {
+  deepseek: 'DEEPSEEK_API_KEY', anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY', google: 'GEMINI_API_KEY',
+  groq: 'GROQ_API_KEY', xai: 'XAI_API_KEY', mistral: 'MISTRAL_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY', cerebras: 'CEREBRAS_API_KEY',
+  fireworks: 'FIREWORKS_API_KEY', together: 'TOGETHER_API_KEY',
+  minimax: 'MINIMAX_API_KEY', moonshotai: 'MOONSHOT_API_KEY',
+  kimi: 'KIMI_API_KEY', zai: 'ZAI_API_KEY',
+}
+
+/** 从 SQLite providers 读取 API Key 并注入到 process.env（Pi SDK 依赖环境变量） */
+export function injectProviderKeys(): void {
+  try {
+    const db = getDB()
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'providers'").get() as { value: string } | undefined
+    if (!row?.value) return
+    const providers: { id: string; name: string; apiKey?: string; active?: boolean }[] = JSON.parse(row.value)
+    for (const p of providers) {
+      if (!p.apiKey || !p.apiKey.trim()) continue
+      const envKey = ENV_KEY_MAP[p.id]
+      if (envKey) {
+        process.env[envKey] = p.apiKey.trim()
+      }
+    }
+    console.log('[pi-session] injected keys from SQLite providers:', providers.filter(p => p.apiKey?.trim()).map(p => p.id).join(', ') || '(none)')
+  } catch { /* non-critical */ }
+}
+
 // ========== 会话生命周期 ==========
 
 export async function createPiSession(options: {
@@ -82,6 +112,9 @@ export async function createPiSession(options: {
   } catch { /* DB 未初始化 */ }
   const modelName = options.modelName ?? defaultModel
   const thinkingLevel = options.thinkingLevel ?? 'medium'
+
+  // 每次创建 Pi 会话前，从 SQLite 注入 API Key（消除 env var 依赖）
+  injectProviderKeys()
 
   const disabledNames = loadDisabledSkills()
   const resourceLoader = new DefaultResourceLoader({

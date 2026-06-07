@@ -8,6 +8,7 @@ import { initAgents } from './init-agents'
 import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
 import { addSkillClient, removeSkillClient } from './handlers/skills'
 import { addAgentClient, removeAgentClient } from './handlers/agent'
+import { injectProviderKeys } from './pi-session'
 
 const PORT = 9229
 
@@ -16,6 +17,7 @@ const db = initDB()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 initPiConfig(__dirname)
 initAgents()
+injectProviderKeys()
 
 // Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
 
