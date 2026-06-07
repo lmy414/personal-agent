@@ -63,4 +63,15 @@ export function handleModelConfigure(msg: ClientMessage, ws: WebSocket): void {
       enabled: updated.enabled,
     },
   }))
+
+  // 推送完整 settings 让前端 modelConfigs() 重新计算
+  const db = getDB()
+  const all = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]
+  ws.send(JSON.stringify({
+    type: 'settings.state',
+    id: `srv-${Date.now()}`,
+    sessionId: '',
+    ts: Date.now(),
+    payload: { entries: all },
+  }))
 }
