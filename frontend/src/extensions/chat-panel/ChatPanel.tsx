@@ -8,7 +8,8 @@ import './chat-panel.css'
 export function ChatPanel() {
   const agent = useAgent()
   const [inputValue, setInputValue] = createSignal('')
-  const [collapsedThinkings, setCollapsedThinkings] = createSignal<Set<string>>(new Set())
+  // 思考默认折叠，点击展开
+  const [expandedThinkings, setExpandedThinkings] = createSignal<Set<string>>(new Set())
   let textareaRef: HTMLTextAreaElement | undefined
   let chatScrollRef: HTMLDivElement | undefined
 
@@ -46,12 +47,13 @@ export function ChatPanel() {
     }
   }
 
+  // 过滤空气泡：已完成且无文字内容的消息不渲染
   const messages = createMemo(() =>
-    agent.messages().filter((m) => m.content || m.thinking || m.partial)
+    agent.messages().filter((m) => m.role === 'user' || m.content || m.partial)
   )
 
   const toggleThinking = (msgId: string) => {
-    setCollapsedThinkings((prev) => {
+    setExpandedThinkings((prev) => {
       const next = new Set(prev)
       if (next.has(msgId)) next.delete(msgId)
       else next.add(msgId)
@@ -171,20 +173,20 @@ export function ChatPanel() {
                     <div style={{ display: 'flex', gap: '12px', width: '100%', 'justify-content': 'flex-start' }}>
                       <div style={{ width: '32px', height: '32px', 'border-radius': '4px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '12px', 'font-weight': 'bold', color: '#fff', 'flex-shrink': '0', background: 'rgba(255,255,255,0.04)' }}>A</div>
                       <div style={{ display: 'flex', 'flex-direction': 'column', gap: '2px', 'max-width': '100%', flex: '1' }}>
-                        {/* Thinking block */}
+                        {/* Thinking block — collapsed by default, click to expand */}
                         <Show when={msg.thinking}>
                           <div style={{ background: 'rgba(10,10,16,0.25)', 'border-radius': '6px', padding: '6px 10px', width: '100%', 'margin-bottom': '4px', cursor: 'pointer' }}
                             onClick={() => toggleThinking(msg.messageId)}>
                             <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
                               <span style={{ color: 'var(--text-muted)', display: 'flex' }}><Brain size={11} /></span>
                               <span style={{ 'font-size': '11px', color: 'var(--text-muted)', flex: '1' }}>
-                                思考过程 {collapsedThinkings().has(msg.messageId) ? '(点击展开)' : '(点击收起)'}
+                                思考过程 {expandedThinkings().has(msg.messageId) ? '(点击收起)' : '(点击展开)'}
                               </span>
                               <span style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
-                                {collapsedThinkings().has(msg.messageId) ? '▶' : '▼'}
+                                {expandedThinkings().has(msg.messageId) ? '▼' : '▶'}
                               </span>
                             </div>
-                            <Show when={!collapsedThinkings().has(msg.messageId)}>
+                            <Show when={expandedThinkings().has(msg.messageId)}>
                               <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'line-height': '1.5', 'margin-top': '4px' }}>{msg.thinking}</div>
                             </Show>
                           </div>

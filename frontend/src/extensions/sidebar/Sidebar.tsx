@@ -339,9 +339,21 @@ export function Sidebar() {
             <span style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '12px', color: 'var(--text-muted)' }}>
               作戦記録
             </span>
-            <button style={{ display: 'flex', 'align-items': 'center', gap: '4px', padding: '3px 10px', 'border-radius': '4px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', 'font-size': '11px', cursor: 'pointer', 'font-family': 'inherit' }}>
-              <CirclePause size={12} />
-            </button>
+            <Show when={a.isStreaming()}>
+              <button
+                onClick={() => a.cancelMessage()}
+                title="中断当前操作"
+                style={{
+                  display: 'flex', 'align-items': 'center', gap: '4px', padding: '3px 10px',
+                  'border-radius': '4px', background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444',
+                  'font-size': '11px', cursor: 'pointer', 'font-family': 'inherit',
+                  animation: 'pulse 2s infinite',
+                }}
+              >
+                <CirclePause size={12} />
+              </button>
+            </Show>
           </div>
           <div ref={toolScrollRef} style={{ display: 'flex', 'flex-direction': 'column', gap: '6px', 'max-height': '280px', 'overflow-y': 'auto' }}>
             <Show when={tools().length === 0}>
