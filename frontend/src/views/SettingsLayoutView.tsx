@@ -397,7 +397,7 @@ function ModelPage() {
                 }}
               </For>
             )
-          }}</For>
+          }</For>
         </tbody>
       </table>
     </>
