@@ -1177,7 +1177,11 @@ function EditorPanel() {
             <Show when={isMd() && active()?.viewMode === 'preview'} fallback={
               <pre style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '11px', 'line-height': '1.6', color: 'var(--text-secondary)', 'white-space': 'pre-wrap', 'word-break': 'break-all', margin: '0', 'user-select': 'text' }}>{active()?.content}</pre>
             }>
-              <div class="msg-content" innerHTML={markdownContent()} style={{ 'font-size': '13px', 'line-height': '1.7', color: 'var(--text-primary)', 'user-select': 'text' }} />
+              <Show when={(active()?.name.split('.').pop()?.toLowerCase() ?? '') === 'html'} fallback={
+                <div class="msg-content" innerHTML={markdownContent()} style={{ 'font-size': '13px', 'line-height': '1.7', color: 'var(--text-primary)', 'user-select': 'text' }} />
+              }>
+                <iframe srcdoc={active()?.content} style={{ width: '100%', height: '100%', border: 'none', background: '#050508' }} sandbox="allow-scripts" />
+              </Show>
             </Show>
           </Show>
         </div>
