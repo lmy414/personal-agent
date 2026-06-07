@@ -734,7 +734,7 @@ function ChatPanel() {
   // 内容渲染 — HTML 直出，Markdown 走 marked
   marked.setOptions({ breaks: true, gfm: true })
   const mdCache = new Map<string, string>()
-  const isRawHtml = (t: string) => /<\s*(\w+|!--)/.test(t)
+  const isRawHtml = (t: string) => /<\s*(\w+|!|!--)/.test(t)
   const renderContent = (msgId: string, text: string) => {
     if (!text) return text
     const cached = mdCache.get(msgId)
