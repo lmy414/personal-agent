@@ -38,9 +38,9 @@ function SectionTitle(props: { children: string }) {
   return <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', 'margin-bottom': '16px' }}>{props.children}</div>
 }
 
-function Btn(props: { children: string; primary?: boolean }) {
+function Btn(props: { children: JSX.Element; primary?: boolean; onClick?: () => void }) {
   return (
-    <button style={{
+    <button onClick={props.onClick} style={{
       padding: '6px 14px', 'border-radius': '4px', cursor: 'pointer', 'font-family': 'inherit', 'font-size': '12px',
       background: props.primary ? 'rgba(107,143,168,0.15)' : 'rgba(255,255,255,0.04)',
       border: props.primary ? '1px solid rgba(107,143,168,0.20)' : '1px solid rgba(255,255,255,0.06)',
