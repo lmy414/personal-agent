@@ -249,17 +249,17 @@ const excludeRules = [
 ]
 
 const logs = [
-  { time: '14:32:15', level: 'INFO' as const, msg: '会话 #52 已创建 · 模型 Claude Opus 4.6' },
-  { time: '14:31:52', level: 'INFO' as const, msg: 'File_exec 完成 · App.tsx L42-58 · 1.2s' },
-  { time: '14:31:28', level: 'WARN' as const, msg: 'shell_exec 超时 · npm run build · 30s' },
+  { time: '14:32:15', level: 'INFO' as const, msg: '会话已创建 · 模型 DeepSeek V3' },
+  { time: '14:31:52', level: 'INFO' as const, msg: '文件写入完成 · SettingsLayoutView.tsx · 1.2s' },
+  { time: '14:31:28', level: 'WARN' as const, msg: 'shell_exec 超时 · npm run check · 30s' },
   { time: '14:31:05', level: 'INFO' as const, msg: '上下文压缩完成 · 释放 8,450 tokens' },
   { time: '14:30:40', level: 'INFO' as const, msg: 'MCP 服务重连成功 · 7 工具可用' },
-  { time: '14:29:07', level: 'ERR'  as const, msg: '连接 v3.1.0 启动 · PID 8241 · 端口 9229' },
+  { time: '14:29:07', level: 'ERR'  as const, msg: '桥接服务器启动 · PID 8241 · 端口 9229' },
 ]
 
 const links = [
   { icon: () => <ExternalLink size={16} />, name: 'GitHub',  url: 'github.com/layyck' },
-  { icon: () => <Monitor size={16} />, name: 'Bilibili', url: 'space.bilibili.com/2529362295' },
+  { icon: () => <Monitor size={16} />, name: 'Bilibili', url: 'https://space.bilibili.com/321480847' },
 ]
 
 // ── 子页面 ──
