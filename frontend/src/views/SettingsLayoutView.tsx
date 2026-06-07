@@ -966,13 +966,13 @@ function SkillsPage() {
       </Show>
 
       {/* 全局技能 */}
-      <Show when={userSkills().length > 0}>
-        <div style={{ 'margin-bottom': '16px' }}>
-          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '10px' }}>
-            <Globe size={14} />
-            <span style={{ 'font-size': '12px', 'font-weight': '500' }}>全局技能</span>
-            <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': 'auto' }}>所有项目可用</span>
-          </div>
+      <div style={{ 'margin-bottom': '16px' }}>
+        <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '10px' }}>
+          <Globe size={14} />
+          <span style={{ 'font-size': '12px', 'font-weight': '500' }}>全局技能</span>
+          <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': 'auto' }}>所有项目可用</span>
+        </div>
+        <Show when={userSkills().length > 0}>
           <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
             <For each={userSkills()}>
               {(skill) => (
@@ -1001,17 +1001,22 @@ function SkillsPage() {
               )}
             </For>
           </div>
-        </div>
-      </Show>
+        </Show>
+        <Show when={userSkills().length === 0}>
+          <div style={{ 'font-size': '12px', color: 'var(--text-muted)', padding: '12px 0' }}>
+            暂无全局技能
+          </div>
+        </Show>
+      </div>
 
       {/* 项目技能 */}
-      <Show when={projectSkills().length > 0}>
-        <div style={{ 'margin-bottom': '16px' }}>
-          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '10px' }}>
-            <FolderOpen size={14} />
-            <span style={{ 'font-size': '12px', 'font-weight': '500' }}>项目技能</span>
-            <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': 'auto' }}>仅当前项目可用</span>
-          </div>
+      <div style={{ 'margin-bottom': '16px' }}>
+        <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'margin-bottom': '10px' }}>
+          <FolderOpen size={14} />
+          <span style={{ 'font-size': '12px', 'font-weight': '500' }}>项目技能</span>
+          <span style={{ 'font-size': '11px', color: 'var(--text-muted)', 'margin-left': 'auto' }}>仅当前项目可用</span>
+        </div>
+        <Show when={projectSkills().length > 0}>
           <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px' }}>
             <For each={projectSkills()}>
               {(skill) => (
@@ -1040,14 +1045,13 @@ function SkillsPage() {
               )}
             </For>
           </div>
-        </div>
-      </Show>
-
-      <Show when={agent.skills().length === 0 && !showInstall()}>
-        <div style={{ 'font-size': '12px', color: 'var(--text-muted)', padding: '20px', 'text-align': 'center' }}>
-          暂无已安装技能，点击右上角安装
-        </div>
-      </Show>
+        </Show>
+        <Show when={projectSkills().length === 0}>
+          <div style={{ 'font-size': '12px', color: 'var(--text-muted)', padding: '12px 0' }}>
+            暂无项目技能
+          </div>
+        </Show>
+      </div>
 
       {/* ── MCP ── */}
       <McpSection />
