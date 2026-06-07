@@ -133,7 +133,7 @@ const PROVIDER_NAMES: Record<string, string> = {
 const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high'] as const
 const THINKING_DOTS: Record<string, number> = { off: 0, minimal: 1, low: 2, medium: 3, high: 4 }
 
-interface ProviderConfig { id: string; name: string; apiUrl?: string; apiKey?: string; active: boolean }
+interface ProviderConfig { id: string; name: string; apiUrl?: string; apiKey?: string; active?: boolean; models?: { id: string; name: string; contextWindow: number }[] }
 
 function ModelPage() {
   const agent = useAgent()
@@ -147,7 +147,12 @@ function ModelPage() {
   const providers = createMemo<ProviderConfig[]>(() => {
     const entry = agent.settings().find(e => e.key === 'providers')
     if (!entry?.value) return []
-    try { return JSON.parse(entry.value) } catch { return [] }
+    try {
+      const raw = JSON.parse(entry.value)
+      // discover writes [{id, name, models:[...]}], saveProvider writes [{id,name,apiKey,active}]
+      // Normalize: ensure active defaults to true
+      return raw.map((p: any) => ({ ...p, active: p.active !== false }))
+    } catch { return [] }
   })
 
   const modelConfigs = createMemo<Record<string, { thinkingLevel?: string; compactThreshold?: number; enabled?: boolean }>>(() => {
