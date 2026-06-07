@@ -734,17 +734,21 @@ function ChatPanel() {
   // 内容渲染 — HTML 直出，Markdown 走 marked
   marked.setOptions({ breaks: true, gfm: true })
   const mdCache = new Map<string, string>()
+  const isFullDoc = (t: string) => /<!DOCTYPE\s+html/i.test(t)
   const isRawHtml = (t: string) => /<\s*(\w+|!|!--)/.test(t)
   const renderContent = (msgId: string, text: string) => {
     if (!text) return text
     const cached = mdCache.get(msgId)
-    if (cached === text) return mdCache.get(`r:${msgId}`) ?? ''
+    if (cached === text) {
+      if (isFullDoc(text)) return mdCache.get(`r:${msgId}`) ?? text
+      return mdCache.get(`r:${msgId}`) ?? ''
+    }
     mdCache.set(msgId, text)
-    let html = text
-    if (isRawHtml(text)) {
-      // 去掉外层文档标签，只保留 body 内容用于 inline 渲染
-      html = text.replace(/<!DOCTYPE[^>]*>/gi, '')
-        .replace(/<\/?(html|head|body)[^>]*>/gi, '')
+    let html: string
+    if (isFullDoc(text)) {
+      html = text  // iframe srcdoc 直接用原文
+    } else if (isRawHtml(text)) {
+      html = text
     } else {
       html = marked.parse(text) as string
     }
@@ -929,7 +933,11 @@ function ChatPanel() {
                           }}
                         >
                           <div class="msg-content" style={{ 'font-size': '13px', 'line-height': '1.6', color: 'var(--text-primary)', 'user-select': 'text' }}>
-                            <span innerHTML={renderContent(msg.messageId, msg.content) || (msg.partial ? '...' : '')} />
+                            <Show when={isFullDoc(msg.content)} fallback={
+                              <span innerHTML={renderContent(msg.messageId, msg.content) || (msg.partial ? '...' : '')} />
+                            }>
+                              <iframe srcdoc={msg.content} style={{ width: '100%', height: '400px', border: 'none', background: '#050508', 'border-radius': '8px' }} sandbox="allow-scripts" />
+                            </Show>
                           </div>
                         </div>
                       </div>
