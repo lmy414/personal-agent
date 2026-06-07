@@ -25,7 +25,7 @@ export default function PencilMainView() {
     <>
       <Show when={showFileTree()} fallback={renderSidebarExt('sidebar')}>
         <div class="glass-panel" style={{ width: '320px', 'flex-shrink': '0', display: 'flex', 'flex-direction': 'column', 'z-index': '5' }}>
-          <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 16px', height: '54px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
+          <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 16px', height: '54px', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
             <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', display: 'flex', 'align-items': 'center', gap: '6px' }}><FolderOpen size={14} /> 工作目录</div>
             <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', 'font-size': '11px' }} onClick={() => setSidebarMode('chat')}>✕</button>
           </div>

@@ -7,7 +7,7 @@ export default function FileTreeView() {
       <div class="bracket-tr"><div class="bracket-h" /><div class="bracket-v" /></div>
       <div style={{
         display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
-        padding: '12px 16px', height: '54px', background: 'var(--panel-bg-top)',
+        padding: '12px 16px', height: '54px', background: 'rgb(var(--top-bar-tint-rgb))',
         'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0',
       }}>
         <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', display: 'flex', 'align-items': 'center', gap: '6px' }}><FolderOpen size={14} /> 工作目录</div>

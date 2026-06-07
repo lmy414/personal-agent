@@ -33,7 +33,7 @@
 
 .nav-item.active {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.04);
+  background: rgb(var(--top-bar-tint-rgb));
 }
 
 .nav-icon {

@@ -127,7 +127,7 @@ export function ChatPanel() {
           'justify-content': 'space-between',
           padding: '12px 16px',
           height: '54px',
-          background: 'var(--panel-bg-top)',
+          background: 'rgb(var(--top-bar-tint-rgb))',
           'border-bottom': '1px solid rgba(255,255,255,0.03)',
           'flex-shrink': '0',
         }}

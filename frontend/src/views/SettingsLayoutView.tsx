@@ -1194,7 +1194,7 @@ export default function SettingsLayoutView() {
         <div style={{
           display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
           padding: '16px 24px', height: '60px',
-          background: 'linear-gradient(180deg, rgba(var(--top-bar-tint-rgb),0.90), rgba(var(--top-bar-tint-rgb),0.60))',
+          background: 'rgb(var(--top-bar-tint-rgb))',
           'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0',
         }}>
           <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '16px', 'font-weight': '600' }}>

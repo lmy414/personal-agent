@@ -81,7 +81,7 @@ export default function SessionRecordsView() {
 
       {/* Detail Panel */}
       <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'min-width': '0' }}>
-        <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 24px', height: '54px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
+        <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 24px', height: '54px', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
           <div style={{ display: 'flex', 'align-items': 'center', gap: '12px' }}>
             <span style={{ display: 'flex', 'align-items': 'center' }}>{activeSession()?.icon()}</span>
             <span style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600' }}>{activeSession()?.title}</span>

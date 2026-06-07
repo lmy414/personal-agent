@@ -84,7 +84,7 @@ export default function CharacterView() {
 
       {/* Editor */}
       <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'min-width': '0' }}>
-        <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '16px 24px', height: '60px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
+        <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '16px 24px', height: '60px', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
           <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '16px', 'font-weight': '600' }}>{active().name} — 设置</div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button style={{ padding: '6px 14px', 'border-radius': '4px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)', 'font-size': '12px', cursor: 'pointer', 'font-family': 'inherit' }}>重置</button>

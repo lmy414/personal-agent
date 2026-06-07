@@ -195,7 +195,7 @@ export default function CostDashboardView() {
       </div>
 
       {/* Bottom Bar */}
-      <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '0 24px', height: '36px', background: 'var(--panel-bg-top)', 'border-top': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
+      <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '0 24px', height: '36px', background: 'rgb(var(--top-bar-tint-rgb))', 'border-top': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
         <span style={{ 'font-family': '"JetBrains Mono", monospace', 'font-size': '10px', color: 'var(--text-muted)' }}>最終更新: 2026-06-07 14:32:15</span>
         <span style={{ display: 'flex', 'align-items': 'center', gap: '16px', 'font-family': '"JetBrains Mono", monospace', 'font-size': '10px', color: 'var(--text-muted)' }}>
           <span>API: DeepSeek V4 · Claude Opus 4.6 · GPT-4o</span>
@@ -206,7 +206,7 @@ export default function CostDashboardView() {
   )
 }
 
-const hdrStyle: Record<string, string> = { display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 24px', height: '60px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }
+const hdrStyle: Record<string, string> = { display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 24px', height: '60px', background: 'rgb(var(--top-bar-tint-rgb))', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }
 const titleStyle: Record<string, string> = { 'font-family': '"Noto Serif SC", serif', 'font-size': '16px', 'font-weight': '600', color: '#fff' }
 const secTitleStyle: Record<string, string> = { 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', color: 'var(--text-primary)' }
 const cardStyle: Record<string, string> = { flex: '1', background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.025)', 'border-radius': '6px', padding: '16px', display: 'flex', 'flex-direction': 'column', gap: '6px', overflow: 'hidden' }
