@@ -24,32 +24,42 @@ personal-agent/
 ├── package.json               ← monorepo root（concurrently 双启动）
 ├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
 │   ├── .pi/settings.json      ←   Pi 扩展注册（3 个扩展，绝对路径）
-│   ├── index.ts               ←   入口：WS Server + SQLite 初始化
+│   ├── index.ts               ←   入口：WSS + 启动编排（53 行）
+│   ├── init-db.ts             ←   DB 初始化 + 主会话 + 默认设置
+│   ├── init-config.ts         ←   .pi/settings.json 生成
+│   ├── init-agents.ts         ←   Agent 自动发现
 │   ├── protocol.ts            ←   统一协议（69 条消息，完整 Pi 事件映射，前后端共享）
 │   ├── dispatcher.ts          ←   消息路由表（32 路由）
 │   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
 │   ├── pi-adapter.ts           ←   Pi 事件 → 协议消息 纯翻译器（~60 行）
 │   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
-│   ├── watcher.ts             ←   文件监听 + 广播
+│   ├── watcher.ts             ←   文件监听 + 广播（客户端管理统一到 client-manager）
+│   ├── client-manager.ts      ←   统一客户端集（add/remove/broadcast）
+│   ├── auto-name.ts           ←   DeepSeek AI 自动命名服务
 │   └── handlers/              ←   按消息类型拆文件（11 文件）
 │       ├── settings.ts        ←     设置 CRUD + 模型发现
 │       ├── file.ts            ←     文件列表/读取/写入
 │       ├── session.ts         ←     会话 CRUD + 历史 + 压缩
-│       ├── message.ts         ←     消息发送/取消 + 自动命名
+│       ├── message.ts         ←     消息发送/取消（自动命名分离到 auto-name.ts）
 │       ├── model.ts           ←     模型切换/列表
 │       ├── memory.ts          ←     记忆搜索/列表
 │       ├── memory-store.ts    ←     Bridge 侧记忆读写
-│       ├── skills.ts          ←     技能 CRUD
-│       ├── agent.ts           ←     智能体管理（多智能体架构）
+│       ├── skills.ts          ←     技能 CRUD（客户端管理统一到 client-manager）
+│       ├── agent.ts           ←     智能体管理（多智能体架构，客户端管理统一）
 │       ├── thinking.ts        ←     思考深度配置
 │       └── tools.ts           ←     工具集配置
 ├── frontend/                  ← SolidJS 前端
 │   ├── src/
-│   │   ├── shell/             ←   壳（Grid 布局 + WS hook + 全局信号）
-│   │   │   ├── App.tsx        ←     壳组件 + 面板拖拽
+│   │   ├── shell/             ←   壳（Registry 驱动布局 + WS + 全局状态）
+│   │   │   ├── App.tsx        ←     壳组件（64 行，纯 registry 组装）
 │   │   │   ├── App.css        ←     全局变量/reset/Grid/动画（364 行）
-│   │   │   ├── useAgent.tsx   ←     全局状态 + WebSocket 管理
-│   │   │   └── settings-signal.ts ← 设置页面开关信号
+│   │   │   ├── useAgent.tsx   ←     全局状态 Provider + Hook（639 行，6 模块组合）
+│   │   │   ├── use-ws.ts      ←     WS 连接/重连/心跳/缓冲
+│   │   │   ├── use-session-cache.ts ← 会话级消息/工具/状态缓存
+│   │   │   ├── char-pump.ts   ←     字符逐帧渲染泵（RAF）
+│   │   │   ├── use-settings.ts ←    设置 CRUD 状态
+│   │   │   ├── use-agents.ts  ←     多智能体状态管理
+│   │   │   └── nav-signal.ts  ←     全局导航信号（替代 CustomEvent）
 │   │   ├── components/        ←   通用组件库（galaxy 平铺式，8 组件）
 │   │   │   ├── glass-panel/   ←     玻璃拟态容器
 │   │   │   ├── glass-input/   ←     输入框
@@ -60,14 +70,18 @@ personal-agent/
 │   │   │   ├── progress-bar/  ←     进度条
 │   │   │   └── spinner/       ←     脉冲指示器
 │   │   ├── registry.ts        ←   扩展注册表（Slot-based 插件系统）
-│   │   ├── views/             ←   视图组件（6 文件，硬编码路由）
-│   │   │   ├── PencilMainView.tsx  ← 主工作区（1292 行巨石）
+│   │   ├── views/             ←   视图组件（6 文件 + index.ts，注册到 main-view 槽位）
+│   │   │   ├── index.ts           ← 6 个 View 统一注册到 registry
+│   │   │   ├── PencilMainView.tsx  ← 主工作区（44 行，从 registry sidebar 槽位组装）
 │   │   │   ├── CharacterView.tsx   ← 智能体角色展示（mock）
-│   │   │   ├── SessionRecordsView.tsx ← 会话记录
+│   │   │   ├── SessionRecordsView.tsx ← 会话记录（mock）
 │   │   │   ├── CostDashboardView.tsx  ← 费用仪表盘（mock）
 │   │   │   ├── FileTreeView.tsx  ←    文件树视图（复用 FileTree 扩展）
 │   │   │   └── SettingsLayoutView.tsx ← 设置页（5 tab：模型/显示/技能/工作目录/系统）
-│   │   └── extensions/        ←   10 个扩展组件，各含独立 CSS
+│   │   └── extensions/        ←   13 个扩展组件，各含独立 CSS
+│   │       ├── sidebar/       ←     侧边栏（Agent 列表 + 工具日志 + 资源监控，P1-5 拆分）
+│   │       ├── chat-panel/    ←     聊天面板（消息渲染 + 输入框，P1-5 拆分）
+│   │       ├── editor-panel/  ←     编辑器面板（文件预览 + 拖拽，P1-5 拆分）
 │   │       ├── chat-renderer/ ←     聊天面板 v2（MomoTalk 布局 + Avatar + Lucide 图标）
 │   │       ├── session-panel/ ←     会话列表 + 切换（动态角色名）
 │   │       ├── file-tree/     ←     文件树浏览
@@ -75,9 +89,9 @@ personal-agent/
 │   │       ├── doc-preview/   ←     文档内容预览
 │   │       ├── top-menu/      ←     顶部菜单（Lucide 图标）
 │   │       ├── mini-nav/      ←     底部导航栏
-│   │       ├── settings-page/ ←     设置页（旧版，Slot 注册但未消费）
 │   │       ├── status-bar/    ←     状态栏
 │   │       └── right-panel/   ←     右侧面板 Tab
+│   │       ├── pencil-utils.ts ←   共享工具函数/类型（P1-5 提取）
 │   ├── index.html
 │   ├── tailwind.config.ts
 │   └── vite.config.ts
@@ -195,7 +209,7 @@ import { MyFeature } from './MyFeature'
 
 registry.register({
   id: 'my-feature',
-  slot: 'right',                   // left-top | left-middle | left-bottom | center | right
+  slot: 'sidebar',                // nav | main-view | sidebar | overlay (Grid: left-top | left-middle | left-bottom | center | right | right-tab)
   label: '功能名',                   // 右侧面板标签显示名（slot=right 时需要）
   component: MyFeature,
 })
@@ -303,7 +317,7 @@ CHANGELOG 条目格式：
 | 消息发不出去 | WS 断连 | 浏览器 Console 有无 WS error |
 | AI 不回复 | API key 失效 | 桥接日志里的 DeepSeek 响应状态 |
 | 扩展没显示 | 没注册 | `registry.ts` 是否有该扩展的 register 调用 |
-| 面板重叠 | Grid 参数不对 | 检查 shell/App.tsx 的 grid-template |
+| 面板不显示 | 扩展未注册到对应 slot | `registry.getBySlot('main-view')` 是否有该 View |
 
 ---
 

@@ -1,69 +1,21 @@
 import { WebSocketServer, WebSocket } from 'ws'
-import { writeFileSync, mkdirSync, existsSync } from 'fs'
-import { resolve, join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 import { dispatch } from './dispatcher'
-import { generateUUID } from './protocol'
-import { initDB, getDB } from './db'
+import { initDB } from './init-db'
+import { initPiConfig } from './init-config'
+import { initAgents } from './init-agents'
 import { startWatcher, stopWatcher, addClient, removeClient } from './watcher'
 import { addSkillClient, removeSkillClient } from './handlers/skills'
-import { discoverAgents, addAgentClient, removeAgentClient } from './handlers/agent'
+import { addAgentClient, removeAgentClient } from './handlers/agent'
 
 const PORT = 9229
 
-// 初始化数据库
+// 初始化
 const db = initDB()
-console.log('[bridge] SQLite initialized at ~/.personal-agent/agent.db')
-
-// 确保主会话「澪」存在
-let mainSid = (db.prepare("SELECT value FROM settings WHERE key = 'main_session_id'").get() as { value: string } | undefined)?.value
-if (!mainSid) {
-  mainSid = generateUUID()
-  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('main_session_id', ?)").run(mainSid)
-  db.prepare("INSERT OR IGNORE INTO conversations (session_id, title) VALUES (?, '澪')").run(mainSid)
-  console.log('[bridge] 主会话「澪」已创建:', mainSid)
-}
-// 初始化默认设置（首次运行）
-const settingsCount = (db.prepare("SELECT COUNT(*) as cnt FROM settings WHERE key NOT LIKE 'main_%'").get() as { cnt: number }).cnt
-if (settingsCount === 0) {
-  const defaults: [string, string][] = [
-    ['default_model', 'deepseek-v4-pro'],
-    ['thinking_level', 'medium'],
-    ['compact_threshold', '80'],
-    ['history_retention', '100'],
-    ['work_dir', ''],
-    ['providers', JSON.stringify([{ id: 'deepseek', name: 'DeepSeek', apiKey: '', active: true }])],
-  ]
-  const insert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
-  for (const [k, v] of defaults) insert.run(k, v)
-  console.log('[bridge] 默认设置已初始化')
-}
-
-// 生成 .pi/settings.json（若不存在），使用当前文件位置推导扩展绝对路径
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-const piDir = resolve(__dirname, '.pi')
-if (!existsSync(piDir)) mkdirSync(piDir, { recursive: true })
-const piSettingsPath = join(piDir, 'settings.json')
-const extDir = resolve(__dirname, '../extensions')
-if (!existsSync(piSettingsPath)) {
-  writeFileSync(piSettingsPath, JSON.stringify({
-    extensions: [
-      resolve(extDir, 'pa-mio/index.ts'),
-      resolve(extDir, 'pa-files/index.ts'),
-      resolve(extDir, 'pa-mcp/index.ts'),
-    ],
-  }, null, 2))
-  console.log('[bridge] .pi/settings.json generated with', 3, 'extensions')
-}
-
-// 启动时触发 Agent 自动发现（从 providers 配置生成默认 Agent）
-try {
-  const agentCount = discoverAgents().length
-  console.log(`[bridge] agents initialized: ${agentCount} total`)
-} catch (err) {
-  console.warn('[bridge] agent discovery failed:', err)
-}
+const __dirname = dirname(fileURLToPath(import.meta.url))
+initPiConfig(__dirname)
+initAgents()
 
 // Pi session 在首次消息发送或会话切换时懒创建，避免启动时竞争
 

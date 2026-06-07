@@ -59,7 +59,10 @@ export interface AgentContextValue {
   cancelMessage: () => void
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
-  subscribe: (type: ServerMessage['type'], handler: (msg: ServerMessage) => void) => (() => void)
+  subscribe: <T extends ServerMessage['type']>(
+    type: T,
+    handler: (msg: Extract<ServerMessage, { type: T }>) => void,
+  ) => (() => void)
   settings: () => { key: string; value: string }[]
   getSettings: () => void
   setSetting: (key: string, value: string) => void
@@ -579,15 +582,19 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
   const msgListeners = new Map<ServerMessage['type'], Set<(msg: ServerMessage) => void>>()
 
-  const subscribe = (type: ServerMessage['type'], handler: (msg: ServerMessage) => void): (() => void) => {
+  function subscribe<T extends ServerMessage['type']>(
+    type: T,
+    handler: (msg: Extract<ServerMessage, { type: T }>) => void,
+  ): () => void {
+    const wrapped = (msg: ServerMessage) => handler(msg as Extract<ServerMessage, { type: T }>)
     let set = msgListeners.get(type)
     if (!set) {
       set = new Set()
       msgListeners.set(type, set)
     }
-    set.add(handler)
+    set.add(wrapped)
     return () => {
-      set?.delete(handler)
+      set?.delete(wrapped)
       if (set?.size === 0) msgListeners.delete(type)
     }
   }

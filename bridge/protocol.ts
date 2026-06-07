@@ -135,6 +135,10 @@ export type ServerMessage =
 
 type ServerMsg<T extends string, P> = MessageEnvelope<T, P>
 
+/** 从 ServerMessage 联合类型中提取指定 type 的 payload 类型 */
+export type ExtractPayload<T extends ServerMessage['type']> =
+  Extract<ServerMessage, { type: T }>['payload']
+
 // ========== 共享类型 ==========
 
 /** Pi ThinkingLevel 枚举 */

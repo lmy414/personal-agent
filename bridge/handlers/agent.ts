@@ -2,6 +2,7 @@ import type { WebSocket } from 'ws'
 import type { ClientMessage, AgentInfo } from '../protocol'
 import { getDB } from '../db'
 import { getAvailableModels, getPiSession } from '../pi-session'
+import { createClientSet } from '../client-manager'
 import { generateUUID } from '../protocol'
 
 // ========== DB 操作 ==========
@@ -123,21 +124,15 @@ export function discoverAgents(): AgentInfo[] {
 
 // ========== 广播 ==========
 
-const clients = new Set<WebSocket>()
+export const agentClients = createClientSet()
 
-export function addAgentClient(ws: WebSocket): void {
-  clients.add(ws)
-}
-
-export function removeAgentClient(ws: WebSocket): void {
-  clients.delete(ws)
-}
+/** @deprecated use agentClients.add() */
+export const addAgentClient = (ws: WebSocket) => agentClients.add(ws)
+/** @deprecated use agentClients.remove() */
+export const removeAgentClient = (ws: WebSocket) => agentClients.remove(ws)
 
 function broadcast(msg: object): void {
-  const raw = JSON.stringify(msg)
-  for (const ws of clients) {
-    if (ws.readyState === ws.OPEN) ws.send(raw)
-  }
+  agentClients.broadcast(JSON.stringify(msg))
 }
 
 // ========== Handlers ==========

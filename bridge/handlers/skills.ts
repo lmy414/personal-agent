@@ -1,5 +1,6 @@
 import type { WebSocket } from 'ws'
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync } from 'fs'
+import { createClientSet } from '../client-manager'
 import { join, basename } from 'path'
 import { homedir } from 'os'
 import { execSync } from 'child_process'
@@ -102,23 +103,15 @@ function scanAllSkills(): SkillSummary[] {
 
 // ========== 广播 ==========
 
-const clients = new Set<WebSocket>()
+export const skillClients = createClientSet()
 
-export function addSkillClient(ws: WebSocket): void {
-  clients.add(ws)
-}
-
-export function removeSkillClient(ws: WebSocket): void {
-  clients.delete(ws)
-}
+/** @deprecated use skillClients.add() */
+export const addSkillClient = (ws: WebSocket) => skillClients.add(ws)
+/** @deprecated use skillClients.remove() */
+export const removeSkillClient = (ws: WebSocket) => skillClients.remove(ws)
 
 function broadcast(msg: object): void {
-  const raw = JSON.stringify(msg)
-  for (const ws of clients) {
-    if (ws.readyState === ws.OPEN) {
-      ws.send(raw)
-    }
-  }
+  skillClients.broadcast(JSON.stringify(msg))
 }
 
 function broadcastSkillsState(): void {

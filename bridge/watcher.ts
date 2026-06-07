@@ -2,6 +2,7 @@ import { watch } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { WebSocket } from 'ws'
+import { createClientSet } from './client-manager'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -10,8 +11,9 @@ const PROJECT_ROOT = resolve(__dirname, '..')
 const DEBOUNCE_MS = 300
 
 let watcher: ReturnType<typeof watch> | null = null
-const clients = new Set<WebSocket>()
 const pending = new Map<string, ReturnType<typeof setTimeout>>()
+
+export const watcherClients = createClientSet()
 
 function normalize(p: string): string {
   return p.replace(/\\/g, '/')
@@ -19,18 +21,13 @@ function normalize(p: string): string {
 
 function broadcast(path: string) {
   const norm = normalize(path)
-  const msg = JSON.stringify({
+  watcherClients.broadcast(JSON.stringify({
     type: 'file.changed',
     id: `srv-${Date.now()}`,
     sessionId: '',
     ts: Date.now(),
     payload: { path: norm },
-  })
-  for (const ws of clients) {
-    if (ws.readyState === ws.OPEN) {
-      ws.send(msg)
-    }
-  }
+  }))
 }
 
 export function startWatcher(): void {
@@ -79,18 +76,12 @@ export function stopWatcher(): void {
   }
 }
 
-export function addClient(ws: WebSocket): void {
-  clients.add(ws)
-}
-
-export function removeClient(ws: WebSocket): void {
-  clients.delete(ws)
-}
-
-export function broadcastToAll(raw: string, exclude?: WebSocket): void {
-  for (const ws of clients) {
-    if (ws !== exclude && ws.readyState === WebSocket.OPEN) {
-      ws.send(raw)
-    }
-  }
+/** @deprecated use watcherClients.add() */
+export const addClient = (ws: WebSocket) => watcherClients.add(ws)
+/** @deprecated use watcherClients.remove() */
+export const removeClient = (ws: WebSocket) => watcherClients.remove(ws)
+/** @deprecated use watcherClients.broadcastExcept() */
+export const broadcastToAll = (raw: string, exclude?: WebSocket) => {
+  if (exclude) watcherClients.broadcastExcept(raw, exclude)
+  else watcherClients.broadcast(raw)
 }
