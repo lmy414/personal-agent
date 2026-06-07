@@ -6,6 +6,23 @@
 
 ## 2026-06-07
 
+### Pencil 设计迁移 Phase 1 — 主界面 + 6 View + 设置 5 子页全部上齐
+
+- **原因**: 新 Pencil 设计稿 (`D:\claude\前端demo\app`) 提供了完整的高保真 UI 原型，需将设计迁移到 personal-agent 的 SolidJS 前端，统一视觉效果，同时保留原有所有扩展和页面
+- **改动**: 9 个文件（6 新建，3 修改）
+  - **App.css**: 全局设计 token 统一为 Pencil 标准（accent `#6B8FA8`、文字 `#EAEAEE`/`#A0A0A8`/`#6E6E78`、玻璃面板渐变 `0.90→0.10`、blur `20px saturate(120%)`）；新增 `body` 底图支持 + `body::before` 半透明纹理层；新增 `.divider`/`.bracket-tr`/`.glass-panel-full`/代码高亮等公共类
+  - **App.tsx**: 从 CSS Grid `overlay` 布局重写为 Pencil 四栏 flex 布局（MiniNav 52px + 内容 flex:1）；新增 6 View 路由切换
+  - **MiniNav.tsx + mini-nav.css**: 精确对齐 Pencil `frame#mREqT`（52×1150, layout=vertical）；添加 `onNavigate` 回调实现视图切换；hover/active 态动画
+  - **新建 src/views/PencilMainView.tsx**: 三栏主界面（Sidebar 320px + Chat flex:1 + Editor 340px），从 `useAgent()` 读取实时数据（agents/sessions/toolCalls/messages/status），session 按 agentId 分组，default agent 默认展开
+  - **新建 src/views/CharacterView.tsx**: 角色管理（左侧 5 角色列表 + 右侧完整表单：名称/头像/提示词/示例/禁用项/模型/记忆目录/5 Toggle/8 工具卡/2 MCP）
+  - **新建 src/views/SessionRecordsView.tsx**: 会话记录（左侧 8 会话按日期分组+费用列 + 右侧详情面板：消息气泡/思考块/工具调用日志）
+  - **新建 src/views/CostDashboardView.tsx**: 费用仪表盘（4 指标卡 + 5 日常统计 + Token 柱状图+SVG 折线 + 6 条会话费用列表 + 月度对比柱状图 + 模型占比横向条 + 3 洞察卡 + 底部状态栏）
+  - **新建 src/views/FileTreeView.tsx**: 文件浏览（480px 居中，复用现有 FileTree 组件）
+  - **新建 src/views/SettingsLayoutView.tsx**: 设置框架（260px 左侧导航 + 右侧 5 子页：模型管理/显示设置/技能管理/工作目录/系统信息），Pencil 精确间距 `padding:20px 24px, gap:20px`，显示设置页浏览按钮精确对齐 Pencil `frame#bAfD9`
+- **热重载**: bridge `tsx --watch` + 根 `npm run dev` 双端热重载
+- **影响**: 前端全部 6 个视图 + 设置 5 子页静态内容已上齐，原有 extensions/ 下 10 个扩展全部保留未删除，bridge 无变动
+- **Commit**: (待提交)
+
 ### 协议标准化 + 多智能体架构 — 35 client / 36 server 消息全实现
 
 - **原因**: protocol.ts 27 条 ClientMessage 中 3 条缺失 handler，31 条 ServerMessage 中 6 条从未发送、6 条发送但前端未消费；新 UI 设计要求多智能体（Agent）架构；handler 代码缺乏统一规范

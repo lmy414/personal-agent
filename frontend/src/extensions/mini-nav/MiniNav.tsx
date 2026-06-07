@@ -1,15 +1,16 @@
-import { createSignal, For } from 'solid-js'
+import { For } from 'solid-js'
 import './mini-nav.css'
 
+export type ViewId = 'chat' | 'agents' | 'records' | 'resources' | 'files' | 'settings'
+
 interface NavItem {
-  id: string
+  id: ViewId
   icon: string
   label: string
-  bold?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'chat', icon: '💬', label: '通信', bold: true },
+  { id: 'chat', icon: '💬', label: '通信' },
   { id: 'agents', icon: '👥', label: '識別' },
   { id: 'records', icon: '📋', label: '記録' },
   { id: 'resources', icon: '💰', label: '資源' },
@@ -17,27 +18,28 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'settings', icon: '⚙', label: '設定' },
 ]
 
-export function MiniNav() {
-  const [activeId, setActiveId] = createSignal('files')
+interface MiniNavProps {
+  activeView: ViewId
+  onNavigate: (view: ViewId) => void
+}
 
+export function MiniNav(props: MiniNavProps) {
   return (
     <nav class="mini-nav">
-      <div class="mini-nav-top-line" />
       <For each={NAV_ITEMS}>
         {(item) => (
           <button
-            class="mini-nav-item"
-            classList={{ active: activeId() === item.id }}
-            onClick={() => setActiveId(item.id)}
+            class="nav-item"
+            classList={{ active: props.activeView === item.id }}
+            onClick={() => props.onNavigate(item.id)}
             title={item.label}
           >
-            <span class="mini-nav-icon">{item.icon}</span>
-            <span class="mini-nav-label" classList={{ bold: item.bold }}>
-              {item.label}
-            </span>
+            <span class="nav-icon">{item.icon}</span>
+            <span class="nav-label">{item.label}</span>
           </button>
         )}
       </For>
+      <div class="nav-divider" />
     </nav>
   )
 }

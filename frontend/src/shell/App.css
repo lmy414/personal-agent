@@ -1,33 +1,49 @@
-/* ====== CSS Variables ====== */
+/* ====== CSS Variables (Pencil Design System) ====== */
 :root {
-  --glass-opacity: 0.45;
-  --glass-bg: rgba(15, 15, 25, var(--glass-opacity));
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-blur: blur(16px) saturate(140%);
-  --glass-opacity: 0.45;
-  --text-primary: rgba(255, 255, 255, 0.90);
-  --text-secondary: rgba(255, 255, 255, 0.50);
-  --text-muted: rgba(255, 255, 255, 0.25);
-  --accent: #8b9cf0;
-  --accent-secondary: #a78bfa;
+  --accent: #6B8FA8;
+  --accent-secondary: #5B8C5A;
+  --text-primary: #EAEAEE;
+  --text-secondary: #A0A0A8;
+  --text-muted: #6E6E78;
+  --border: rgba(255,255,255,0.06);
+  --border-light: rgba(255,255,255,0.10);
+  --success: #5B8C5A;
+  --error: #E8553D;
+  --warning: #C8963E;
+  --code-bg: rgba(0,0,0,0.50);
+  --card-bg: rgba(14,14,22,0.25);
+
+  /* Glass panel — Pencil gradient */
+  --panel-bg-top: rgba(0,0,0,0.90);
+  --panel-bg-mid: rgba(0,0,0,0.70);
+  --panel-bg-low: rgba(0,0,0,0.40);
+  --panel-bg-bottom: rgba(0,0,0,0.10);
+  --glass-bg: linear-gradient(180deg, var(--panel-bg-top), var(--panel-bg-mid), var(--panel-bg-low), var(--panel-bg-bottom));
+  --glass-border: rgba(255,255,255,0.06);
+  --glass-blur: blur(20px) saturate(120%);
+
+  /* Layout */
   --gap: 6px;
   --margin: 12px;
-  --left-col: 400px;
-  /* 气泡系统 */
-  --bubble-user-bg: linear-gradient(135deg, rgba(139,156,240,0.22), rgba(167,139,250,0.15));
-  --bubble-user-border: rgba(139,156,240,0.16);
+
+  /* 气泡系统 — 保持部分原有值，accent 用新色 */
+  --bubble-user-bg: linear-gradient(135deg, rgba(107,143,168,0.22), rgba(91,140,90,0.15));
+  --bubble-user-border: rgba(107,143,168,0.16);
   --bubble-ai-bg: rgba(255,255,255,0.04);
   --bubble-ai-border: rgba(255,255,255,0.06);
   --bubble-radius: 18px;
   --bubble-shadow: 0 2px 8px rgba(0,0,0,0.25);
   --bubble-glow: inset 0 1px 0 rgba(255,255,255,0.04);
+
   /* 动画 */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 150ms;
   --duration-normal: 250ms;
+
   /* Avatar */
   --avatar-size: 24px;
-  --avatar-glow-color: rgba(139,156,240,0.2);
+  --avatar-glow-color: rgba(107,143,168,0.2);
+
   /* 间距 */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -41,14 +57,29 @@
 html, body, #root {
   width: 100%; height: 100%;
   overflow: hidden;
-  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
-  background: var(--app-bg, #0a0a12);
-  background-image: var(--app-bg-image, none);
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  background: transparent;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+/* ====== 底图（硬编码，后续通过设置面板切换） ====== */
+body {
+  background-image: url('/wallpapers/default-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  color: var(--text-primary);
-  user-select: none;
+  background-attachment: fixed;
+}
+
+/* ====== Pencil 背景纹理 ====== */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse at 60% 80%, rgba(107,143,168,0.06) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.40) 100%);
+  pointer-events: none;
 }
 
 /* ====== 统一滚动条 ====== */
@@ -59,14 +90,59 @@ html, body, #root {
 ::-webkit-scrollbar-corner { background: transparent; }
 * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 
-/* ====== 玻璃拟态面板（全局共享类，扩展直接用 class="glass-panel"） ====== */
+/* ====== 玻璃拟态面板（全局共享类） — Pencil 渐变 ====== */
 .glass-panel {
+  position: relative;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
+  border-right: 1px solid rgba(255,255,255,0.10);
+  opacity: 0.92;
+  overflow: hidden;
 }
+
+/* 全屏玻璃面板（无右侧边框，用于独立 View） */
+.glass-panel-full {
+  position: relative;
+  z-index: 1;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255,255,255,0.10);
+  opacity: 0.92;
+  overflow: hidden;
+  width: 100%;
+  height: 100vh;
+}
+
+/* ====== 通用分割线 ====== */
+.divider {
+  width: 100%;
+  height: 0.5px;
+  background: rgba(255,255,255,0.06);
+  opacity: 0.25;
+  flex-shrink: 0;
+}
+
+/* ====== 装饰 bracket ====== */
+.bracket-tr {
+  position: absolute;
+  top: 8px; right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 2;
+}
+.bracket-h { width: 8px; height: 0.5px; background: #fff; }
+.bracket-v { width: 0.5px; height: 8px; background: #fff; }
+
+/* ====== 代码高亮 ====== */
+.kw { color: #C8963E; }
+.fn { color: #6B8FA8; }
+.str { color: #5B8C5A; }
+.cm { color: var(--text-muted); }
 
 /* ====== 面板拖拽把手 ====== */
 .panel-drag-handle {

@@ -1,145 +1,58 @@
-import { createSignal, For, onMount, onCleanup } from 'solid-js'
-import { registry, type Extension } from '@/registry'
+import { createSignal } from 'solid-js'
 import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
 import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
-import { MiniNav } from '@/extensions/mini-nav/MiniNav'
+import { MiniNav, type ViewId } from '@/extensions/mini-nav/MiniNav'
+import PencilMainView from '@/views/PencilMainView'
+import CharacterView from '@/views/CharacterView'
+import SessionRecordsView from '@/views/SessionRecordsView'
+import CostDashboardView from '@/views/CostDashboardView'
+import FileTreeView from '@/views/FileTreeView'
+import SettingsLayoutView from '@/views/SettingsLayoutView'
 import './App.css'
 
-function renderExtension(ext: Extension) {
-  if (ext.id === 'top-menu' || ext.id === 'settings-page') return null
-  return <ext.component />
-}
-
-const STORAGE_KEY_W = 'mio:right-panel-w'
-const STORAGE_KEY_V = 'mio:right-panel-visible'
-
-function loadPanelState(): { w: number; visible: boolean } {
-  try {
-    const w = localStorage.getItem(STORAGE_KEY_W)
-    const v = localStorage.getItem(STORAGE_KEY_V)
-    return {
-      w: w ? parseInt(w) : 400,
-      visible: v !== null ? v === '1' : true,
-    }
-  } catch { return { w: 400, visible: true } }
-}
-
-function savePanelState(w: number, visible: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_W, String(w))
-    localStorage.setItem(STORAGE_KEY_V, visible ? '1' : '0')
-  } catch { /* localStorage not available */ }
-}
-
 export function App() {
-  const saved = loadPanelState()
-  const [rightPanelW, setRightPanelW] = createSignal(saved.w)
-  const [panelVisible, setPanelVisible] = createSignal(saved.visible)
+  const [activeView, setActiveView] = createSignal<ViewId>('chat')
 
-  onMount(() => {
-    const handleClose = () => {
-      setRightPanelW(0)
-      setPanelVisible(false)
-      savePanelState(0, false)
+  const renderView = () => {
+    switch (activeView()) {
+      case 'chat':       return <PencilMainView />
+      case 'agents':     return <CharacterView />
+      case 'records':    return <SessionRecordsView />
+      case 'resources':  return <CostDashboardView />
+      case 'files':      return <FileTreeView />
+      case 'settings':   return <SettingsLayoutView />
+      default:           return <PencilMainView />
     }
-    window.addEventListener('close-right-panel', handleClose)
-    onCleanup(() => window.removeEventListener('close-right-panel', handleClose))
-  })
-
-  const handleDragStart = (e: MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startW = rightPanelW()
-    const handle = e.currentTarget as HTMLElement
-    handle.classList.add('dragging')
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'col-resize'
-
-    const onMove = (ev: MouseEvent) => {
-      const w = startW - (ev.clientX - startX)
-      const clamped = Math.max(0, Math.min(900, w))
-      setRightPanelW(clamped)
-
-      if (clamped < 120 && w < 120) {
-        setPanelVisible(false)
-      } else if (clamped > 0) {
-        setPanelVisible(true)
-      }
-    }
-
-    const onUp = () => {
-      handle.classList.remove('dragging')
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      savePanelState(rightPanelW(), panelVisible())
-    }
-
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
   }
-
-  const handleExpandClick = () => {
-    setRightPanelW(400)
-    setPanelVisible(true)
-    savePanelState(400, true)
-  }
-
-  const effectiveWidth = () => panelVisible() ? rightPanelW() : 0
 
   return (
     <>
       <TopMenuBar />
       <SettingsPage />
       <div
-        class="overlay"
         style={{
-          'grid-template-columns': `52px var(--left-col) 1fr ${effectiveWidth()}px`,
+          position: 'relative',
+          'z-index': '1',
+          display: 'flex',
+          height: '100vh',
+          gap: '0',
         }}
       >
-        <div class="overlay-nav-left">
-          <MiniNav />
+        {/* ===== Mini Nav (52px) — glass-panel 背景 + mini-nav 内部布局 ===== */}
+        <div class="glass-panel" style={{ width: '52px', 'flex-shrink': '0', 'z-index': '10' }}>
+          <MiniNav activeView={activeView()} onNavigate={setActiveView} />
         </div>
 
-        <div class="overlay-left-top">
-          <For each={registry.getBySlot('left-top')}>{renderExtension}</For>
-        </div>
-
-        <div class="overlay-left-bottom">
-          <For each={registry.getBySlot('left-middle')}>{renderExtension}</For>
-        </div>
-
-        <div class="overlay-left-status">
-          <For each={registry.getBySlot('left-bottom')}>{renderExtension}</For>
-        </div>
-
-        <div class="overlay-center-main">
-          <For each={registry.getBySlot('center')}>{renderExtension}</For>
-        </div>
-
-        <div class="overlay-right-panel">
-          <div class="glass-panel right-panel">
-            <div
-              class="panel-drag-handle"
-              onMouseDown={handleDragStart}
-              onDblClick={() => {
-                setRightPanelW(0)
-                setPanelVisible(false)
-                savePanelState(0, false)
-              }}
-            />
-            <div
-              class="expand-tab"
-              classList={{ hidden: panelVisible() }}
-              onClick={handleExpandClick}
-            >
-              文件
-            </div>
-            <div class="right-panel-body">
-              <For each={registry.getBySlot('right')}>{renderExtension}</For>
-            </div>
-          </div>
+        {/* ===== Main Content Area ===== */}
+        <div
+          style={{
+            flex: '1',
+            display: 'flex',
+            overflow: 'hidden',
+            'min-width': '0',
+          }}
+        >
+          {renderView()}
         </div>
       </div>
     </>
