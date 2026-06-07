@@ -132,7 +132,7 @@ export function ChatPanel() {
           'flex-shrink': '0',
         }}
       >
-        <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '17px', 'font-weight': '600', color: '#fff' }}>
+        <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '17px', 'font-weight': '600', color: 'var(--text-primary)' }}>
           {agentName()} · {sessionTitle()}
         </div>
         <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'font-size': '11px', color: 'var(--text-muted)' }}>
@@ -171,7 +171,7 @@ export function ChatPanel() {
                   fallback={
                     /* Assistant */
                     <div style={{ display: 'flex', gap: '12px', width: '100%', 'justify-content': 'flex-start' }}>
-                      <div style={{ width: '32px', height: '32px', 'border-radius': '4px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '12px', 'font-weight': 'bold', color: '#fff', 'flex-shrink': '0', background: 'rgba(255,255,255,0.04)' }}>A</div>
+                      <div style={{ width: '32px', height: '32px', 'border-radius': '4px', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '12px', 'font-weight': 'bold', color: 'var(--text-primary)', 'flex-shrink': '0', background: 'rgba(255,255,255,0.04)' }}>A</div>
                       <div style={{ display: 'flex', 'flex-direction': 'column', gap: '2px', 'max-width': '100%', flex: '1' }}>
                         {/* Thinking block — collapsed by default, click to expand */}
                         <Show when={msg.thinking}>

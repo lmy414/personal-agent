@@ -165,7 +165,7 @@ export function SessionPanel() {
                       </>
                     }
                   >
-                    <span class="dot" style={{ color: '#f87171' }}>!</span>
+                    <span class="dot" style={{ color: 'var(--error)' }}>!</span>
                     <span
                       onClick={(e) => {
                         e.stopPropagation()
@@ -191,10 +191,10 @@ export function SessionPanel() {
                       style={{
                         cursor: 'pointer',
                         'font-size': '12px',
-                        color: '#f87171',
+                        color: 'var(--error)',
                         padding: '2px 10px',
                         'border-radius': '4px',
-                        background: 'rgba(248,113,113,0.15)',
+                        background: 'rgba(var(--error-rgb),0.15)',
                         'font-weight': '500',
                         'flex-shrink': '0',
                       }}

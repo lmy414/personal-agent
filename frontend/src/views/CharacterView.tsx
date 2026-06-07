@@ -72,7 +72,7 @@ export default function CharacterView() {
         <div style={{ flex: '1', 'overflow-y': 'auto' }}>
           <For each={agents}>{(a) => (
             <div {...kbd(() => setActiveId(a.id))} onClick={() => setActiveId(a.id)} style={{ display: 'flex', 'align-items': 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', 'border-left': activeId() === a.id ? '3px solid var(--accent)' : '3px solid transparent', background: activeId() === a.id ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
-              <div style={{ width: '36px', height: '36px', 'border-radius': '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '14px', 'font-weight': 'bold', color: '#fff', 'flex-shrink': '0' }}>{a.avatar}</div>
+              <div style={{ width: '36px', height: '36px', 'border-radius': '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'font-family': '"JetBrains Mono", monospace', 'font-size': '14px', 'font-weight': 'bold', color: 'var(--text-primary)', 'flex-shrink': '0' }}>{a.avatar}</div>
               <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', gap: '2px' }}>
                 <div style={{ 'font-size': '13px', 'font-weight': '500', color: 'var(--text-primary)' }}>{a.name}</div>
                 <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{a.role}</div>

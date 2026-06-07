@@ -211,7 +211,7 @@ export function ChatRenderer() {
           )}
         </span>
         <span class="chat-header-right">
-          <span class="energy-dot" style={{background: agent.connected() ? `rgba(${accentRgb()},0.6)` : 'rgba(255,80,80,0.6)'}} />
+          <span class="energy-dot" style={{background: agent.connected() ? `rgba(${accentRgb()},0.6)` : 'rgba(var(--error-rgb),0.6)'}} />
           {agent.connected() ? '就绪' : '断连'}
         </span>
       </div>

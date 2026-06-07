@@ -10,8 +10,11 @@
   --border: rgba(255,255,255,0.06);
   --border-light: rgba(255,255,255,0.10);
   --success: #5B8C5A;
+  --success-rgb: 91,140,90;
   --error: #E8553D;
+  --error-rgb: 232,85,61;
   --warning: #C8963E;
+  --warning-rgb: 200,150,62;
   --code-bg: rgba(0,0,0,0.50);
   --card-bg: rgba(14,14,22,0.25);
 
