@@ -1,18 +1,13 @@
-import { createSignal, Show } from 'solid-js'
+import { createSignal, Show, onCleanup, onMount } from 'solid-js'
 import './index.css'
 
 export interface ColorPickerProps {
-  /** 当前颜色 hex 值，如 #6B8FA8 */
   value: string
-  /** 颜色变更回调 */
   onChange: (hex: string) => void
-  /** 可选的重置回调，传入时显示重置按钮 */
   onReset?: () => void
-  /** 是否显示重置按钮 */
   showReset?: boolean
 }
 
-/** 预设色板 — 精选 18 色 */
 const SWATCHES = [
   '#6B8FA8', '#5B8C5A', '#C8963E', '#8B7FB8', '#7A8B94',
   '#4A90D9', '#3D8B7A', '#D4764E', '#9B6B9E', '#6E7B8B',
@@ -20,14 +15,153 @@ const SWATCHES = [
   '#1B998B', '#C77DBA', '#F97316', '#EC4899', '#64748B',
 ]
 
+// ── hex / hsv / rgb 互转 ──
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '')
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16),
+  }
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
+}
+
+function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: number } {
+  r /= 255; g /= 255; b /= 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const d = max - min
+  let h = 0
+  if (d !== 0) {
+    if (max === r) h = ((g - b) / d + 6) % 6
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h *= 60
+  }
+  return { h, s: max === 0 ? 0 : d / max, v: max }
+}
+
+function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: number } {
+  const c = v * s
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1))
+  const m = v - c
+  let r = 0, g = 0, b = 0
+  if (h < 60) { r = c; g = x }
+  else if (h < 120) { r = x; g = c }
+  else if (h < 180) { g = c; b = x }
+  else if (h < 240) { g = x; b = c }
+  else if (h < 300) { r = x; b = c }
+  else { r = c; b = x }
+  return {
+    r: (r + m) * 255,
+    g: (g + m) * 255,
+    b: (b + m) * 255,
+  }
+}
+
 export function ColorPicker(props: ColorPickerProps) {
   const [open, setOpen] = createSignal(false)
+  const [tab, setTab] = createSignal<'swatches' | 'picker'>('swatches')
+
+  // HSV 状态
+  const [hue, setHue] = createSignal(210)
+  const [sat, setSat] = createSignal(0.3)
+  const [val, setVal] = createSignal(0.66)
+
+  // 从 props.value 初始化 HSV
+  const syncFromHex = (hex: string) => {
+    const rgb = hexToRgb(hex)
+    const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b)
+    setHue(hsv.h)
+    setSat(hsv.s)
+    setVal(hsv.v)
+  }
+
+  // 点击外部关闭
+  let panelRef: HTMLDivElement | undefined
+  const handleDocClick = (e: MouseEvent) => {
+    if (panelRef && !panelRef.contains(e.target as Node)) setOpen(false)
+  }
+  onMount(() => document.addEventListener('mousedown', handleDocClick))
+  onCleanup(() => document.removeEventListener('mousedown', handleDocClick))
+
+  // 饱和度/明度面板拖拽
+  let svRef: HTMLDivElement | undefined
+  const [draggingSV, setDraggingSV] = createSignal(false)
+
+  const updateSV = (clientX: number, clientY: number) => {
+    if (!svRef) return
+    const rect = svRef.getBoundingClientRect()
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
+    setSat(x)
+    setVal(1 - y)
+    const rgb = hsvToRgb(hue(), x, 1 - y)
+    props.onChange(rgbToHex(rgb.r, rgb.g, rgb.b))
+  }
+
+  const handleSVMouseDown = (e: MouseEvent) => {
+    setDraggingSV(true)
+    updateSV(e.clientX, e.clientY)
+  }
+  const handleSVMouseMove = (e: MouseEvent) => {
+    if (draggingSV()) updateSV(e.clientX, e.clientY)
+  }
+  const handleSVMouseUp = () => setDraggingSV(false)
+
+  onMount(() => {
+    document.addEventListener('mousemove', handleSVMouseMove)
+    document.addEventListener('mouseup', handleSVMouseUp)
+  })
+  onCleanup(() => {
+    document.removeEventListener('mousemove', handleSVMouseMove)
+    document.removeEventListener('mouseup', handleSVMouseUp)
+  })
+
+  // 色相条拖拽
+  let hueRef: HTMLDivElement | undefined
+  const [draggingHue, setDraggingHue] = createSignal(false)
+
+  const updateHue = (clientX: number) => {
+    if (!hueRef) return
+    const rect = hueRef.getBoundingClientRect()
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const h = x * 360
+    setHue(h)
+    const rgb = hsvToRgb(h, sat(), val())
+    props.onChange(rgbToHex(rgb.r, rgb.g, rgb.b))
+  }
+
+  const handleHueMouseDown = (e: MouseEvent) => {
+    setDraggingHue(true)
+    updateHue(e.clientX)
+  }
+  const handleHueMouseMove = (e: MouseEvent) => {
+    if (draggingHue()) updateHue(e.clientX)
+  }
+  const handleHueMouseUp = () => setDraggingHue(false)
+
+  onMount(() => {
+    document.addEventListener('mousemove', handleHueMouseMove)
+    document.addEventListener('mouseup', handleHueMouseUp)
+  })
+  onCleanup(() => {
+    document.removeEventListener('mousemove', handleHueMouseMove)
+    document.removeEventListener('mouseup', handleHueMouseUp)
+  })
+
+  const currentHex = () => {
+    const rgb = hsvToRgb(hue(), sat(), val())
+    return rgbToHex(rgb.r, rgb.g, rgb.b)
+  }
 
   return (
     <div class="color-picker">
       <button
         class="color-picker__trigger"
-        onClick={() => setOpen(!open())}
+        onClick={() => { syncFromHex(props.value); setOpen(!open()) }}
         type="button"
       >
         <span class="color-picker__swatch" style={{ background: props.value }} />
@@ -41,28 +175,45 @@ export function ColorPicker(props: ColorPickerProps) {
       </Show>
 
       <Show when={open()}>
-        <div class="color-picker__panel">
-          <div class="color-picker__swatches">
-            {SWATCHES.map(c => (
+        <div class="color-picker__panel" ref={panelRef}>
+          {/* ── 面板标题栏 ── */}
+          <div class="color-picker__header">
+            <div class="color-picker__tabs">
               <button
-                class="color-picker__swatch-btn"
-                classList={{ 'color-picker__swatch-btn--active': props.value.toUpperCase() === c.toUpperCase() }}
-                style={{ background: c }}
-                onClick={() => { props.onChange(c); setOpen(false) }}
+                class="color-picker__tab"
+                classList={{ 'color-picker__tab--active': tab() === 'swatches' }}
+                onClick={() => setTab('swatches')}
                 type="button"
-              />
-            ))}
+              >
+                色板
+              </button>
+              <button
+                class="color-picker__tab"
+                classList={{ 'color-picker__tab--active': tab() === 'picker' }}
+                onClick={() => setTab('picker')}
+                type="button"
+              >
+                拾取
+              </button>
+            </div>
+            <button class="color-picker__close" onClick={() => setOpen(false)} type="button">✕</button>
           </div>
-          <div class="color-picker__custom">
-            <span class="color-picker__custom-label">自定义</span>
-            <div class="color-picker__custom-input-wrap">
-              <span class="color-picker__custom-preview" style={{ background: props.value }} />
-              <input
-                class="color-picker__native"
-                type="color"
-                value={props.value}
-                onInput={(e) => props.onChange(e.currentTarget.value)}
-              />
+
+          {/* ── 色板页 ── */}
+          <Show when={tab() === 'swatches'}>
+            <div class="color-picker__swatches">
+              {SWATCHES.map(c => (
+                <button
+                  class="color-picker__swatch-btn"
+                  classList={{ 'color-picker__swatch-btn--active': props.value.toUpperCase() === c.toUpperCase() }}
+                  style={{ background: c }}
+                  onClick={() => { props.onChange(c); syncFromHex(c) }}
+                  type="button"
+                />
+              ))}
+            </div>
+            <div class="color-picker__custom-row">
+              <span class="color-picker__custom-label">自定义</span>
               <input
                 class="color-picker__hex-input"
                 type="text"
@@ -70,14 +221,80 @@ export function ColorPicker(props: ColorPickerProps) {
                 placeholder="#000000"
                 onBlur={(e) => {
                   const v = e.currentTarget.value.trim()
-                  if (/^#[0-9a-fA-F]{6}$/.test(v)) props.onChange(v)
+                  if (/^#[0-9a-fA-F]{6}$/.test(v)) { props.onChange(v); syncFromHex(v) }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                 }}
               />
             </div>
-          </div>
+          </Show>
+
+          {/* ── 拾取页（自绘 HSV） ── */}
+          <Show when={tab() === 'picker'}>
+            <div class="color-picker__picker">
+              {/* SV 面板 */}
+              <div
+                class="color-picker__sv"
+                ref={svRef}
+                onMouseDown={handleSVMouseDown}
+                style={{
+                  background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue()}, 100%, 50%))`,
+                }}
+              >
+                <div
+                  class="color-picker__sv-thumb"
+                  style={{
+                    left: `${sat() * 100}%`,
+                    top: `${(1 - val()) * 100}%`,
+                    'background-color': currentHex(),
+                  }}
+                />
+              </div>
+
+              {/* 色相条 */}
+              <div
+                class="color-picker__hue"
+                ref={hueRef}
+                onMouseDown={handleHueMouseDown}
+              >
+                <div
+                  class="color-picker__hue-thumb"
+                  style={{ left: `${(hue() / 360) * 100}%` }}
+                />
+              </div>
+
+              {/* 预览 + RGB 输入 */}
+              <div class="color-picker__preview-row">
+                <div class="color-picker__preview" style={{ background: currentHex() }} />
+                <div class="color-picker__rgb-inputs">
+                  {(['R', 'G', 'B'] as const).map((ch, i) => {
+                    const rgb = hexToRgb(currentHex())
+                    const val = [rgb.r, rgb.g, rgb.b][i]
+                    return (
+                      <div class="color-picker__rgb-group">
+                        <input
+                          class="color-picker__rgb-input"
+                          type="number"
+                          min={0} max={255}
+                          value={val}
+                          onChange={(e) => {
+                            const v = Math.max(0, Math.min(255, parseInt(e.currentTarget.value) || 0))
+                            const cur = hexToRgb(currentHex())
+                            const newRgb = i === 0 ? { ...cur, r: v } : i === 1 ? { ...cur, g: v } : { ...cur, b: v }
+                            const hex = rgbToHex(newRgb.r, newRgb.g, newRgb.b)
+                            props.onChange(hex)
+                            syncFromHex(hex)
+                          }}
+                        />
+                        <span class="color-picker__rgb-label">{ch}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </Show>
         </div>
       </Show>
     </div>

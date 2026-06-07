@@ -65,22 +65,85 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 100;
-  min-width: 220px;
-  padding: 12px;
+  width: 240px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
 }
 
-/* ── 色板网格 ── */
+/* ── 面板标题栏 ── */
+.color-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.color-picker__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.color-picker__tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: inherit;
+  transition: all 0.15s;
+  position: relative;
+}
+.color-picker__tab:hover {
+  color: var(--text-secondary);
+}
+.color-picker__tab--active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.color-picker__tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.color-picker__close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.color-picker__close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+/* ── 色板页 ── */
 .color-picker__swatches {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  margin-bottom: 10px;
+  padding: 12px;
 }
 
 .color-picker__swatch-btn {
@@ -101,13 +164,13 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-/* ── 自定义输入区 ── */
-.color-picker__custom {
+.color-picker__custom-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 0 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .color-picker__custom-label {
@@ -116,36 +179,12 @@
   flex-shrink: 0;
 }
 
-.color-picker__custom-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-
-.color-picker__custom-preview {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
-}
-
-/* 原生拾色器隐藏在预览色块下 */
-.color-picker__native {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  opacity: 0;
-  cursor: pointer;
-}
-
 .color-picker__hex-input {
   flex: 1;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 5px 8px;
   color: var(--text-primary);
   font-size: 11px;
   font-family: "JetBrains Mono", "Cascadia Code", monospace;
@@ -157,4 +196,120 @@
 }
 .color-picker__hex-input::placeholder {
   color: rgba(255, 255, 255, 0.20);
+}
+
+/* ── 拾取页（自绘 HSV） ── */
+.color-picker__picker {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* SV 面板 */
+.color-picker__sv {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  cursor: crosshair;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.color-picker__sv-thumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 色相条 */
+.color-picker__hue {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    #f00 0%, #ff0 17%, #0f0 33%,
+    #0ff 50%, #00f 67%, #f0f 83%, #f00 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.color-picker__hue-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 预览 + RGB */
+.color-picker__preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-picker__preview {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.color-picker__rgb-inputs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.color-picker__rgb-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.color-picker__rgb-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 4px 2px;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-align: center;
+  font-family: "JetBrains Mono", "Cascadia Code", monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.color-picker__rgb-input:focus {
+  border-color: rgba(var(--accent-rgb), 0.35);
+}
+/* 隐藏 number 输入的上下箭头 */
+.color-picker__rgb-input::-webkit-outer-spin-button,
+.color-picker__rgb-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.color-picker__rgb-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
 }

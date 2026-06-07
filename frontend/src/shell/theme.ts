@@ -92,6 +92,17 @@ export function restoreGlassTint(settingsEntries: { key: string; value: string }
   if (entry?.value) applyGlassTint(entry.value)
 }
 
+/** 顶部标题栏色调 — 控制 --top-bar-tint-rgb */
+export function applyTopBarTint(rgb: string): void {
+  document.documentElement.style.setProperty('--top-bar-tint-rgb', rgb)
+}
+
+/** 从 settings 恢复顶部标题栏色调 */
+export function restoreTopBarTint(settingsEntries: { key: string; value: string }[]): void {
+  const entry = settingsEntries.find(e => e.key === 'top-bar-tint')
+  if (entry?.value) applyTopBarTint(entry.value)
+}
+
 /** 从 settings entries 中恢复主题 */
 export function restoreTheme(settingsEntries: { key: string; value: string }[]): void {
   const entry = settingsEntries.find(e => e.key === 'theme')

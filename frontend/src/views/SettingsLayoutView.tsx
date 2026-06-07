@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js'
 import { createSignal, For, Show, createMemo, createEffect } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
-import { THEMES, getThemeById, applyTheme, applyWallpaper, applyCustomAccent, applyGlassTint, accentRgb, accentHex } from '@/shell/theme'
+import { THEMES, getThemeById, applyTheme, applyWallpaper, applyCustomAccent, applyGlassTint, applyTopBarTint, accentRgb, accentHex } from '@/shell/theme'
 import { ColorPicker } from '@/components/color-picker'
 import { Settings, Palette, Wrench, FolderOpen, Info, Globe, Monitor, Image, ExternalLink, Plus, Trash2, ChevronRight, ChevronDown } from 'lucide-solid'
 
@@ -796,6 +796,59 @@ function DisplayPage() {
             const rgb = `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
             applyGlassTint(rgb)
             agent.setSetting('glass-tint', rgb)
+          }}
+        />
+      </div>
+
+      {/* divider */}
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', opacity: '0.35', 'margin-bottom': '20px' }} />
+
+      {/* ── 顶部标题栏颜色 ── */}
+      <div style={{ ...titleStyle, 'margin-bottom': '12px' }}>顶部标题栏</div>
+      <div style={{ 'font-size': '12px', color: 'var(--text-muted)', 'margin-bottom': '12px' }}>自定义顶部菜单栏的玻璃底色</div>
+      <div style={{ display: 'flex', 'align-items': 'center', gap: '8px' }}>
+        <For each={[
+          { name: '纯黑', rgb: '0,0,0' },
+          { name: '深蓝', rgb: '8,12,24' },
+          { name: '深灰', rgb: '18,18,18' },
+          { name: '深紫', rgb: '14,8,20' },
+          { name: '暖黑', rgb: '16,10,6' },
+        ]}>
+          {(t) => {
+            const currentTopBarTint = createMemo(() => {
+              const entry = agent.settings().find(e => e.key === 'top-bar-tint')
+              return entry?.value ?? '0,0,0'
+            })
+            const isActive = createMemo(() => currentTopBarTint() === t.rgb)
+            return (
+              <div
+                onClick={() => { applyTopBarTint(t.rgb); agent.setSetting('top-bar-tint', t.rgb) }}
+                {...kbd(() => { applyTopBarTint(t.rgb); agent.setSetting('top-bar-tint', t.rgb) })}
+                style={{
+                  padding: '10px 14px', background: `rgba(${t.rgb},0.80)`,
+                  border: `1.5px solid ${isActive() ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  'box-shadow': isActive() ? '0 0 0 2px rgba(255,255,255,0.08)' : 'none',
+                  'border-radius': '6px', cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '6px',
+                }}>
+                <div style={{ width: '36px', height: '24px', 'border-radius': '4px', background: `rgba(${t.rgb},0.90)`, border: '1px solid rgba(255,255,255,0.06)' }} />
+                <div style={{ 'font-size': '11px', color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{t.name}</div>
+              </div>
+            )
+          }}
+        </For>
+        <ColorPicker
+          value={(() => {
+            const entry = agent.settings().find(e => e.key === 'top-bar-tint')
+            const rgb = entry?.value ?? '0,0,0'
+            const [r, g, b] = rgb.split(',').map(Number)
+            return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+          })()}
+          onChange={(hex) => {
+            const h = hex.replace('#', '')
+            const rgb = `${parseInt(h.substring(0, 2), 16)},${parseInt(h.substring(2, 4), 16)},${parseInt(h.substring(4, 6), 16)}`
+            applyTopBarTint(rgb)
+            agent.setSetting('top-bar-tint', rgb)
           }}
         />
       </div>
