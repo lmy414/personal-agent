@@ -206,19 +206,8 @@ function Sidebar() {
           >
             {timeStr()}
           </div>
-          <div style={{ 'font-size': '10px', color: 'var(--text-muted)', display: 'flex', 'align-items': 'center', gap: '6px' }}>
+          <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
             通信 #{a.sessions().length}
-            <button
-              onClick={() => a.createSession()}
-              style={{
-                width: '18px', height: '18px', 'border-radius': '50%',
-                background: 'rgba(107,143,168,0.15)', border: '1px solid rgba(107,143,168,0.25)',
-                color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer',
-                display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                'line-height': '1', padding: '0',
-              }}
-              title="新建会话"
-            >+</button>
           </div>
         </div>
       </div>
@@ -317,6 +306,17 @@ function Sidebar() {
                       {agentItem.roleDescription || agentItem.provider}
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); a.createSession() }}
+                    style={{
+                      'min-width': '18px', height: '18px', 'border-radius': '4px',
+                      background: 'rgba(107,143,168,0.12)', border: '1px solid rgba(107,143,168,0.20)',
+                      color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer',
+                      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                      padding: '0 4px', 'font-family': 'inherit', 'flex-shrink': '0',
+                    }}
+                    title="新建会话"
+                  >+</button>
                   <span style={{ 'font-size': '10px', color: 'var(--text-muted)', 'flex-shrink': '0' }}>
                     {agentSessions().length}
                   </span>
