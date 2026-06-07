@@ -313,20 +313,14 @@ function Sidebar() {
                       {agentItem.roleDescription || agentItem.provider}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); a.createSession() }}
-                    style={{
-                      'min-width': '18px', height: '18px', 'border-radius': '4px',
-                      background: 'rgba(107,143,168,0.12)', border: '1px solid rgba(107,143,168,0.20)',
-                      color: 'var(--accent)', 'font-size': '12px', cursor: 'pointer',
-                      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                      padding: '0 4px', 'font-family': 'inherit', 'flex-shrink': '0',
-                    }}
-                    title="新建会话"
-                  >+</button>
                   <span style={{ 'font-size': '10px', color: 'var(--text-muted)', 'flex-shrink': '0' }}>
                     {agentSessions().length}
                   </span>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); a.createSession() }}
+                    style={{ 'font-size': '11px', color: 'var(--text-muted)', cursor: 'pointer', 'margin-left': '4px', 'line-height': '1' }}
+                    title="新建会话"
+                  >+</span>
                   <span
                     style={{
                       'font-size': '10px',
@@ -397,7 +391,7 @@ function Sidebar() {
                               fallback={
                                 <span
                                   onClick={(e) => { e.stopPropagation(); setDeleteTarget(s.id) }}
-                                  style={{ 'font-size': '12px', color: 'var(--text-muted)', cursor: 'pointer', 'margin-left': '4px', 'line-height': '1' }}
+                                  style={{ 'font-size': '11px', color: 'var(--text-muted)', cursor: 'pointer', 'margin-left': '4px', 'line-height': '1' }}
                                   title="删除会话"
                                 >×</span>
                               }
