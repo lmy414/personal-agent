@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-06-08
+
+### UI 优化：空气泡过滤 + 思考默认折叠 + 暂停按钮条件显示
+- **原因**: LLM 思考后无文字输出导致空气泡；思考内容默认展开影响阅读
+- **改动**: ChatPanel 消息过滤排除已完成无内容的 AI 消息；思考块改为 `expandedThinkings` 默认折叠；Sidebar 暂停按钮仅 `isStreaming` 时红色显示
+- **影响**: ChatPanel, Sidebar 扩展
+- **Commit**: `022dc39`
+
+### 文件树交互重设计
+- **原因**: 文件树占整页打断工作流，应替换侧边栏区域
+- **改动**: 新增 `sidebar-mode.ts` 信号；MiniNav ファイル按钮切换 sidebarMode；PencilMainView 读信号切换侧边栏内容；FileTreeView 从 main-view 移除
+- **影响**: MiniNav, PencilMainView, views/index.ts
+- **Commit**: `0b22c98`
+
+### 模型管理：厂商 CRUD + 模型配置
+- **原因**: 设置页模型管理全量 mock，需接入真实数据
+- **改动**:
+  - **后端**: 新建 `provider.ts` (厂商 save/delete，删除后 agent 切换模型)；`model-config.ts` (模型启停/思考强度/可见性)
+  - **协议**: +3 client +3 server 消息 (`provider.save/delete`, `model.configure`)
+  - **前端**: SettingsLayoutView ModelPage 全量重写 — 厂商卡片 (providers JSON)、模型表 (Pi 发现)、思考强度切换、启停开关、配置弹窗 (模型加入/移除)
+  - **环境变量**: `injectProviderKeys()` 从 SQLite 读 API Key 注入 process.env，消除 env var 污染
+- **影响**: bridge/handlers, protocol, dispatcher, SettingsLayoutView, use-settings
+- **Commit**: `623fc87` ~ `5988fc3` (9 个迭代修复)
+
+### 前端 Bug 修复
+- **Btn 组件**不支持 `onClick` → 新增 prop (`993d517`)
+- **providers JSON 格式**不匹配 → 兼容 discover 嵌套格式 (`bb6708d`)
+- **JSX 嵌套语法**`}}</For>` → 修正为 `}</For>` (`dc2ffde`)
+- **ToggleSmall 自管理**不响应外部更新 → 新增受控 `ModelToggle` (`1e2ddd0`)
+- **model.configure 不推送** settings.state → 补充推送 (`64ee63e`)
+- **`.sort()` 导致 For DOM 复用** → 移除排序，稳定顺序 (`5988fc3`)
+
+### 交互式架构可视化 HTML
+- **原因**: 需要可视化的架构文档
+- **改动**: 新建 `docs/architecture-viz.html` (678 行) — 5 Tab 交互式架构图，Dark OLED 主题
+- **影响**: docs/
+- **Commit**: `149e5bc`
+
+### P0-P3 架构迁移完成
+- **原因**: 前端从硬编码路由迁移到 registry 驱动 + useAgent 解耦
+- **改动**: 参见 `2e4f2af` (P0-P2) + `c634dea` (P3)
+- **Commit**: `2e4f2af`, `c634dea`
+
+---
+
 ## 2026-06-07
 
 ### Pencil 设计迁移 Phase 1 — 主界面 + 6 View + 设置 5 子页全部上齐

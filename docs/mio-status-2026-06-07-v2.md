@@ -1,7 +1,7 @@
 # 澪号 Personal Agent — 详细状态报告 v2
 
-> 日期: 2026-06-07 | 上期: [mio-status-2026-06-07](./mio-status-2026-06-07.md)
-> 用途: 前端迁移的基线文档，记录当前实际状态与目标架构的差距
+> 日期: 2026-06-08 | 上期: 2026-06-07
+> 状态: P0-P4 完成, P5 部分推进 (模型管理 ✅, UI优化 ✅, 文件树交互 ✅)
 
 ---
 
@@ -276,10 +276,13 @@ Server → Client (36 条)
 
 | # | 任务 | 说明 |
 |---|------|------|
-| P5-1 | CharacterView 接入实时数据 | useAgent().agents() 替代 mock |
-| P5-2 | SessionRecordsView 接入 | useAgent().sessions() 历史 |
-| P5-3 | CostDashboardView 接入 | status + stats handler |
-| P5-4 | SettingsLayoutView 接入 | 设置读写 + 模型 CRUD |
+| P5-1 | 模型管理 (SettingsLayoutView) | provider CRUD + model config ✅ `5988fc3` |
+| P5-2 | UI 优化 | 空气泡过滤 + 思考折叠 + 暂停按钮 ✅ `022dc39` |
+| P5-3 | 文件树交互 | 侧边栏模式切换 ✅ `0b22c98` |
+| P5-4 | CharacterView 接入 | useAgent().agents() 替代 mock |
+| P5-5 | SessionRecordsView 接入 | useAgent().sessions() 历史 |
+| P5-6 | CostDashboardView 接入 | status + stats handler |
+| P5-7 | 架构可视化 | docs/architecture-viz.html ✅ `149e5bc` |
 
 ---
 
