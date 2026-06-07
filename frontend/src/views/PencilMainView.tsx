@@ -72,11 +72,12 @@ function Sidebar() {
   const [searchQuery, setSearchQuery] = createSignal('')
   const [expandedAgents, setExpandedAgents] = createSignal<string[]>([])
 
-  // 默认展开当前活跃角色
+  // 默认展开所有角色（因为目前角色少）
   const ensureExpanded = () => {
-    const aid = activeAgent()?.id
-    if (aid && !expandedAgents().includes(aid)) {
-      setExpandedAgents((prev) => [...prev, aid])
+    for (const ag of allAgents()) {
+      if (!expandedAgents().includes(ag.id)) {
+        setExpandedAgents((prev) => [...prev, ag.id])
+      }
     }
   }
   ensureExpanded()
@@ -86,10 +87,11 @@ function Sidebar() {
     const sessions = a.sessions()
     const curSid = a.sessionId()
     const curSession = sessions.find((s) => s.id === curSid)
+    const agents = allAgents()
     const linked = curSession?.agentId
-      ? a.agents().find((ag) => ag.id === curSession.agentId)
+      ? agents.find((ag) => ag.id === curSession.agentId)
       : undefined
-    return linked ?? a.agents().find((ag) => ag.isDefault) ?? a.agents()[0]
+    return linked ?? agents.find((ag) => ag.isDefault) ?? agents[0]
   })
 
   const toggleExpand = (id: string) => {
@@ -101,7 +103,8 @@ function Sidebar() {
   const sessionsByAgent = createMemo(() => {
     const map = new Map<string, SessionInfo[]>()
     const allSessions = a.sessions()
-    const defaultId = a.agents().find((ag) => ag.isDefault)?.id ?? a.agents()[0]?.id ?? ''
+    const agents = allAgents()
+    const defaultId = agents.find((ag) => ag.isDefault)?.id ?? agents[0]?.id ?? 'default'
     for (const s of allSessions) {
       const key = s.agentId || defaultId
       if (!map.has(key)) map.set(key, [])
@@ -110,7 +113,22 @@ function Sidebar() {
     return map
   })
 
-  const allAgents = createMemo(() => a.agents())
+  const allAgents = createMemo(() => {
+    const list = a.agents()
+    // 兜底：至少有一个澪
+    if (list.length > 0) return list
+    return [{
+      id: 'default',
+      name: '澪',
+      provider: 'DeepSeek',
+      modelId: '',
+      avatarColor: '#6B8FA8',
+      roleDescription: '技術顧問 · 戦術支援',
+      isDefault: true,
+      createdAt: 0,
+      sessionCount: 0,
+    } as AgentInfo]
+  })
 
   const handleAgentClick = (agentId: string) => {
     const agentSessions = sessionsByAgent().get(agentId) ?? []
@@ -310,6 +328,9 @@ function Sidebar() {
                       {agentItem.roleDescription || agentItem.provider}
                     </div>
                   </div>
+                  <span style={{ 'font-size': '10px', color: 'var(--text-muted)', 'flex-shrink': '0' }}>
+                    {agentSessions().length}
+                  </span>
                   <span
                     style={{
                       'font-size': '10px',
