@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>澪号 Personal Agent — 架构可视化</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+  :root {
+    --bg-deep: #020617;
+    --bg-card: #0F172A;
+    --bg-elevated: #1E293B;
+    --border: rgba(255,255,255,0.06);
+    --border-active: rgba(255,255,255,0.12);
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --accent: #6B8FA8;
+    --accent-glow: rgba(107,143,168,0.3);
+    --green: #22C55E;
+    --green-glow: rgba(34,197,94,0.2);
+    --amber: #F59E0B;
+    --amber-glow: rgba(245,158,11,0.2);
+    --red: #EF4444;
+    --red-glow: rgba(239,68,68,0.2);
+    --glass-bg: linear-gradient(135deg, rgba(15,23,42,0.90) 0%, rgba(15,23,42,0.70) 40%, rgba(30,41,59,0.40) 70%, rgba(30,41,59,0.10) 100%);
+    --glass-blur: blur(20px) saturate(120%);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { font-size: 15px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Fira Sans', system-ui, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(107,143,168,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(34,197,94,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(245,158,11,0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+  }
+  .header h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.25rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--text-primary), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-meta {
+    display: flex; gap: 16px; font-family: 'Fira Code', monospace;
+    font-size: 0.7rem; color: var(--text-muted);
+  }
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+  .dot.amber { background: var(--amber); }
+  .dot.red { background: var(--red); }
+
+  /* ── Tabs ── */
+  .tab-bar {
+    position: sticky; top: 60px; z-index: 99;
+    display: flex; gap: 0;
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 20px; font-family: 'Fira Code', monospace;
+    font-size: 0.75rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s; white-space: nowrap;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Main Content ── */
+  .main { position: relative; z-index: 1; padding: 32px; max-width: 1600px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+    transition: all 0.25s;
+  }
+  .card:hover { border-color: var(--border-active); }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+  .card.expanded { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); }
+
+  .card-title {
+    font-family: 'Fira Code', monospace; font-size: 0.8rem;
+    font-weight: 600; color: var(--text-primary); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-subtitle { font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; }
+  .card-detail { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--text-secondary); line-height: 1.6; }
+  .card.expanded .card-detail { display: block; }
+
+  /* ── Grid Layouts ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+  .span-full { grid-column: 1 / -1; }
+
+  /* ── Topology ── */
+  .topology-row { display: flex; gap: 24px; align-items: stretch; margin-bottom: 24px; }
+  .topology-zone { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  .zone-label {
+    font-family: 'Fira Code', monospace; font-size: 0.65rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 2px;
+    padding: 8px 14px; border-radius: 6px; text-align: center;
+  }
+  .zone-frontend .zone-label { background: rgba(107,143,168,0.12); color: var(--accent); }
+  .zone-bridge .zone-label { background: var(--green-glow); color: var(--green); }
+  .zone-backend .zone-label { background: var(--amber-glow); color: var(--amber); }
+
+  /* ── Connection Arrow ── */
+  .connection {
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fira Code', monospace; font-size: 0.6rem; color: var(--text-muted);
+    padding: 0 8px; gap: 8px; flex-shrink: 0;
+  }
+  .connection svg { width: 48px; height: 20px; }
+  .connection line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+  .connection text { fill: var(--text-muted); font-size: 7px; font-family: 'Fira Code', monospace; }
+
+  /* ── Node Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px; font-family: 'Fira Code', monospace;
+    font-size: 0.6rem; font-weight: 500;
+  }
+  .badge-count { background: rgba(107,143,168,0.12); color: var(--accent); }
+  .badge-green { background: var(--green-glow); color: var(--green); }
+  .badge-amber { background: var(--amber-glow); color: var(--amber); }
+  .badge-red { background: var(--red-glow); color: var(--red); }
+
+  /* ── Flow Arrow Styling ── */
+  .flow-list { display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    font-size: 0.72rem; font-family: 'Fira Code', monospace;
+    border-left: 1px solid var(--border);
+  }
+  .flow-step .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 700; flex-shrink: 0;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+  }
+  .flow-step:nth-child(-n+4) .step-num { color: var(--green); border-color: var(--green); }
+  .flow-step:nth-child(n+5):nth-child(-n+8) .step-num { color: var(--accent); border-color: var(--accent); }
+  .flow-step:nth-child(n+9) .step-num { color: var(--amber); border-color: var(--amber); }
+
+  /* ── Stats Row ── */
+  .stat-card { text-align: center; padding: 16px; }
+  .stat-value { font-family: 'Fira Code', monospace; font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; font-size: 0.65rem; color: var(--text-muted); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* ── Section Header ── */
+  .section-title {
+    font-family: 'Noto Serif SC', serif; font-size: 1.1rem; font-weight: 600;
+    margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .icon { opacity: 0.6; }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .grid-3, .grid-4, .grid-5, .grid-6 { grid-template-columns: repeat(2, 1fr); }
+    .topology-row { flex-direction: column; }
+    .connection { flex-direction: row; }
+    .header { padding: 12px 16px; }
+    .main { padding: 16px; }
+    .tab-bar { padding: 0 16px; }
+  }
+  @media (max-width: 640px) {
+    .grid-2, .grid-3, .grid-4, .grid-5, .grid-6 { grid-template-columns: 1fr; }
+    .span-2, .span-3 { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>澪号 Personal Agent — 架构可视化</h1>
+  <div class="header-meta">
+    <span><span class="dot green"></span> Bridge 9229 在线</span>
+    <span>v3.1.0</span>
+    <span>2026-06-08</span>
+  </div>
+</header>
+
+<nav class="tab-bar">
+  <button class="tab active" onclick="switchView('overview')">01 总览</button>
+  <button class="tab" onclick="switchView('frontend')">02 前端</button>
+  <button class="tab" onclick="switchView('bridge')">03 桥接</button>
+  <button class="tab" onclick="switchView('backend')">04 后端</button>
+  <button class="tab" onclick="switchView('flow')">05 数据流</button>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIEW 01: OVERVIEW                               -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="view active" id="view-overview">
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span> 前端 SolidJS</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span> 桥接 Node.js</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span> Pi 扩展</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--text-muted)"></span> WS 协议 69 条消息</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card stat-card"><div class="stat-value" style="color:var(--accent)">64</div><div class="stat-label">App.tsx 行数</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--green)">643</div><div class="stat-label">useAgent 行数</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--amber)">69</div><div class="stat-label">协议消息</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--text-secondary)">19</div><div class="stat-label">扩展组件</div></div>
+  </div>
+
+  <!-- Topology -->
+  <div class="topology-row">
+    <!-- Frontend Zone -->
+    <div class="topology-zone zone-frontend">
+      <div class="zone-label">🖥 Frontend — SolidJS + Tailwind</div>
+      <div class="card clickable">
+        <div class="card-title">App.tsx <span class="badge badge-count">64 行</span></div>
+        <div class="card-subtitle">纯 registry 驱动，3 槽位 (overlay / nav / main-view)</div>
+      </div>
+      <div class="grid-2">
+        <div class="card clickable"><div class="card-title">Views <span class="badge badge-count">6</span></div><div class="card-subtitle">PencilMainView CharacterView SessionRecordsView CostDashboardView FileTreeView SettingsLayoutView</div></div>
+        <div class="card clickable"><div class="card-title">Extensions <span class="badge badge-count">13</span></div><div class="card-subtitle">sidebar chat-panel editor-panel mini-nav top-menu file-tree 等</div></div>
+      </div>
+      <div class="card clickable">
+        <div class="card-title">useAgent Facade <span class="badge badge-count">643 行</span></div>
+        <div class="card-subtitle">use-ws · use-session-cache · char-pump · use-settings · use-agents</div>
+      </div>
+    </div>
+
+    <!-- Connection -->
+    <div class="connection">
+      <svg viewBox="0 0 48 20"><line x1="0" y1="10" x2="48" y2="10"/><polygon points="40,5 48,10 40,15" fill="#64748B"/></svg>
+      <div style="text-align:center">
+        <div>WebSocket</div>
+        <div>:9229</div>
+      </div>
+      <svg viewBox="0 0 48 20"><line x1="0" y1="10" x2="48" y2="10"/><polygon points="8,5 0,10 8,15" fill="#64748B"/></svg>
+    </div>
+
+    <!-- Bridge Zone -->
+    <div class="topology-zone zone-bridge">
+      <div class="zone-label">⚡ Bridge — Node.js + Pi SDK</div>
+      <div class="card clickable">
+        <div class="card-title">index.ts <span class="badge badge-count">59 行</span></div>
+        <div class="card-subtitle">init-db · init-config · init-agents · WSS start</div>
+      </div>
+      <div class="grid-2">
+        <div class="card clickable"><div class="card-title">dispatcher.ts <span class="badge badge-green">32 路由</span></div></div>
+        <div class="card clickable"><div class="card-title">protocol.ts <span class="badge badge-green">69 消息</span></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card clickable"><div class="card-title">handlers/ <span class="badge badge-green">11 文件</span></div></div>
+        <div class="card clickable"><div class="card-title">pi-adapter.ts <span class="badge badge-green">10 事件</span></div></div>
+      </div>
+    </div>
+
+    <!-- Connection -->
+    <div class="connection">
+      <svg viewBox="0 0 48 20"><line x1="0" y1="10" x2="48" y2="10"/><polygon points="40,5 48,10 40,15" fill="#64748B"/></svg>
+      <div style="text-align:center">
+        <div>Pi SDK</div>
+        <div>API</div>
+      </div>
+      <svg viewBox="0 0 48 20"><line x1="0" y1="10" x2="48" y2="10"/><polygon points="8,5 0,10 8,15" fill="#64748B"/></svg>
+    </div>
+
+    <!-- Backend Zone -->
+    <div class="topology-zone zone-backend">
+      <div class="zone-label">🔌 Pi Extensions — Backend</div>
+      <div class="card clickable">
+        <div class="card-title">.pi/settings.json</div>
+        <div class="card-subtitle">3 个扩展绝对路径 → Pi SDK 自动加载</div>
+      </div>
+      <div class="grid-1" style="display:flex; flex-direction:column; gap:12px">
+        <div class="card clickable"><div class="card-title">pa-mio <span class="badge badge-amber">v5</span></div><div class="card-subtitle">4 层 Prompt · memory_add/read 工具 · SOUL.md</div></div>
+        <div class="card clickable"><div class="card-title">pa-files</div><div class="card-subtitle">文件浏览 · 动态工作目录感知 · list/preview 工具</div></div>
+        <div class="card clickable"><div class="card-title">pa-mcp</div><div class="card-subtitle">通用 MCP 桥接 · 懒初始化 · SERVERS[] 配置</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIEW 02: FRONTEND                               -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="view" id="view-frontend">
+
+  <div class="section-title"><span class="icon">🖥</span> App.tsx — Registry-Driven Shell (64 行)</div>
+  <div class="grid-3" style="margin-bottom:24px">
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">overlay 槽位</div>
+      <div class="card-subtitle">覆盖层组件</div>
+      <div class="card-detail">TopMenuBar — 顶部菜单 (齿轮导航)<br>Settings 齿轮 → navigateTo('settings') → SettingsLayoutView</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">nav 槽位</div>
+      <div class="card-subtitle">52px 导航栏</div>
+      <div class="card-detail">MiniNav — 6 导航项<br>通信·識別·記録·資源·ファイル·設定<br>nav-signal.ts: activeView + navigateTo</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">main-view 槽位</div>
+      <div class="card-subtitle">主内容区</div>
+      <div class="card-detail">6 个 View 注册到 main-view<br>按 ext.id === activeView() 匹配渲染<br>views/index.ts 统一注册</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">📐</span> Views — main-view 槽位 (6 文件)</div>
+  <div class="grid-3" style="margin-bottom:24px">
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">PencilMainView <span class="badge badge-count">41 行</span></div>
+      <div class="card-subtitle">id: chat · 主工作区布局壳</div>
+      <div class="card-detail">从 registry sidebar 槽位读取 3 扩展<br>sidebar → &lt;Sidebar /&gt;<br>chat-panel → &lt;ChatPanel /&gt;<br>editor-panel → &lt;EditorPanel /&gt;</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">CharacterView <span class="badge badge-amber">mock</span></div>
+      <div class="card-subtitle">id: agents · 角色管理</div>
+      <div class="card-detail">左侧 Agent 列表 + 右侧编辑表单<br>当前: 5 个硬编码 Agent<br>待 P5: 接入 useAgent().agents()</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">SettingsLayoutView <span class="badge badge-amber">mock</span></div>
+      <div class="card-subtitle">id: settings · 5 子页设置</div>
+      <div class="card-detail">模型管理 · 显示设置 · 技能管理<br>工作目录 · 系统信息<br>待 P5: 接入 settings.get/set</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">SessionRecordsView <span class="badge badge-amber">mock</span></div>
+      <div class="card-subtitle">id: records · 会话记录</div>
+      <div class="card-detail">日期分组 + 详情面板<br>待 P5: 接入 useAgent().sessions()</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">CostDashboardView <span class="badge badge-amber">mock</span></div>
+      <div class="card-subtitle">id: resources · 费用仪表盘</div>
+      <div class="card-detail">指标卡 + 图表 + 洞察<br>待 P5: 接入 status + stats handler</div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">FileTreeView</div>
+      <div class="card-subtitle">id: files · 文件树视图</div>
+      <div class="card-detail">复用 FileTree 扩展<br>全屏文件浏览模式</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">🧩</span> Extensions — 4 个槽位 (13 个扩展)</div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div>
+      <div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--accent);margin-bottom:8px">slot: sidebar (3)</div>
+      <div class="grid-3">
+        <div class="card"><div class="card-title">sidebar <span class="badge badge-count">416 行</span></div><div class="card-subtitle">Agent 列表 · 会话 · 搜索 · 工具日志 · 资源监视</div></div>
+        <div class="card"><div class="card-title">chat-panel <span class="badge badge-count">255 行</span></div><div class="card-subtitle">消息渲染 · Markdown · HTML · 输入框 · 思考块</div></div>
+        <div class="card"><div class="card-title">editor-panel <span class="badge badge-count">160 行</span></div><div class="card-subtitle">文件标签页 · 预览切换 · 拖拽宽度 · 订阅 file.content</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--green);margin-bottom:8px">slot: overlay (1)</div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">top-menu</div><div class="card-subtitle">顶部菜单栏 · 齿轮导航到 settings</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--amber);margin-bottom:8px">slot: nav (1)</div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">mini-nav <span class="badge badge-green">P1-3</span></div><div class="card-subtitle">6 导航项 · nav-signal 驱动 · Lucide 图标</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--text-muted);margin-bottom:8px">slot: right-tab / left-* (8 — 旧 Grid 槽位, 过渡保留)</div>
+      <div class="grid-4">
+        <div class="card"><div class="card-title">file-tree</div><div class="card-subtitle">文件树浏览</div></div>
+        <div class="card"><div class="card-title">doc-preview</div><div class="card-subtitle">文档预览</div></div>
+        <div class="card"><div class="card-title">right-panel</div><div class="card-subtitle">右侧面板 Tab</div></div>
+        <div class="card"><div class="card-title">chat-renderer</div><div class="card-subtitle">(旧) 聊天渲染</div></div>
+        <div class="card"><div class="card-title">session-panel</div><div class="card-subtitle">(旧) 会话列表</div></div>
+        <div class="card"><div class="card-title">tool-panel</div><div class="card-subtitle">(旧) 工具状态</div></div>
+        <div class="card"><div class="card-title">status-bar</div><div class="card-subtitle">(旧) 状态栏</div></div>
+        <div class="card" style="opacity:0.4"><div class="card-title">settings-page</div><div class="card-subtitle">(P1-7 已删除)</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIEW 03: BRIDGE                                 -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="view" id="view-bridge">
+
+  <div class="section-title"><span class="icon">⚡</span> Bridge 启动流程</div>
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card"><div class="card-title">init-db.ts <span class="badge badge-count">38 行</span></div><div class="card-subtitle">SQLite 初始化<br>主会话「澪」创建<br>默认设置写入</div></div>
+    <div class="card"><div class="card-title">init-config.ts <span class="badge badge-count">24 行</span></div><div class="card-subtitle">.pi/settings.json 生成<br>3 个扩展绝对路径</div></div>
+    <div class="card"><div class="card-title">init-agents.ts <span class="badge badge-count">13 行</span></div><div class="card-subtitle">Agent 自动发现<br>从 providers 配置生成<br>默认 Agent</div></div>
+    <div class="card"><div class="card-title">WSS + Watcher</div><div class="card-subtitle">WebSocket Server :9229<br>文件监听 + 广播<br>client-manager 统一管理</div></div>
+  </div>
+
+  <div class="section-title"><span class="icon">📋</span> dispatcher.ts — 32 路由 → 11 Handler</div>
+  <div class="grid-6" style="margin-bottom:16px;font-size:0.65rem;font-family:'Fira Code',monospace">
+    <div class="card"><strong style="color:var(--accent)">agent.* (6)</strong><br>agent.list<br>agent.create<br>agent.update<br>agent.delete<br>agent.switch<br>agent.set_default</div>
+    <div class="card"><strong style="color:var(--green)">session.* (8)</strong><br>session.create<br>session.list<br>session.switch<br>session.delete<br>session.rename<br>session.history<br>session.state<br>agent.compact</div>
+    <div class="card"><strong style="color:var(--amber)">对话 (2)</strong><br>agent.prompt<br>agent.abort</div>
+    <div class="card"><strong style="color:var(--accent)">配置 (4)</strong><br>agent.model.set<br>agent.model.list<br>agent.thinking.set<br>agent.tools.set</div>
+    <div class="card"><strong style="color:var(--green)">文件 (3)</strong><br>file.list<br>file.read<br>file.write</div>
+    <div class="card"><strong style="color:var(--text-secondary)">其他 (9)</strong><br>settings.* (3)<br>memory.* (2)<br>skills.* (4)</div>
+  </div>
+
+  <div class="section-title"><span class="icon">📁</span> handlers/ — 11 文件</div>
+  <div class="grid-6" style="margin-bottom:16px">
+    <div class="card"><div class="card-title">session.ts</div><div class="card-subtitle">会话 CRUD<br>历史 · 压缩</div></div>
+    <div class="card"><div class="card-title">message.ts</div><div class="card-subtitle">发送 · 取消<br>auto-name 委托</div></div>
+    <div class="card"><div class="card-title">model.ts</div><div class="card-subtitle">模型切换<br>列表</div></div>
+    <div class="card"><div class="card-title">file.ts</div><div class="card-subtitle">文件列表<br>读取 · 写入</div></div>
+    <div class="card"><div class="card-title">memory.ts</div><div class="card-subtitle">记忆搜索<br>列表</div></div>
+    <div class="card"><div class="card-title">memory-store.ts</div><div class="card-subtitle">Bridge 侧<br>记忆读写</div></div>
+    <div class="card"><div class="card-title">settings.ts</div><div class="card-subtitle">设置 CRUD<br>模型发现</div></div>
+    <div class="card"><div class="card-title">skills.ts</div><div class="card-subtitle">技能 CRUD<br>client-manager</div></div>
+    <div class="card"><div class="card-title">agent.ts</div><div class="card-subtitle">智能体管理<br>多智能体</div></div>
+    <div class="card"><div class="card-title">thinking.ts</div><div class="card-subtitle">思考深度<br>配置</div></div>
+    <div class="card"><div class="card-title">tools.ts</div><div class="card-subtitle">工具集<br>配置</div></div>
+  </div>
+
+  <div class="section-title"><span class="icon">🔄</span> pi-adapter.ts — Pi 事件 → 协议消息 (10 事件, 203 行)</div>
+  <div class="grid-5" style="margin-bottom:16px">
+    <div class="card" style="text-align:center"><div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--green)">agent_start</div><div style="font-size:0.6rem;color:var(--text-muted)">→ agent.start</div></div>
+    <div class="card" style="text-align:center"><div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--green)">turn_start</div><div style="font-size:0.6rem;color:var(--text-muted)">→ turn.start</div></div>
+    <div class="card" style="text-align:center"><div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--accent)">message_*</div><div style="font-size:0.6rem;color:var(--text-muted)">→ start/delta/end</div></div>
+    <div class="card" style="text-align:center"><div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--amber)">tool_*</div><div style="font-size:0.6rem;color:var(--text-muted)">→ start/progress/end</div></div>
+    <div class="card" style="text-align:center"><div style="font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--red)">agent_end</div><div style="font-size:0.6rem;color:var(--text-muted)">→ error + turn.end</div></div>
+  </div>
+
+  <div class="section-title"><span class="icon">📦</span> 辅助模块</div>
+  <div class="grid-4">
+    <div class="card"><div class="card-title">pi-session.ts</div><div class="card-subtitle">Pi 会话创建 · 模型注册 · 生命周期</div></div>
+    <div class="card"><div class="card-title">db.ts</div><div class="card-subtitle">SQLite 持久化 · settings/conversations/messages/tool_calls</div></div>
+    <div class="card"><div class="card-title">watcher.ts</div><div class="card-subtitle">文件监听 + client-manager 广播</div></div>
+    <div class="card"><div class="card-title">client-manager.ts <span class="badge badge-green">P3-4</span></div><div class="card-subtitle">createClientSet() · 统一切换</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIEW 04: BACKEND                                -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="view" id="view-backend">
+
+  <div class="section-title"><span class="icon">🔌</span> Pi 扩展注册机制</div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">bridge/.pi/settings.json</div>
+    <div class="card-detail" style="display:block;font-family:'Fira Code',monospace;font-size:0.7rem;color:var(--text-secondary)">
+{<br>
+&nbsp;&nbsp;"extensions": [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"D:/claude/personal-agent/extensions/pa-mio/index.ts",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"D:/claude/personal-agent/extensions/pa-files/index.ts",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"D:/claude/personal-agent/extensions/pa-mcp/index.ts"<br>
+&nbsp;&nbsp;]<br>
+}<br><br>
+Pi SDK 启动时自动 import → 调用 register(api) → 扩展就绪
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">🧠</span> pa-mio — 人格注入 v5</div>
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">4 层 System Prompt 组装</div>
+      <div class="card-subtitle">每次 LLM 调用实时构建</div>
+      <div class="card-detail">
+        Layer 0: SOUL.md — 人格定义（实时读取）<br>
+        Layer 1: 记忆快照 — MEMORY.md + USER.md (&lt;recall&gt; 围栏)<br>
+        Layer 2: 检索记忆 + 工作目录（关键词匹配 ≤3 条）<br>
+        Layer 3: Pi 工具定义（Pi 自动注入）<br>
+        + Pi 底层: 对话历史
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">注册的 Pi 工具 & 事件</div>
+      <div class="card-subtitle">api.registerTool · api.on</div>
+      <div class="card-detail">
+        memory_add — 写入 MEMORY.md / USER.md<br>
+        memory_read — 读取记忆全文<br>
+        before_agent_start — Prompt 注入<br>
+        session_start — 刷新记忆快照<br>
+        tool_execution_start/end — UI 状态更新
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">📁</span> pa-files — 文件浏览 & 预览</div>
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">注册的 Pi 工具</div>
+      <div class="card-detail">
+        list_directory — 列出目录内容 (maxDepth 3)<br>
+        preview_file — 预览文件 (Markdown · HTML · 代码)<br>
+        动态工作目录感知 (SQLite settings.work_dir)
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">注册的 Slash 命令</div>
+      <div class="card-detail">
+        /files [path] — 浏览工作区目录<br>
+        /preview &lt;file&gt; — 预览文件<br>
+        /workspace [new-path] — 查看/切换工作目录
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">🔗</span> pa-mcp — 通用 MCP 客户端桥接</div>
+  <div class="card clickable" onclick="this.classList.toggle('expanded')">
+    <div class="card-title">架构 <span class="badge badge-green">Live2D 已清理</span></div>
+    <div class="card-subtitle">MCPClient 类 (lazy singleton) · STDIO JSON-RPC · SERVERS[] 配置</div>
+    <div class="card-detail">
+      SERVERS: MCPServer[] — 当前为空数组<br>
+      添加新 MCP Server: 追加 command + args + tools 配置<br>
+      MCPClient.ensureStarted() — 懒初始化<br>
+      首次工具调用 → spawn MCP server → initialize handshake → register tools<br>
+      Live2D 7 工具已于 2026-06-07 清理 (P0)
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIEW 05: DATA FLOW                              -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="view" id="view-flow">
+
+  <div class="section-title"><span class="icon">↻</span> 消息生命周期 (用户发送 → AI 回复)</div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="flow-list">
+      <div class="flow-step"><span class="step-num">1</span> ChatPanel 用户输入 → agent.sendMessage(content)</div>
+      <div class="flow-step"><span class="step-num">2</span> useAgent: 本地插入 user MessageEntry → send('agent.prompt', {...})</div>
+      <div class="flow-step"><span class="step-num">3</span> use-ws.ts: ws.send(JSON) — 或缓冲到 pendingSends</div>
+      <div class="flow-step"><span class="step-num" style="color:var(--green)">4</span> WebSocket → dispatcher → 'agent.prompt' → handleMessageSend</div>
+      <div class="flow-step"><span class="step-num" style="color:var(--green)">5</span> message.ts: 获取/创建 Pi session → session.prompt(content)</div>
+      <div class="flow-step"><span class="step-num" style="color:var(--green)">6</span> Pi SDK: LLM 调用 → tool calls → LLM → ...</div>
+      <div class="flow-step"><span class="step-num" style="color:var(--green)">7</span> pi-adapter: session.subscribe(Pi events) → broadcast(ServerMessage)</div>
+      <div class="flow-step"><span class="step-num" style="color:var(--green)">8</span> WS broadcast: message.delta / tool.start / tool.end / turn.end</div>
+      <div class="flow-step"><span class="step-num">9</span> useAgent.handleServerMessage() → 更新 Signal + 分发 subscribers</div>
+      <div class="flow-step"><span class="step-num">10</span> char-pump: schedulePump() → requestAnimationFrame 逐字渲染</div>
+      <div class="flow-step"><span class="step-num">11</span> editor-panel: subscribe('file.content') → 更新文件预览</div>
+      <div class="flow-step"><span class="step-num">12</span> SolidJS 响应式 → ChatPanel / Sidebar / EditorPanel 自动重渲染</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">🧬</span> useAgent.tsx — 内部模块组合 (643 行 facade)</div>
+  <div class="grid-5" style="margin-bottom:20px">
+    <div class="card clickable" onclick="this.classList.toggle('expanded')" style="border-top:2px solid var(--accent)">
+      <div class="card-title">use-ws.ts <span class="badge badge-count">86 行</span></div>
+      <div class="card-subtitle">WS 连接 · 心跳 · 重连 · 缓冲</div>
+      <div class="card-detail">
+        createWsConnection({ onOpen, onMessage, onClose })<br>
+        → { send, cleanup }<br>
+        · 指数退避重连 (3s→30s)<br>
+        · ping 心跳 (30s)<br>
+        · pendingSends 缓冲队列
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')" style="border-top:2px solid var(--green)">
+      <div class="card-title">use-session-cache.ts <span class="badge badge-count">41 行</span></div>
+      <div class="card-subtitle">会话隔离 · Map 缓存</div>
+      <div class="card-detail">
+        createSessionCache()<br>
+        → { messages, toolCalls, status, pendingChars, deleteSession }<br>
+        切换会话时保留后台状态
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')" style="border-top:2px solid var(--amber)">
+      <div class="card-title">char-pump.ts <span class="badge badge-count">61 行</span></div>
+      <div class="card-subtitle">逐字渲染 · rAF 驱动</div>
+      <div class="card-detail">
+        createCharPump({ getSessionId, pendingChars, setMessages, syncToCache })<br>
+        → { schedulePump, cleanup }<br>
+        CHARS_PER_FRAME = 15
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">use-settings.ts <span class="badge badge-count">18 行</span></div>
+      <div class="card-subtitle">设置信号 · 读写</div>
+      <div class="card-detail">
+        createSettings(send)<br>
+        → { entries, setEntries, getSettings, setSetting }<br>
+        合并原 settings-signal.ts
+      </div>
+    </div>
+    <div class="card clickable" onclick="this.classList.toggle('expanded')">
+      <div class="card-title">use-agents.ts <span class="badge badge-count">65 行</span></div>
+      <div class="card-subtitle">智能体 · 事件处理</div>
+      <div class="card-detail">
+        createAgents(send)<br>
+        → { agents, handleAgent*, switchAgent, create/update/delete/setDefault }<br>
+        含 5 个服务端事件处理器
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="icon">📊</span> 协议统计</div>
+  <div class="grid-4">
+    <div class="card stat-card"><div class="stat-value" style="color:var(--accent)">33</div><div class="stat-label">Client → Server</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--green)">36</div><div class="stat-label">Server → Client</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--amber)">32</div><div class="stat-label">Dispatcher 路由</div></div>
+    <div class="card stat-card"><div class="stat-value" style="color:var(--text-secondary)">11</div><div class="stat-label">Handler 文件</div></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Keyboard nav
+document.addEventListener('keydown', (e) => {
+  const tabs = ['overview','frontend','bridge','backend','flow'];
+  const current = tabs.findIndex(t => document.getElementById('view-'+t).classList.contains('active'));
+  if (e.key === 'ArrowRight' && current < tabs.length-1) switchView(tabs[current+1]);
+  if (e.key === 'ArrowLeft' && current > 0) switchView(tabs[current-1]);
+  if (e.key >= '1' && e.key <= '5') switchView(tabs[parseInt(e.key)-1]);
+});
+
+// Respect reduced motion
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.documentElement.style.setProperty('--animate-duration', '0s');
+}
+</script>
+</body>
+</html>
