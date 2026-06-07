@@ -629,6 +629,13 @@ function ChatPanel() {
   const [collapsedThinkings, setCollapsedThinkings] = createSignal<Set<string>>(new Set())
   let textareaRef: HTMLTextAreaElement | undefined
 
+  // 启动时自动创建 session（如果还没有）
+  onMount(() => {
+    if (agent.sessions().length === 0) {
+      agent.createSession()
+    }
+  })
+
   const handleSend = () => {
     const text = inputValue().trim()
     if (!text) return
