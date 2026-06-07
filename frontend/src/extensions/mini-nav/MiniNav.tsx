@@ -38,10 +38,13 @@ export function MiniNav() {
   return (
     <nav class="mini-nav">
       <For each={NAV_ITEMS}>
-        {(item) => (
+        {(item, idx) => (
           <button
             class="nav-item"
-            classList={{ active: isActive(item.id) }}
+            classList={{
+              active: isActive(item.id),
+              'is-first': idx() === 0,
+            }}
             onClick={() => handleClick(item.id)}
             title={item.label}
           >

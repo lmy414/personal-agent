@@ -33,6 +33,11 @@
 
 .nav-item.active {
   color: var(--text-primary);
+  background: rgba(255,255,255,0.08);
+}
+
+/* 第一个选项（通信）固定使用首栏颜色，保证视觉连贯 */
+.nav-item.active.is-first {
   background: rgb(var(--top-bar-tint-rgb));
 }
 
