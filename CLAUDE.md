@@ -25,24 +25,29 @@ personal-agent/
 ├── bridge/                    ← Node 桥接服务器（Pi SDK → WebSocket）
 │   ├── .pi/settings.json      ←   Pi 扩展注册（3 个扩展，绝对路径）
 │   ├── index.ts               ←   入口：WS Server + SQLite 初始化
-│   ├── protocol.ts            ←   统一协议（55 条消息，完整 Pi 事件映射，前后端共享）
-│   ├── dispatcher.ts          ←   消息路由表（27 路由）
+│   ├── protocol.ts            ←   统一协议（69 条消息，完整 Pi 事件映射，前后端共享）
+│   ├── dispatcher.ts          ←   消息路由表（32 路由）
 │   ├── pi-session.ts          ←   Pi 会话管理 + 模型注册表
+│   ├── pi-adapter.ts           ←   Pi 事件 → 协议消息 纯翻译器（~60 行）
 │   ├── db.ts                  ←   SQLite 持久化（~/.personal-agent/agent.db）
 │   ├── watcher.ts             ←   文件监听 + 广播
-│   └── handlers/              ←   按消息类型拆文件（7 文件）
+│   └── handlers/              ←   按消息类型拆文件（11 文件）
 │       ├── settings.ts        ←     设置 CRUD + 模型发现
-│       ├── file.ts            ←     文件列表/读取（支持工作目录）
+│       ├── file.ts            ←     文件列表/读取/写入
 │       ├── session.ts         ←     会话 CRUD + 历史 + 压缩
 │       ├── message.ts         ←     消息发送/取消 + 自动命名
 │       ├── model.ts           ←     模型切换/列表
 │       ├── memory.ts          ←     记忆搜索/列表
-│       └── memory-store.ts    ←     Bridge 侧记忆读写
+│       ├── memory-store.ts    ←     Bridge 侧记忆读写
+│       ├── skills.ts          ←     技能 CRUD
+│       ├── agent.ts           ←     智能体管理（多智能体架构）
+│       ├── thinking.ts        ←     思考深度配置
+│       └── tools.ts           ←     工具集配置
 ├── frontend/                  ← SolidJS 前端
 │   ├── src/
 │   │   ├── shell/             ←   壳（Grid 布局 + WS hook + 全局信号）
 │   │   │   ├── App.tsx        ←     壳组件 + 面板拖拽
-│   │   │   ├── App.css        ←     全局变量/reset/Grid/动画（~170 行）
+│   │   │   ├── App.css        ←     全局变量/reset/Grid/动画（364 行）
 │   │   │   ├── useAgent.tsx   ←     全局状态 + WebSocket 管理
 │   │   │   └── settings-signal.ts ← 设置页面开关信号
 │   │   ├── components/        ←   通用组件库（galaxy 平铺式，8 组件）
@@ -55,14 +60,22 @@ personal-agent/
 │   │   │   ├── progress-bar/  ←     进度条
 │   │   │   └── spinner/       ←     脉冲指示器
 │   │   ├── registry.ts        ←   扩展注册表（Slot-based 插件系统）
-│   │   └── extensions/        ←   9 个扩展组件，各含独立 CSS
+│   │   ├── views/             ←   视图组件（6 文件，硬编码路由）
+│   │   │   ├── PencilMainView.tsx  ← 主工作区（1292 行巨石）
+│   │   │   ├── CharacterView.tsx   ← 智能体角色展示（mock）
+│   │   │   ├── SessionRecordsView.tsx ← 会话记录
+│   │   │   ├── CostDashboardView.tsx  ← 费用仪表盘（mock）
+│   │   │   ├── FileTreeView.tsx  ←    文件树视图（复用 FileTree 扩展）
+│   │   │   └── SettingsLayoutView.tsx ← 设置页（5 tab：模型/显示/技能/工作目录/系统）
+│   │   └── extensions/        ←   10 个扩展组件，各含独立 CSS
 │   │       ├── chat-renderer/ ←     聊天面板 v2（MomoTalk 布局 + Avatar + Lucide 图标）
 │   │       ├── session-panel/ ←     会话列表 + 切换（动态角色名）
 │   │       ├── file-tree/     ←     文件树浏览
 │   │       ├── tool-panel/    ←     工具调用状态（Lucide 图标）
 │   │       ├── doc-preview/   ←     文档内容预览
 │   │       ├── top-menu/      ←     顶部菜单（Lucide 图标）
-│   │       ├── settings-page/ ←     设置页（4 tab：智能体/主界面/工作目录/技能）
+│   │       ├── mini-nav/      ←     底部导航栏
+│   │       ├── settings-page/ ←     设置页（旧版，Slot 注册但未消费）
 │   │       ├── status-bar/    ←     状态栏
 │   │       └── right-panel/   ←     右侧面板 Tab
 │   ├── index.html
@@ -91,10 +104,10 @@ personal-agent/
 ├── frontend-sketch/           ← UI 原型（设计源）
 ├── docs/
 │   ├── architecture.html      ←   交互式架构图（vis-network）
-│   ├── mio-status-2026-06-06.md ← 最新项目状态
+│   ├── mio-status-2026-06-07-v2.md ← 最新项目状态（前端迁移基线）
 │   ├── roadmap.md             ←   项目路线图
 │   └── superpowers/
-│       ├── specs/             ←   设计 Specs（当前 5 份）
+│       ├── specs/             ←   设计 Specs（当前 6 份）
 │       └── plans/             ←   实施计划（当前 2 份）
 └── vendor/pi/                 ← Pi 框架（不修改）
 ```
@@ -302,7 +315,7 @@ CHANGELOG 条目格式：
 1. 读本文件（CLAUDE.md）
 2. 读 CHANGELOG.md 了解最近改动及意图
 3. 读 C:\Users\Mirror\.claude\projects\D--claude\memory\MEMORY.md 了解进行中的任务（auto-memory）
-4. 读 docs/mio-status-2026-06-06.md 了解当前项目状态
+4. 读 docs/mio-status-2026-06-07-v2.md 了解当前项目状态
 5. 读 docs/superpowers/specs/ 下最新 spec
 6. 读 frontend-sketch/layout-mockup-v2.html 了解 UI 原型
 7. git log --oneline -20 了解最近改动

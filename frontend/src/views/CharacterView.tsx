@@ -151,7 +151,6 @@ export default function CharacterView() {
           <div style={{ display: 'flex', 'flex-direction': 'column', gap: '8px' }}>
             <div style={labelStyle}>MCP 配置</div>
             <ToggleRow label="Pencil 设计工具" desc="UI/UX 设计协作" initialOn />
-            <ToggleRow label="Live2D 控制" desc="桌面宠物交互" initialOn />
           </div>
         </div>
       </div>

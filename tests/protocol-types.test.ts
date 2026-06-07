@@ -35,7 +35,7 @@ describe('Protocol — 消息类型双向覆盖', () => {
       'session.create', 'session.list', 'session.switch', 'session.delete',
       'session.history', 'session.rename', 'session.state', 'session.compact',
       'message.send', 'message.cancel',
-      'model.switch', 'model.list',
+      'agent.model.set', 'agent.model.list',
       'file.list', 'file.read',
       'memory.search', 'memory.list',
       'settings.get', 'settings.set', 'settings.discover-models',

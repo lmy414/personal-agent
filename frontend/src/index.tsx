@@ -11,7 +11,11 @@ import './extensions/file-tree'
 import './extensions/doc-preview'
 import './extensions/right-panel'
 import './extensions/top-menu'
-import './extensions/settings-page'
+import './extensions/mini-nav'
+import './extensions/sidebar'
+import './extensions/chat-panel'
+import './extensions/editor-panel'
+import './views'
 
 render(() => (
   <AgentProvider sessionId="sess-default">

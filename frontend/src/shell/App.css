@@ -243,16 +243,6 @@ body::before {
 }
 .top-menu-bar.open { transform: translateX(-50%) translateY(0); }
 
-/* ====== 设置全页面 ====== */
-.settings-page {
-  position: fixed; inset: 0; z-index: 55;
-  display: flex; flex-direction: column;
-  background: #0a0a18;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s;
-}
-.settings-page.open { opacity: 1; pointer-events: auto; }
-
 /* ====== 少女祈祷中（多扩展共用） ====== */
 @keyframes praying-breathe {
   0%, 100% {

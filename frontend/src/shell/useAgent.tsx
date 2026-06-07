@@ -1,13 +1,11 @@
 import { createContext, createSignal, onCleanup, useContext, type Component, type JSX } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import type { ServerMessage, StatusPayload, SessionInfo, AgentInfo } from '@bridge/protocol'
-
-// ========== 常量 ==========
-
-const WS_URL = 'ws://localhost:9229'
-const HEARTBEAT_INTERVAL = 30000
-const RECONNECT_BASE_DELAY = 3000
-const MAX_RECONNECT_DELAY = 30000
+import { createWsConnection } from './use-ws'
+import { createSessionCache } from './use-session-cache'
+import { createCharPump } from './char-pump'
+import { createSettings } from './use-settings'
+import { createAgents } from './use-agents'
 
 // ========== 全局状态类型 ==========
 
@@ -62,8 +60,6 @@ export interface AgentContextValue {
   switchSession: (sessionId: string) => void
   switchModel: (modelId: string) => void
   subscribe: (type: ServerMessage['type'], handler: (msg: ServerMessage) => void) => (() => void)
-  isSettingsOpen: () => boolean
-  setIsSettingsOpen: (v: boolean) => void
   settings: () => { key: string; value: string }[]
   getSettings: () => void
   setSetting: (key: string, value: string) => void
@@ -88,132 +84,59 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const [toolCalls, setToolCalls] = createSignal<ToolCallEntry[]>([])
   const [sessions, setSessions] = createSignal<SessionInfo[]>([])
   const [currentSessionId, setCurrentSessionId] = createSignal(props.sessionId)
-  const [isSettingsOpen, setIsSettingsOpen] = createSignal(false)
-  const [settings, setSettings] = createSignal<{ key: string; value: string }[]>([])
-  const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [status, setStatus] = createStore<StatusPayload>({
     tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0,
   })
 
-  // session 级缓存
-  const sessionMessages = new Map<string, MessageEntry[]>()
-  const sessionToolCalls = new Map<string, ToolCallEntry[]>()
-  const sessionStatus = new Map<string, StatusPayload>()
-
-  // 每 session 独立的字符缓冲（逐字渲染）
-  const sessionPendingChars = new Map<string, Map<string, string>>()
-
-  let ws: WebSocket | null = null
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  let heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  let pumpRafId: number | null = null
-  let reconnectAttempts = 0
-  const CHARS_PER_FRAME = 15
-  const pendingSends: string[] = []
-
-  const getPendingChars = (sid: string): Map<string, string> => {
-    let m = sessionPendingChars.get(sid)
-    if (!m) {
-      m = new Map()
-      sessionPendingChars.set(sid, m)
-    }
-    return m
-  }
+  const cache = createSessionCache()
 
   const syncSignalToCache = () => {
     const sid = currentSessionId()
-    sessionMessages.set(sid, messages())
-    sessionToolCalls.set(sid, toolCalls())
+    cache.messages.set(sid, messages())
+    cache.toolCalls.set(sid, toolCalls())
   }
 
-  const connect = () => {
-    ws = new WebSocket(WS_URL)
-
-    ws.onopen = () => {
+  const wsConn = createWsConnection({
+    onOpen() {
       setConnected(true)
       setIsStreaming(false)
-      reconnectAttempts = 0
-      // 心跳：每 30s 发送 ping 防止静默断线
-      if (heartbeatTimer) clearInterval(heartbeatTimer)
-      heartbeatTimer = setInterval(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping', id: '', sessionId: '', ts: Date.now(), payload: {} }))
-        }
-      }, HEARTBEAT_INTERVAL)
       // 初始化：请求 session 列表 + 模型列表 + 设置
-      const initMessages = [
-        JSON.stringify({
-          type: 'session.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {},
-        }),
-        JSON.stringify({
-          type: 'model.list', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {},
-        }),
-        JSON.stringify({
-          type: 'settings.get', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {},
-        }),
-      ]
-      for (const raw of initMessages) {
-        ws!.send(raw)
+      const rawSend = wsConn.send
+      for (const raw of [
+        JSON.stringify({ type: 'session.list', id: crypto.randomUUID(), sessionId: '', ts: Date.now(), payload: {} }),
+        JSON.stringify({ type: 'agent.model.list', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {} }),
+        JSON.stringify({ type: 'settings.get', id: crypto.randomUUID(), sessionId: currentSessionId(), ts: Date.now(), payload: {} }),
+      ]) {
+        rawSend(raw)
       }
-      // 刷待发送队列
-      while (pendingSends.length > 0) {
-        const raw = pendingSends.shift()!
-        ws!.send(raw)
-      }
-    }
-
-    ws.onmessage = (event) => {
-      const msg: ServerMessage = JSON.parse(event.data as string)
+    },
+    onMessage(msg: ServerMessage) {
       handleServerMessage(msg)
-    }
-
-    ws.onclose = () => {
+    },
+    onClose() {
       setConnected(false)
-      if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null }
-      if (reconnectTimer) clearTimeout(reconnectTimer)
-      const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY)
-      reconnectAttempts++
-      reconnectTimer = setTimeout(connect, delay)
-    }
+    },
+  })
 
-    ws.onerror = () => {
-      ws?.close()
-    }
+  const pump = createCharPump({
+    getSessionId: currentSessionId,
+    pendingChars: cache.pendingChars,
+    setMessages,
+    syncToCache: (sid, msgs) => cache.messages.set(sid, msgs),
+  })
+
+  const send = (type: string, payload: unknown) => {
+    wsConn.send(JSON.stringify({
+      type,
+      id: crypto.randomUUID(),
+      sessionId: currentSessionId() || props.sessionId,
+      ts: Date.now(),
+      payload,
+    }))
   }
 
-  const pumpChars = () => {
-    pumpRafId = null
-    const sid = currentSessionId()
-    const pending = sessionPendingChars.get(sid)
-    if (!pending || pending.size === 0) return
-
-    let hasMore = false
-    setMessages((prev) => {
-      const next = prev.map((m) => {
-        const chars = pending.get(m.messageId)
-        if (!chars || chars.length === 0 || !m.partial) return m
-        if (chars.length <= CHARS_PER_FRAME) {
-          pending.delete(m.messageId)
-          return { ...m, content: m.content + chars }
-        }
-        const chunk = chars.slice(0, CHARS_PER_FRAME)
-        pending.set(m.messageId, chars.slice(CHARS_PER_FRAME))
-        hasMore = true
-        return { ...m, content: m.content + chunk }
-      })
-      sessionMessages.set(sid, next)
-      return next
-    })
-    if (hasMore) {
-      pumpRafId = requestAnimationFrame(pumpChars)
-    }
-  }
-
-  const schedulePump = () => {
-    if (pumpRafId === null) {
-      pumpRafId = requestAnimationFrame(pumpChars)
-    }
-  }
+  const settingsStore = createSettings(send)
+  const agentsStore = createAgents(send)
 
   const handleServerMessage = (msg: ServerMessage) => {
     const msgSid = msg.sessionId ?? ''
@@ -234,8 +157,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           setMessages((prev) => [...prev, entry])
         }
         // 更新背景 session 缓存
-        const bg = sessionMessages.get(msgSid) ?? []
-        sessionMessages.set(msgSid, [...bg, entry])
+        const bg = cache.messages.get(msgSid) ?? []
+        cache.messages.set(msgSid, [...bg, entry])
         break
       }
 
@@ -254,25 +177,25 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
           if (isCurrent) {
             setMessages((prev) => {
               const next = appendThinking(prev)
-              sessionMessages.set(msgSid, next)
+              cache.messages.set(msgSid, next)
               return next
             })
           } else {
-            const bg = sessionMessages.get(msgSid)
-            if (bg) sessionMessages.set(msgSid, appendThinking(bg))
+            const bg = cache.messages.get(msgSid)
+            if (bg) cache.messages.set(msgSid, appendThinking(bg))
           }
         } else {
           // 文本 delta → 逐字动画
-          const pending = getPendingChars(msgSid)
+          const pending = cache.getPendingChars(msgSid)
           pending.set(msgId, (pending.get(msgId) ?? '') + msg.payload.delta)
-          if (isCurrent) schedulePump()
+          if (isCurrent) pump.schedulePump()
         }
         break
       }
 
       case 'message.end': {
         // 先排空该消息的 pending chars，追加到当前 content，再标记完成
-        const pending = sessionPendingChars.get(msgSid)
+        const pending = cache.pendingChars.get(msgSid)
         const remaining = pending?.get(msg.payload.messageId) ?? ''
         if (pending) pending.delete(msg.payload.messageId)
 
@@ -286,12 +209,12 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         if (isCurrent) {
           setMessages((prev) => {
             const next = finalize(prev)
-            sessionMessages.set(msgSid, next)
+            cache.messages.set(msgSid, next)
             return next
           })
         } else {
-          const bg = sessionMessages.get(msgSid)
-          if (bg) sessionMessages.set(msgSid, finalize(bg))
+          const bg = cache.messages.get(msgSid)
+          if (bg) cache.messages.set(msgSid, finalize(bg))
         }
         break
       }
@@ -310,8 +233,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         if (isCurrent) {
           setToolCalls((prev) => [...prev, entry])
         }
-        const bg = sessionToolCalls.get(msgSid) ?? []
-        sessionToolCalls.set(msgSid, [...bg, entry])
+        const bg = cache.toolCalls.get(msgSid) ?? []
+        cache.toolCalls.set(msgSid, [...bg, entry])
         break
       }
 
@@ -336,12 +259,12 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         if (isCurrent) {
           setToolCalls((prev) => {
             const next = finalize(prev)
-            sessionToolCalls.set(msgSid, next)
+            cache.toolCalls.set(msgSid, next)
             return next
           })
         } else {
-          const bg = sessionToolCalls.get(msgSid)
-          if (bg) sessionToolCalls.set(msgSid, finalize(bg))
+          const bg = cache.toolCalls.get(msgSid)
+          if (bg) cache.toolCalls.set(msgSid, finalize(bg))
         }
         break
       }
@@ -365,15 +288,15 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         if (p.model) setStatus('model', p.model)
         if (p.tokens !== undefined) setStatus('tokens', p.tokens)
         if (p.cost !== undefined) setStatus('cost', p.cost)
-        const curCtxMax = sessionStatus.get(msgSid)?.contextMax ?? status.contextMax
-        sessionStatus.set(msgSid, {
-          ...(sessionStatus.get(msgSid) ?? status),
+        const curCtxMax = cache.status.get(msgSid)?.contextMax ?? status.contextMax
+        cache.status.set(msgSid, {
+          ...(cache.status.get(msgSid) ?? status),
           contextUsed: p.contextUsed,
           contextMax: p.contextMax > 0 || curCtxMax === 0 ? p.contextMax : curCtxMax,
           roundCount: p.roundCount,
           model: p.model,
-          tokens: p.tokens ?? (sessionStatus.get(msgSid)?.tokens ?? 0),
-          cost: p.cost ?? (sessionStatus.get(msgSid)?.cost ?? 0),
+          tokens: p.tokens ?? (cache.status.get(msgSid)?.tokens ?? 0),
+          cost: p.cost ?? (cache.status.get(msgSid)?.cost ?? 0),
         })
         setSessions((prev) => prev.map((s) =>
           s.id === msgSid ? { ...s, roundCount: p.roundCount } : s
@@ -384,13 +307,13 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
       case 'session.compacted': {
         const p = msg.payload as { tokensBefore: number; tokensAfter: number; tokensSaved: number; contextWindow: number }
         // 更新该 session 的缓存状态
-        const prev = sessionStatus.get(msgSid)
+        const prev = cache.status.get(msgSid)
         const updatedStatus: StatusPayload = {
           ...(prev ?? { tokens: 0, cost: 0, contextUsed: 0, contextMax: 0, roundCount: 0 }),
           contextUsed: p.tokensAfter,
           contextMax: p.contextWindow > 0 ? p.contextWindow : (prev?.contextMax ?? 0),
         }
-        sessionStatus.set(msgSid, updatedStatus)
+        cache.status.set(msgSid, updatedStatus)
         // 仅当前会话更新 UI
         if (isCurrent) {
           setStatus('contextUsed', p.tokensAfter)
@@ -401,7 +324,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
       case 'status.update': {
         const p = msg.payload as StatusPayload
-        sessionStatus.set(msgSid, p)
+        cache.status.set(msgSid, p)
         if (isCurrent) {
           // 防止 0 覆盖已有有效值（热重载/reconnect 时的竞态）
           if (p.contextUsed > 0 || status.contextUsed === 0) setStatus('contextUsed', p.contextUsed)
@@ -430,8 +353,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         setCurrentSessionId(sid)
         setMessages([])
         setToolCalls([])
-        sessionMessages.set(sid, [])
-        sessionToolCalls.set(sid, [])
+        cache.messages.set(sid, [])
+        cache.toolCalls.set(sid, [])
         send('session.list', {})
         setSessions((prev) => {
           if (prev.some((s) => s.id === sid)) return prev
@@ -470,8 +393,8 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
         const tcs = ((msg.payload.toolCalls ?? []) as ToolCallEntry[]).map((t) =>
           t.status === 'running' ? { ...t, status: 'error' as const, output: t.output + '\n[会话中断]' } : t
         )
-        sessionMessages.set(sid, msgs)
-        sessionToolCalls.set(sid, tcs)
+        cache.messages.set(sid, msgs)
+        cache.toolCalls.set(sid, tcs)
         if (currentSessionId() === sid) {
           setMessages(msgs)
           setToolCalls(tcs)
@@ -487,50 +410,34 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
 
       case 'session.deleted':
         setSessions((prev) => prev.filter((s) => s.id !== msg.payload.sessionId))
-        sessionMessages.delete(msg.payload.sessionId)
-        sessionToolCalls.delete(msg.payload.sessionId)
-        sessionPendingChars.delete(msg.payload.sessionId)
-        sessionStatus.delete(msg.payload.sessionId)
+        cache.deleteSession(msg.payload.sessionId)
         break
 
       case 'settings.state':
-        setSettings((msg.payload as { entries: { key: string; value: string }[] }).entries)
+        settingsStore.setEntries((msg.payload as { entries: { key: string; value: string }[] }).entries)
         break
 
       // ── 智能体事件 ──
 
-      case 'agent.list': {
-        const agents = (msg.payload as { agents: import('@bridge/protocol').AgentInfo[] }).agents
-        setAgents(agents)
+      case 'agent.list':
+        agentsStore.handleAgentList((msg.payload as { agents: AgentInfo[] }).agents)
         break
-      }
 
-      case 'agent.created': {
-        const agent = (msg.payload as { agent: import('@bridge/protocol').AgentInfo }).agent
-        setAgents((prev) => {
-          if (prev.some((a) => a.id === agent.id)) return prev
-          return [...prev, agent]
-        })
+      case 'agent.created':
+        agentsStore.handleAgentCreated((msg.payload as { agent: AgentInfo }).agent)
         break
-      }
 
-      case 'agent.updated': {
-        const agent = (msg.payload as { agent: import('@bridge/protocol').AgentInfo }).agent
-        setAgents((prev) => prev.map((a) => (a.id === agent.id ? agent : a)))
+      case 'agent.updated':
+        agentsStore.handleAgentUpdated((msg.payload as { agent: AgentInfo }).agent)
         break
-      }
 
-      case 'agent.deleted': {
-        const agentId = (msg.payload as { agentId: string }).agentId
-        setAgents((prev) => prev.filter((a) => a.id !== agentId))
+      case 'agent.deleted':
+        agentsStore.handleAgentDeleted((msg.payload as { agentId: string }).agentId)
         break
-      }
 
-      case 'agent.default_changed': {
-        const agentId = (msg.payload as { agentId: string }).agentId
-        setAgents((prev) => prev.map((a) => ({ ...a, isDefault: a.id === agentId })))
+      case 'agent.default_changed':
+        agentsStore.handleAgentDefaultChanged((msg.payload as { agentId: string }).agentId)
         break
-      }
 
       // ── 状态同步 ──
 
@@ -582,21 +489,6 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     }
   }
 
-  const send = (type: string, payload: unknown) => {
-    const raw = JSON.stringify({
-      type,
-      id: crypto.randomUUID(),
-      sessionId: currentSessionId() || props.sessionId,
-      ts: Date.now(),
-      payload,
-    })
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      pendingSends.push(raw)
-      return
-    }
-    ws.send(raw)
-  }
-
   const createSession = (model?: string) => send('session.create', { model })
   const sendMessage = (content: string, displayContent?: string, attachments?: { path: string; name: string; isImage: boolean }[]) => {
     const userMsg: MessageEntry = {
@@ -609,7 +501,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     }
     setMessages((prev) => {
       const next = [...prev, userMsg]
-      sessionMessages.set(currentSessionId(), next)
+      cache.messages.set(currentSessionId(), next)
       return next
     })
     send('agent.prompt', { content, attachments })
@@ -617,24 +509,21 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const cancelMessage = () => {
     // 立即本地清理：清空待渲染字符缓冲
     const sid = currentSessionId()
-    sessionPendingChars.delete(sid)
-    if (pumpRafId !== null) {
-      cancelAnimationFrame(pumpRafId)
-      pumpRafId = null
-    }
+    cache.pendingChars.delete(sid)
+    pump.cleanup()
     // 终结所有 partial 消息 + 取消所有 running 工具
     setMessages((prev) => {
       const next = prev.map((m) =>
         m.partial ? { ...m, partial: false, content: m.content || '(已中断)' } : m
       )
-      sessionMessages.set(sid, next)
+      cache.messages.set(sid, next)
       return next
     })
     setToolCalls((prev) => {
       const next = prev.map((t) =>
         t.status === 'running' ? { ...t, status: 'error' as const, output: t.output + '\n[已中断]' } : t
       )
-      sessionToolCalls.set(sid, next)
+      cache.toolCalls.set(sid, next)
       return next
     })
     setIsStreaming(false)
@@ -642,8 +531,7 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     send('agent.abort', {})
   }
   const loadHistory = (sid: string) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return
-    ws.send(JSON.stringify({
+    wsConn.send(JSON.stringify({
       type: 'session.history',
       id: crypto.randomUUID(),
       sessionId: sid,
@@ -655,45 +543,37 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
   const switchSession = (sid: string) => {
     // 先存当前 session 状态
     syncSignalToCache()
-    // 保存当前状态到 sessionStatus
-    sessionStatus.set(currentSessionId(), { ...status })
+    // 保存当前状态到 cache.status
+    cache.status.set(currentSessionId(), { ...status })
 
     setCurrentSessionId(sid)
 
-    if (sessionMessages.has(sid)) {
-      setMessages(sessionMessages.get(sid)!)
-      setToolCalls(sessionToolCalls.get(sid) ?? [])
+    if (cache.messages.has(sid)) {
+      setMessages(cache.messages.get(sid)!)
+      setToolCalls(cache.toolCalls.get(sid) ?? [])
     } else {
       setMessages([])
       setToolCalls([])
     }
 
     // 恢复该 session 的 status
-    const savedStatus = sessionStatus.get(sid)
+    const savedStatus = cache.status.get(sid)
     if (savedStatus) setStatus(savedStatus)
 
     // 如果有后台流式残留的 pending chars，恢复泵送
-    const pending = sessionPendingChars.get(sid)
+    const pending = cache.pendingChars.get(sid)
     if (pending && pending.size > 0) {
-      schedulePump()
+      pump.schedulePump()
     }
 
     send('session.switch', { sessionId: sid })
-    if (!sessionMessages.has(sid)) {
+    if (!cache.messages.has(sid)) {
       loadHistory(sid)
     }
   }
-  const switchModel = (modelId: string) => send('model.set', { modelId })
-  const getSettings = () => send('settings.get', {})
-  const setSetting = (key: string, value: string) => send('settings.set', { key, value })
-
-  const switchAgent = (agentId: string) => send('agent.switch', { agentId })
-  const createAgent = (name: string, provider: string, modelId: string, opts?: { avatarColor?: string; roleDescription?: string }) =>
-    send('agent.create', { name, provider, modelId, ...opts })
-  const updateAgent = (agentId: string, updates: { name?: string; avatarColor?: string; roleDescription?: string }) =>
-    send('agent.update', { agentId, ...updates })
-  const deleteAgent = (agentId: string) => send('agent.delete', { agentId })
-  const setDefaultAgent = (agentId: string) => send('agent.set_default', { agentId })
+  const switchModel = (modelId: string) => send('agent.model.set', { modelId })
+  const getSettings = () => settingsStore.getSettings()
+  const setSetting = (key: string, value: string) => settingsStore.setSetting(key, value)
 
   // ========== 扩展消息订阅 ==========
 
@@ -712,13 +592,9 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     }
   }
 
-  connect()
-
   onCleanup(() => {
-    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null }
-    if (reconnectTimer) clearTimeout(reconnectTimer)
-    if (pumpRafId !== null) cancelAnimationFrame(pumpRafId)
-    ws?.close()
+    pump.cleanup()
+    wsConn.cleanup()
   })
 
   const value: AgentContextValue = {
@@ -736,17 +612,15 @@ export const AgentProvider: Component<{ sessionId: string; children: JSX.Element
     switchSession,
     switchModel,
     subscribe,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    settings,
+    settings: settingsStore.entries,
     getSettings,
     setSetting,
-    agents,
-    switchAgent,
-    createAgent,
-    updateAgent,
-    deleteAgent,
-    setDefaultAgent,
+    agents: agentsStore.agents,
+    switchAgent: agentsStore.switchAgent,
+    createAgent: agentsStore.createAgent,
+    updateAgent: agentsStore.updateAgent,
+    deleteAgent: agentsStore.deleteAgent,
+    setDefaultAgent: agentsStore.setDefaultAgent,
   }
 
   return (

@@ -35,10 +35,10 @@ export type ClientMessage =
   | ClientMsg<'agent.compact', {}>
 
   // ── 配置控制 (4) — Agent/Session 配置 ──
-  | ClientMsg<'model.set', { modelId: string }>
-  | ClientMsg<'model.list', {}>
-  | ClientMsg<'thinking.set', { level: ThinkingLevel }>
-  | ClientMsg<'tools.set', { toolNames: string[] }>
+  | ClientMsg<'agent.model.set', { modelId: string }>
+  | ClientMsg<'agent.model.list', {}>
+  | ClientMsg<'agent.thinking.set', { level: ThinkingLevel }>
+  | ClientMsg<'agent.tools.set', { toolNames: string[] }>
 
   // ── 文件系统 (3) — FileSystem 方法 ──
   | ClientMsg<'file.list', { path?: string }>

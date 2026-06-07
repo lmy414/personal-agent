@@ -30,73 +30,12 @@ interface PreDefTool {
 /** 解析项目根目录（extensions/pa-mcp/index.ts → ../../） */
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
-/** 硬编码工具定义 — 与 MCP adapter tools.ts 保持同步 */
-const SERVERS: MCPServer[] = [
-  {
-    command: 'node',
-    args: [
-      resolve(PROJECT_ROOT, 'bridge/node_modules/tsx/dist/cli.mjs'),
-      resolve(PROJECT_ROOT, 'packages/live2d-pet/packages/adapters/mcp/src/index.ts'),
-    ],
-    tools: [
-      {
-        name: 'model_load',
-        description:
-          '加载 Live2D 模型。指定包含 .model3.json 的目录绝对路径。加载后自动发现表情和动作列表。',
-        params: {
-          path: { type: 'string', required: true, description: '模型目录的绝对路径，必须包含 .model3.json 文件' },
-        },
-      },
-      {
-        name: 'expression_set',
-        description:
-          '切换 Live2D 角色的表情。可用表情通过 expression_list 获取（需先 model_load）。',
-        params: {
-          name: { type: 'string', required: true, description: '表情名称，对应 .exp3.json 文件名（不含扩展名）' },
-        },
-      },
-      {
-        name: 'expression_list',
-        description: '列出当前模型的所有可用表情及描述。需先 model_load。',
-        params: {},
-      },
-      {
-        name: 'action_perform',
-        description:
-          '播放语义动作。可用: nod(点头)、shake_head(摇头)、tilt_head(歪头)、wink(单眼眨)、slow_blink(慢眨眼)、double_blink(双眨眼)。',
-        params: {
-          name: { type: 'string', required: true, description: 'nod / shake_head / tilt_head / wink / slow_blink / double_blink' },
-          intensity: { type: 'number', required: false, description: '强度 0.0~1.0，默认 1.0' },
-          count: { type: 'number', required: false, description: '重复次数，默认 1' },
-        },
-      },
-      {
-        name: 'action_list',
-        description: '列出所有可用的语义动作。所有模型通用。',
-        params: {},
-      },
-      {
-        name: 'settings_get',
-        description: '获取 Live2D 桌面宠物所有当前设置。',
-        params: {},
-      },
-      {
-        name: 'settings_set',
-        description:
-          '修改桌面宠物设置。可修改: window.width/height/x/y/opacity, model.scale/offsetX/offsetY/visible。',
-        params: {
-          'window.width': { type: 'number', required: false, description: '窗口宽度 (200-600)' },
-          'window.height': { type: 'number', required: false, description: '窗口高度 (260-800)' },
-          'window.opacity': { type: 'number', required: false, description: '窗口透明度 (0.3-1.0)' },
-          'model.scale': { type: 'number', required: false, description: '模型缩放 (0=自动)' },
-          'model.offsetX': { type: 'number', required: false, description: '模型横向偏移 (-200~200)' },
-          'model.offsetY': { type: 'number', required: false, description: '模型纵向偏移 (-200~200)' },
-          'model.visible': { type: 'boolean', required: false, description: '模型是否可见' },
-        },
-      },
-    ],
-  },
-]
+/**
+ * MCP Server 配置列表。
+ * Live2D 已于 2026-06-07 清理。添加新的 MCP server 时在此数组中追加配置。
+ * 每个 server 需提供 command/args/tools（预定义工具列表，避免依赖异步 tools/list）。
+ */
+const SERVERS: MCPServer[] = []
 
 // ── MCP Client (lazy singleton) ────────────────
 
@@ -150,7 +89,7 @@ class MCPClient {
       }).then((initResult) => {
         if (!initResult) return reject(new Error('MCP initialize 无响应'))
         this._notifyRpc('notifications/initialized', {})
-        console.log('[pa-mcp] MCP connected, 7 tools registered')
+        console.log('[pa-mcp] MCP connected')
         resolve()
       }).catch(reject)
     })
@@ -228,5 +167,6 @@ export default function register(api: ExtensionAPI): void {
     }
   }
 
-  console.log('[pa-mcp] 7 tools registered (lazy MCP init)')
+  const count = SERVERS.reduce((sum, s) => sum + s.tools.length, 0)
+  console.log(`[pa-mcp] ${count} tools registered (lazy MCP init)`)
 }

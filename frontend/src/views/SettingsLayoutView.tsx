@@ -87,7 +87,6 @@ const wallpapers = [
 
 const mcpTools = [
   { name: 'Pencil 设计工具', desc: 'UI/UX 设计协作',    status: '在线', on: true },
-  { name: 'Live2D 桌面宠物', desc: '角色交互与动画',   status: '在线', on: true },
   { name: '文件系统访问',    desc: '本地文件读写',     status: '在线', on: true },
   { name: 'Notion 集成',     desc: '知识库同步',       status: '离线', on: false },
   { name: 'SQLite 查询',     desc: '数据库操作',       status: '在线', on: true },

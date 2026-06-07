@@ -1,42 +1,37 @@
-import { createSignal, onMount, onCleanup } from 'solid-js'
-import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
-import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
-import { MiniNav, type ViewId } from '@/extensions/mini-nav/MiniNav'
-import PencilMainView from '@/views/PencilMainView'
-import CharacterView from '@/views/CharacterView'
-import SessionRecordsView from '@/views/SessionRecordsView'
-import CostDashboardView from '@/views/CostDashboardView'
-import FileTreeView from '@/views/FileTreeView'
-import SettingsLayoutView from '@/views/SettingsLayoutView'
+import { For } from 'solid-js'
+import { registry, type Extension } from '@/registry'
+import { activeView } from '@/shell/nav-signal'
 import './App.css'
 
 export function App() {
-  const [activeView, setActiveView] = createSignal<ViewId>('chat')
+  // ── Registry-driven slot rendering ──
+  // All slots are populated by extension registrations (P1-3 → P1-6).
 
-  onMount(() => {
-    const onNav = (e: Event) => { const detail = (e as CustomEvent).detail as ViewId; if (detail) setActiveView(detail) }
-    window.addEventListener('mio:navigate', onNav)
-    onCleanup(() => window.removeEventListener('mio:navigate', onNav))
-  })
+  const renderOverlay = () => {
+    const exts = registry.getBySlot('overlay')
+    return <For each={exts}>{ext => { const Comp = ext.component; return <Comp /> }}</For>
+  }
 
-  const sidebarProps = () => ({ sidebarMode: (activeView() === 'files' ? 'files' : 'chat') as 'chat' | 'files' })
+  const renderNav = () => {
+    const exts = registry.getBySlot('nav')
+    if (exts.length === 0) return null
+    return <For each={exts}>{ext => { const Comp = ext.component; return <Comp /> }}</For>
+  }
 
-  const renderView = () => {
-    const v = activeView()
-    if (v === 'chat' || v === 'files') return <PencilMainView {...sidebarProps()} />
-    switch (v) {
-      case 'agents':     return <CharacterView />
-      case 'records':    return <SessionRecordsView />
-      case 'resources':  return <CostDashboardView />
-      case 'settings':   return <SettingsLayoutView />
-      default:           return <PencilMainView {...sidebarProps()} />
+  const renderMainView = () => {
+    const exts = registry.getBySlot('main-view')
+    const match = exts.find((e: Extension) => e.id === activeView()) || exts[0]
+    if (match) {
+      const Comp = match.component
+      return <Comp />
     }
+    return null
   }
 
   return (
     <>
-      <TopMenuBar />
-      <SettingsPage />
+      {/* ── Overlay slot ── */}
+      {renderOverlay()}
       <div
         style={{
           position: 'relative',
@@ -46,12 +41,12 @@ export function App() {
           gap: '0',
         }}
       >
-        {/* ===== Mini Nav (52px) — glass-panel 背景 + mini-nav 内部布局 ===== */}
+        {/* ── Nav slot (52px) ── */}
         <div class="glass-panel" style={{ width: '52px', 'flex-shrink': '0', 'z-index': '10' }}>
-          <MiniNav activeView={activeView()} onNavigate={setActiveView} />
+          {renderNav()}
         </div>
 
-        {/* ===== Main Content Area ===== */}
+        {/* ── Main content area ── */}
         <div
           style={{
             flex: '1',
@@ -60,7 +55,7 @@ export function App() {
             'min-width': '0',
           }}
         >
-          {renderView()}
+          {renderMainView()}
         </div>
       </div>
     </>

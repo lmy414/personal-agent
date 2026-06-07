@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js'
-import { setIsSettingsOpen } from '@/shell/settings-signal'
+import { navigateTo } from '@/shell/nav-signal'
 import { Settings, Wind } from 'lucide-solid'
 import './top-menu.css'
 
@@ -7,11 +7,6 @@ export function TopMenuBar() {
   const [menuOpen, setMenuOpen] = createSignal(false)
 
   const handleToggle = () => setMenuOpen(!menuOpen())
-
-  const handleOpenSettings = () => {
-    setIsSettingsOpen(true)
-    setMenuOpen(false)
-  }
 
   return (
     <>
@@ -24,11 +19,11 @@ export function TopMenuBar() {
         <span class="toggle-arrow">▼</span>
       </div>
       <div class="top-menu-bar" classList={{ open: menuOpen() }}>
-        <button class="top-menu-item" onClick={handleOpenSettings}>
+        <button class="top-menu-item" onClick={() => { navigateTo('settings'); setMenuOpen(false) }}>
           <Settings size={18} class="menu-icon-svg" />
           <span class="menu-label">设置</span>
         </button>
-        <button class="top-menu-item" onClick={() => { setIsSettingsOpen(false); setMenuOpen(false) }}>
+        <button class="top-menu-item" onClick={() => { navigateTo('chat'); setMenuOpen(false) }}>
           <Wind size={18} class="menu-icon-svg" />
           <span class="menu-label">主会话</span>
         </button>

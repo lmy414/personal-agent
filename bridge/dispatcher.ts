@@ -40,10 +40,10 @@ const routes: Record<string, Handler> = {
   'agent.abort': handleMessageCancel,
 
   // ── 模型 & 配置 ──
-  'model.set': handleModelSwitch,
-  'model.list': handleModelList,
-  'thinking.set': handleThinkingSet,
-  'tools.set': handleToolsSet,
+  'agent.model.set': handleModelSwitch,
+  'agent.model.list': handleModelList,
+  'agent.thinking.set': handleThinkingSet,
+  'agent.tools.set': handleToolsSet,
 
   // ── 文件系统 ──
   'file.list': handleFileList,

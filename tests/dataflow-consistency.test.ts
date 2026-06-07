@@ -103,7 +103,7 @@ interface InitMessage {
 function getWsOnOpenInitMessages(_sessionId: string): InitMessage[] {
   return [
     { type: 'session.list', payload: {} },
-    { type: 'model.list', payload: {} },
+    { type: 'agent.model.list', payload: {} },
     { type: 'settings.get', payload: {} },
   ]
 }
@@ -292,7 +292,7 @@ describe('数据流一致性 — 初始化消息完整性', () => {
     // 前端组件 onMount 时需要的全局数据源
     const requiredDataSources = new Map<string, string>([
       ['sessions', 'session.list'],       // SessionPanel, useAgent
-      ['models', 'model.list'],           // StatusBar, TopMenuBar
+      ['models', 'agent.model.list'],     // StatusBar, TopMenuBar
       ['settings', 'settings.get'],       // FileTree, SettingsPage, pa-mio prompt
     ])
 
@@ -418,8 +418,8 @@ describe('数据流一致性 — 依赖清单', () => {
     wsMessageType: string
   }[] = [
     { component: 'SessionPanel', dataSource: 'sessions', wsMessageType: 'session.list' },
-    { component: 'StatusBar', dataSource: 'models', wsMessageType: 'model.list' },
-    { component: 'TopMenuBar', dataSource: 'models', wsMessageType: 'model.list' },
+    { component: 'StatusBar', dataSource: 'models', wsMessageType: 'agent.model.list' },
+    { component: 'TopMenuBar', dataSource: 'models', wsMessageType: 'agent.model.list' },
     { component: 'FileTree', dataSource: 'settings', wsMessageType: 'settings.get' },
     { component: 'SettingsPage', dataSource: 'settings', wsMessageType: 'settings.get' },
     { component: 'ChatRenderer', dataSource: 'sessions', wsMessageType: 'session.list' },
@@ -432,11 +432,11 @@ describe('数据流一致性 — 依赖清单', () => {
 
     // 验证每个 WS 消息类型都在 dispatcher 路由表中
     const dispatchedTypes = new Set([
-      'session.list', 'model.list', 'settings.get',
+      'session.list', 'agent.model.list', 'settings.get',
       'session.create', 'session.switch', 'session.delete',
       'session.history', 'session.rename', 'session.state', 'session.compact',
       'message.send', 'message.cancel',
-      'model.switch',
+      'agent.model.set',
       'file.list', 'file.read',
       'memory.search', 'memory.list',
       'settings.set', 'settings.discover-models',

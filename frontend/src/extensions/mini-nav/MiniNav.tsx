@@ -1,9 +1,8 @@
 import type { JSX } from 'solid-js'
 import { For } from 'solid-js'
 import { MessageSquare, Users, ClipboardList, Coins, FolderOpen, Settings } from 'lucide-solid'
+import { activeView, navigateTo, type ViewId } from '@/shell/nav-signal'
 import './mini-nav.css'
-
-export type ViewId = 'chat' | 'agents' | 'records' | 'resources' | 'files' | 'settings'
 
 interface NavItem {
   id: ViewId
@@ -20,20 +19,15 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'settings', icon: () => <Settings size={16} />, label: '設定' },
 ]
 
-interface MiniNavProps {
-  activeView: ViewId
-  onNavigate: (view: ViewId) => void
-}
-
-export function MiniNav(props: MiniNavProps) {
+export function MiniNav() {
   return (
     <nav class="mini-nav">
       <For each={NAV_ITEMS}>
         {(item) => (
           <button
             class="nav-item"
-            classList={{ active: props.activeView === item.id }}
-            onClick={() => props.onNavigate(item.id)}
+            classList={{ active: activeView() === item.id }}
+            onClick={() => navigateTo(item.id)}
             title={item.label}
           >
             <span class="nav-icon">{item.icon()}</span>
