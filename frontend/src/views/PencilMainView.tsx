@@ -669,11 +669,15 @@ function ChatPanel() {
   let textareaRef: HTMLTextAreaElement | undefined
   let chatScrollRef: HTMLDivElement | undefined
 
-  // 启动时自动创建 session（如果还没有）
+  // 启动时自动创建 session（连接稳定后仍无会话才创建）
   onMount(() => {
-    if (agent.sessions().length === 0) {
-      agent.createSession()
-    }
+    const tid = setInterval(() => {
+      if (agent.connected() && agent.sessions().length === 0) {
+        agent.createSession()
+        clearInterval(tid)
+      }
+    }, 500)
+    onCleanup(() => clearInterval(tid))
   })
 
   // 消息变化 / 切换会话 → 滚到底部
