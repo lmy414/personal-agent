@@ -4,6 +4,7 @@ import { useAgent, type MessageEntry, type ToolCallEntry } from '@/shell/useAgen
 import type { SessionInfo, AgentInfo, ServerMessage } from '@bridge/protocol'
 import { Code2, FileText, Globe, Search, CirclePause, BarChart3, Brain, Paperclip, ChevronLeft, FolderOpen } from 'lucide-solid'
 import { marked } from 'marked'
+import { FileTree } from '@/extensions/file-tree/FileTree'
 
 // ===== 类型 =====
 
@@ -1114,6 +1115,8 @@ function EditorPanel() {
   const markdownContent = createMemo(() => {
     const f = active()
     if (!f || !f.content) return ''
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+    if (ext === 'html' || ext === 'htm') return f.content  // HTML 直出
     return marked.parse(f.content) as string
   })
 
@@ -1185,10 +1188,22 @@ function EditorPanel() {
 
 // ===== 主入口 =====
 
-export default function PencilMainView() {
+export default function PencilMainView(props: { sidebarMode?: 'chat' | 'files' }) {
+  const showFileTree = () => props.sidebarMode === 'files'
+
   return (
     <>
-      <Sidebar />
+      <Show when={showFileTree()} fallback={<Sidebar />}>
+        <div class="glass-panel" style={{ width: '320px', 'flex-shrink': '0', display: 'flex', 'flex-direction': 'column', 'z-index': '5' }}>
+          <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 16px', height: '54px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
+            <div style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '14px', 'font-weight': '600', display: 'flex', 'align-items': 'center', gap: '6px' }}><FolderOpen size={14} /> 工作目录</div>
+            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', 'font-size': '11px' }} onClick={() => { window.dispatchEvent(new CustomEvent('mio:navigate', { detail: 'chat' })) }}>✕</button>
+          </div>
+          <div style={{ flex: '1', 'overflow-y': 'auto', padding: '8px 0' }}>
+            <FileTree />
+          </div>
+        </div>
+      </Show>
       <ChatPanel />
       <EditorPanel />
     </>

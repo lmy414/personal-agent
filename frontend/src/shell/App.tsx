@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js'
+import { createSignal, onMount, onCleanup } from 'solid-js'
 import { TopMenuBar } from '@/extensions/top-menu/TopMenuBar'
 import { SettingsPage } from '@/extensions/settings-page/SettingsPage'
 import { MiniNav, type ViewId } from '@/extensions/mini-nav/MiniNav'
@@ -13,15 +13,23 @@ import './App.css'
 export function App() {
   const [activeView, setActiveView] = createSignal<ViewId>('chat')
 
+  onMount(() => {
+    const onNav = (e: Event) => { const detail = (e as CustomEvent).detail as ViewId; if (detail) setActiveView(detail) }
+    window.addEventListener('mio:navigate', onNav)
+    onCleanup(() => window.removeEventListener('mio:navigate', onNav))
+  })
+
+  const sidebarProps = () => ({ sidebarMode: (activeView() === 'files' ? 'files' : 'chat') as 'chat' | 'files' })
+
   const renderView = () => {
-    switch (activeView()) {
-      case 'chat':       return <PencilMainView />
+    const v = activeView()
+    if (v === 'chat' || v === 'files') return <PencilMainView {...sidebarProps()} />
+    switch (v) {
       case 'agents':     return <CharacterView />
       case 'records':    return <SessionRecordsView />
       case 'resources':  return <CostDashboardView />
-      case 'files':      return <FileTreeView />
       case 'settings':   return <SettingsLayoutView />
-      default:           return <PencilMainView />
+      default:           return <PencilMainView {...sidebarProps()} />
     }
   }
 
