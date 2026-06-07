@@ -1,5 +1,7 @@
+import type { JSX } from 'solid-js'
 import { For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { BarChart3, TrendingUp, Lightbulb } from 'lucide-solid'
 
 const metrics = [
   { label: '総費用', value: '$48.25', trend: '+12%', up: true, sub: '全期間累計' },
@@ -45,10 +47,10 @@ const modelBars = [
   { label: 'GPT-4o', pct: '12%', w: '12%', cost: '$5.79' },
 ]
 
-const insights = [
-  { icon: '📊', text: 'Claude Opus 占总费用的 42%，为最高消费模型', color: 'var(--text-primary)' },
-  { icon: '📈', text: '本月费用较上月增长 34%，Token 使用量上升', color: 'var(--warning)' },
-  { icon: '💡', text: '建议：对重复查询启用缓存可节省约 15% 费用', color: 'var(--accent)' },
+const insights: { icon: () => JSX.Element; text: string; color: string }[] = [
+  { icon: () => <BarChart3 size={16} />, text: 'Claude Opus 占总费用的 42%，为最高消费模型', color: 'var(--text-primary)' },
+  { icon: () => <TrendingUp size={16} />, text: '本月费用较上月增长 34%，Token 使用量上升', color: 'var(--warning)' },
+  { icon: () => <Lightbulb size={16} />, text: '建议：对重复查询启用缓存可节省约 15% 费用', color: 'var(--accent)' },
 ]
 
 const trendPts = dailyBars.map((b, i) => `${12 + i * 14},${100 - parseInt(b.h)}`).join(' ')
@@ -184,7 +186,7 @@ export default function CostDashboardView() {
         <div style={{ display: 'flex', gap: '16px', padding: '16px 24px' }}>
           <For each={insights}>{(ins) => (
             <div style={{ ...cardStyle, flex: '1', padding: '12px 16px', display: 'flex', 'align-items': 'center', gap: '10px' }}>
-              <div style={{ 'font-size': '16px' }}>{ins.icon}</div>
+              <div style={{ display: 'flex', 'align-items': 'center' }}>{ins.icon()}</div>
               <div style={{ 'font-size': '12px', 'line-height': '1.5', flex: '1', color: ins.color }}>{ins.text}</div>
             </div>
           )}</For>

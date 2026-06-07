@@ -1,5 +1,7 @@
+import type { JSX } from 'solid-js'
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { BookOpen, Pencil, Search, Terminal, Globe, FileText, ClipboardList, Palette } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
@@ -38,15 +40,15 @@ const agents: AgentDef[] = [
   { id: 'gemini', avatar: 'G', name: 'Gemini 2.5', role: '长上下文 · 代码审查', model: 'Gemini 2.5 Pro', avatarPath: './avatars/gemini.png', memDir: './mio-harness/memories/', prompt: '', examples: '', prohibitions: '' },
 ]
 
-const tools = [
-  { name: '📖 读取文件', status: '已启用', desc: '读取项目文件内容' },
-  { name: '✏️ 写入文件', status: '已启用', desc: '修改项目文件' },
-  { name: '🔍 代码搜索', status: '已启用', desc: '搜索代码片段' },
-  { name: '⚙️ 执行命令', status: '已启用', desc: '运行终端命令' },
-  { name: '🌐 网络搜索', status: '已启用', desc: '搜索互联网信息' },
-  { name: '📝 添加记忆', status: '已启用', desc: '写入长期记忆' },
-  { name: '📋 搜索记忆', status: '已启用', desc: '检索历史记忆' },
-  { name: '🎨 生成图像', status: '已启用', desc: '调用图像生成' },
+const tools: { icon: () => JSX.Element; name: string; status: string; desc: string }[] = [
+  { icon: () => <BookOpen size={13} />, name: '读取文件', status: '已启用', desc: '读取项目文件内容' },
+  { icon: () => <Pencil size={13} />, name: '写入文件', status: '已启用', desc: '修改项目文件' },
+  { icon: () => <Search size={13} />, name: '代码搜索', status: '已启用', desc: '搜索代码片段' },
+  { icon: () => <Terminal size={13} />, name: '执行命令', status: '已启用', desc: '运行终端命令' },
+  { icon: () => <Globe size={13} />, name: '网络搜索', status: '已启用', desc: '搜索互联网信息' },
+  { icon: () => <FileText size={13} />, name: '添加记忆', status: '已启用', desc: '写入长期记忆' },
+  { icon: () => <ClipboardList size={13} />, name: '搜索记忆', status: '已启用', desc: '检索历史记忆' },
+  { icon: () => <Palette size={13} />, name: '生成图像', status: '已启用', desc: '调用图像生成' },
 ]
 
 const inputBase: Record<string, string> = { background: 'rgba(0,0,0,0.40)', border: '1px solid rgba(255,255,255,0.06)', 'border-radius': '4px', padding: '10px 14px', color: 'var(--text-primary)', 'font-size': '13px', 'font-family': 'inherit', outline: 'none' }
@@ -64,7 +66,7 @@ export default function CharacterView() {
       <div style={{ width: '340px', 'flex-shrink': '0', display: 'flex', 'flex-direction': 'column', 'border-right': '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ padding: '16px 20px', 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600' }}>角色管理</div>
         <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', padding: '8px 16px', height: '40px', 'border-bottom': '1px solid rgba(255,255,255,0.03)' }}>
-          <span style={{ 'font-size': '13px', color: 'var(--text-muted)' }}>🔍 搜索角色名...</span>
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '6px', 'font-size': '13px', color: 'var(--text-muted)' }}><Search size={14} /> 搜索角色名...</div>
         </div>
         <div style={{ flex: '1', 'overflow-y': 'auto' }}>
           <For each={agents}>{(a) => (
@@ -137,7 +139,7 @@ export default function CharacterView() {
               <For each={tools}>{(tool) => (
                 <div style={{ padding: '12px', background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.04)', 'border-radius': '6px', display: 'flex', 'flex-direction': 'column', gap: '6px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between' }}>
-                    <span style={{ 'font-size': '12px', 'font-weight': '500' }}>{tool.name}</span>
+                    <span style={{ 'font-size': '12px', 'font-weight': '500', display: 'flex', 'align-items': 'center', gap: '5px' }}>{tool.icon()} {tool.name}</span>
                     <span style={{ 'font-size': '10px', padding: '2px 6px', 'border-radius': '3px', background: 'rgba(91,140,90,0.10)', color: 'var(--success)' }}>{tool.status}</span>
                   </div>
                   <div style={{ 'font-size': '11px', color: 'var(--text-muted)' }}>{tool.desc}</div>

@@ -1,16 +1,18 @@
+import type { JSX } from 'solid-js'
 import { createSignal, For, Show } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { Settings, Palette, Wrench, FolderOpen, Info } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
 type SettingsPage = 'model' | 'display' | 'skills' | 'workdir' | 'system'
 
-const NAV_ITEMS: { id: SettingsPage; icon: string; label: string; desc: string }[] = [
-  { id: 'model',   icon: '⚙️', label: '模型管理',   desc: 'API 密钥 · 模型选择 · 参数配置' },
-  { id: 'display', icon: '🎨', label: '显示设置',   desc: '主题 · 壁纸 · 字体 · 布局' },
-  { id: 'skills',  icon: '🛠️', label: '技能管理',   desc: 'MCP 接入 · 扩展管理' },
-  { id: 'workdir', icon: '📁', label: '工作目录',   desc: '项目路径 · 文件索引' },
-  { id: 'system',  icon: 'ℹ️', label: '系统信息',   desc: '版本 · 日志 · 关于澪号' },
+const NAV_ITEMS: { id: SettingsPage; icon: () => JSX.Element; label: string; desc: string }[] = [
+  { id: 'model',   icon: () => <Settings size={14} />, label: '模型管理',   desc: 'API 密钥 · 模型选择 · 参数配置' },
+  { id: 'display', icon: () => <Palette size={14} />,  label: '显示设置',   desc: '主题 · 壁纸 · 字体 · 布局' },
+  { id: 'skills',  icon: () => <Wrench size={14} />,   label: '技能管理',   desc: 'MCP 接入 · 扩展管理' },
+  { id: 'workdir', icon: () => <FolderOpen size={14} />, label: '工作目录', desc: '项目路径 · 文件索引' },
+  { id: 'system',  icon: () => <Info size={14} />,     label: '系统信息',   desc: '版本 · 日志 · 关于澪号' },
 ]
 
 // ── 复用小组件 ──
@@ -543,7 +545,7 @@ export default function SettingsLayoutView() {
                 'border-left': page() === item.id ? '2px solid var(--accent)' : '2px solid transparent',
                 background: page() === item.id ? 'rgba(107,143,168,0.06)' : 'transparent',
               }}>
-                <span style={{ 'font-size': '14px', width: '20px', 'text-align': 'center' }}>{item.icon}</span>
+                <span style={{ 'font-size': '14px', width: '20px', 'text-align': 'center', display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}>{item.icon()}</span>
                 <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
                   <div style={{ 'font-size': '13px' }}>{item.label}</div>
                   <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>{item.desc}</div>

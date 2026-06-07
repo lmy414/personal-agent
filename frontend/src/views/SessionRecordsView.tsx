@@ -1,26 +1,29 @@
+import type { JSX } from 'solid-js'
 import { createSignal, For } from 'solid-js'
 import { useAgent } from '@/shell/useAgent'
+import { MessageSquare, Search, Database, FileText, Bug, Palette, Zap, Plug } from 'lucide-solid'
 
 function kbd(fn: () => void) { return { tabIndex: 0, role: 'button' as const, onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() } } } }
 
 interface Session {
-  icon: string; title: string; meta: string; cost: string
+  icon: () => JSX.Element; title: string; meta: string; cost: string
 }
 
+const iconSize = 14
 const sessionGroups: { date: string; sessions: Session[] }[] = [
   { date: '今天 · 6月7日', sessions: [
-    { icon: '💬', title: '前端组件重构', meta: '3轮 · 15,200 tokens', cost: '$0.42' },
-    { icon: '🔌', title: 'API 接口调试', meta: '5轮 · 9,920 tokens', cost: '$0.28' },
-    { icon: '🔍', title: '代码审查', meta: '4轮 · 25,100 tokens', cost: '$0.55' },
-    { icon: '🗄️', title: '数据库架构设计', meta: '6轮 · 26,400 tokens', cost: '$0.78' },
+    { icon: () => <MessageSquare size={iconSize} />, title: '前端组件重构', meta: '3轮 · 15,200 tokens', cost: '$0.42' },
+    { icon: () => <Plug size={iconSize} />, title: 'API 接口调试', meta: '5轮 · 9,920 tokens', cost: '$0.28' },
+    { icon: () => <Search size={iconSize} />, title: '代码审查', meta: '4轮 · 25,100 tokens', cost: '$0.55' },
+    { icon: () => <Database size={iconSize} />, title: '数据库架构设计', meta: '6轮 · 26,400 tokens', cost: '$0.78' },
   ]},
   { date: '6月6日 · 周四', sessions: [
-    { icon: '📝', title: 'README 撰写', meta: '1轮 · 3,600 tokens', cost: '$0.11' },
-    { icon: '🐛', title: 'Bug 修复 #42', meta: '3轮 · 6,800 tokens', cost: '$0.24' },
+    { icon: () => <FileText size={iconSize} />, title: 'README 撰写', meta: '1轮 · 3,600 tokens', cost: '$0.11' },
+    { icon: () => <Bug size={iconSize} />, title: 'Bug 修复 #42', meta: '3轮 · 6,800 tokens', cost: '$0.24' },
   ]},
   { date: '更早', sessions: [
-    { icon: '🎨', title: 'UI 布局调整', meta: '5轮 · 16,400 tokens', cost: '$0.92' },
-    { icon: '⚡', title: '性能优化', meta: '3轮 · 18,200 tokens', cost: '$0.45' },
+    { icon: () => <Palette size={iconSize} />, title: 'UI 布局调整', meta: '5轮 · 16,400 tokens', cost: '$0.92' },
+    { icon: () => <Zap size={iconSize} />, title: '性能优化', meta: '3轮 · 18,200 tokens', cost: '$0.45' },
   ]},
 ]
 
@@ -62,7 +65,7 @@ export default function SessionRecordsView() {
                 const key = `${gi()}-${si()}`
                 return (
                   <div {...kbd(() => setActiveKey(key))} onClick={() => setActiveKey(key)} style={{ display: 'flex', 'align-items': 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer', 'border-left': activeKey() === key ? '3px solid var(--accent)' : '3px solid transparent', background: activeKey() === key ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}>
-                    <div style={{ 'font-size': '14px', width: '20px', 'text-align': 'center', 'flex-shrink': '0' }}>{s.icon}</div>
+                    <div style={{ 'font-size': '14px', width: '20px', 'text-align': 'center', 'flex-shrink': '0', display: 'flex', 'align-items': 'center', 'justify-content': 'center' }}>{s.icon()}</div>
                     <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', gap: '2px', 'min-width': '0' }}>
                       <div style={{ 'font-size': '12px', color: 'var(--text-primary)', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>{s.title}</div>
                       <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>{s.meta}</div>
@@ -80,7 +83,7 @@ export default function SessionRecordsView() {
       <div style={{ flex: '1', display: 'flex', 'flex-direction': 'column', 'min-width': '0' }}>
         <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', padding: '12px 24px', height: '54px', background: 'var(--panel-bg-top)', 'border-bottom': '1px solid rgba(255,255,255,0.03)', 'flex-shrink': '0' }}>
           <div style={{ display: 'flex', 'align-items': 'center', gap: '12px' }}>
-            <span style={{ 'font-size': '16px' }}>{activeSession()?.icon}</span>
+            <span style={{ display: 'flex', 'align-items': 'center' }}>{activeSession()?.icon()}</span>
             <span style={{ 'font-family': '"Noto Serif SC", serif', 'font-size': '15px', 'font-weight': '600' }}>{activeSession()?.title}</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               <For each={tabs}>{(tab, tIdx) => (
